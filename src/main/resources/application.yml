@@ -1,0 +1,62 @@
+spring:
+  application:
+    name: ThesisRepo
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://${PGHOST:localhost}:${PGPORT:5432}/${PGDATABASE:postgres}}
+    username: ${SPRING_DATASOURCE_USERNAME:${PGUSER:postgres}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${PGPASSWORD:}}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
+
+server:
+  port: ${PORT:8080}
+  forward-headers-strategy: framework
+
+logging:
+  level:
+    root: INFO
+
+file:
+  storage:
+    provider: ${FILE_STORAGE_PROVIDER:}
+  max-size-bytes: 5242880
+
+azure:
+  storage:
+    account-name: ${AZURE_STORAGE_ACCOUNT:}
+    account-key: ${AZURE_STORAGE_KEY:}
+    connection-string: ${AZURE_STORAGE_CONNECTION_STRING:}
+    container-name: ${AZURE_STORAGE_CONTAINER:}
+    prefix: ${AZURE_STORAGE_PREFIX:documents}
+
+app:
+  ui:
+    base-url: ${APP_UI_BASE_URL:}
+  auth:
+    mode: ${APP_AUTH_MODE:SSO}
+  security:
+    cors:
+      allowed-origins: ${FRONTEND_URL:${APP_UI_BASE_URL:http://localhost:5173}}
+    csp: "${APP_SECURITY_CSP:default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://login.microsoftonline.com; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'}"
+    rate-limit:
+      window-seconds: ${AUTH_RATE_LIMIT_WINDOW_SECONDS:60}
+      login:
+        max-attempts: ${AUTH_RATE_LIMIT_LOGIN_MAX_ATTEMPTS:5}
+      otp:
+        max-attempts: ${AUTH_RATE_LIMIT_OTP_MAX_ATTEMPTS:5}
+  email:
+    from: ${MAIL_FROM:}
+    app-name: FYP Digital Repository
