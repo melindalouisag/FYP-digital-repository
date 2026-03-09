@@ -1,7 +1,8 @@
 import { Link, useNavigate } from "react-router-dom";
 
-// Logout first to clear any existing session, then redirect to SSO
-const SSO_URL = "/logout?redirect=/oauth2/authorization/azure";
+// Start OAuth directly. With CSRF enabled, Spring Security expects POST /logout,
+// so using GET /logout?redirect=... can fail and bounce users back to /login.
+const SSO_URL = "/oauth2/authorization/azure";
 
 function RegisterPage() {
   const navigate = useNavigate();
