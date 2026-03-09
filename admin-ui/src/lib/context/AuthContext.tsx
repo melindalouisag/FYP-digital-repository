@@ -51,9 +51,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     setUser(null);
-    // Redirect to Spring Security logout — this clears both Spring session
-    // AND Microsoft SSO session (redirects to Microsoft logout endpoint)
-    window.location.href = '/logout';
+    try {
+      await authApi.logout();
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.status !== 401) {
+        console.error('Failed to POST /api/auth/logout', error);
+      }
+    } finally {
+      window.location.assign('/');
+    }
   }, []);
 
   const value = useMemo(

@@ -11,6 +11,9 @@ export class ApiError extends Error {
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS', 'TRACE']);
 let csrfBootstrapPromise: Promise<string | null> | null = null;
+let csrfBootstrapped = false;
+let csrfRequestToken: string | null = null;
+let csrfCookieToken: string | null = null;
 
 async function readBody(response: Response): Promise<unknown> {
   const contentType = response.headers.get('content-type') ?? '';
@@ -55,10 +58,10 @@ function readCookie(name: string): string | null {
   return value.length > 0 ? decodeURIComponent(value) : null;
 }
 
-async function ensureCsrfToken(): Promise<string | null> {
-  const existingToken = readCookie('XSRF-TOKEN');
-  if (existingToken) {
-    return existingToken;
+async function ensureCsrfToken(forceRefresh = false): Promise<string | null> {
+  const cookieToken = readCookie('XSRF-TOKEN');
+  if (!forceRefresh && csrfBootstrapped && csrfRequestToken && cookieToken === csrfCookieToken) {
+    return csrfRequestToken;
   }
 
   if (!csrfBootstrapPromise) {
@@ -75,10 +78,16 @@ async function ensureCsrfToken(): Promise<string | null> {
         if (payload && typeof payload === 'object') {
           const token = (payload as Record<string, unknown>).token;
           if (typeof token === 'string' && token.trim().length > 0) {
+            // Spring Security's default XOR handler expects the request token from /api/auth/csrf,
+            // not the raw XSRF-TOKEN cookie value.
+            csrfRequestToken = token;
+            csrfCookieToken = readCookie('XSRF-TOKEN');
             return token;
           }
         }
-        return readCookie('XSRF-TOKEN');
+        csrfRequestToken = null;
+        csrfCookieToken = readCookie('XSRF-TOKEN');
+        return null;
       })
       .catch(() => null)
       .finally(() => {
@@ -86,7 +95,16 @@ async function ensureCsrfToken(): Promise<string | null> {
       });
   }
 
-  return csrfBootstrapPromise;
+  const token = await csrfBootstrapPromise;
+  csrfBootstrapped = token !== null;
+  if (!token) {
+    csrfRequestToken = null;
+  }
+  return token;
+}
+
+export function bootstrapCsrfToken(forceRefresh = false): Promise<string | null> {
+  return ensureCsrfToken(forceRefresh);
 }
 
 export async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -95,8 +113,13 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
 
   if (!SAFE_METHODS.has(method)) {
     const csrfToken = await ensureCsrfToken();
-    if (csrfToken && !headers.has('X-XSRF-TOKEN')) {
-      headers.set('X-XSRF-TOKEN', csrfToken);
+    if (csrfToken) {
+      if (!headers.has('X-XSRF-TOKEN')) {
+        headers.set('X-XSRF-TOKEN', csrfToken);
+      }
+      if (!headers.has('X-CSRF-TOKEN')) {
+        headers.set('X-CSRF-TOKEN', csrfToken);
+      }
     }
   }
 

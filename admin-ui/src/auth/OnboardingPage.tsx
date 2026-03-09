@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '../lib/api/auth';
+import { ApiError, bootstrapCsrfToken } from '../lib/api/http';
 import { defaultPath } from '../lib/authUi';
 import { masterApi, type Faculty, type Program } from '../lib/api/master';
 import { useAuth } from '../lib/context/AuthContext';
@@ -16,6 +17,7 @@ export default function OnboardingPage() {
   const { user, refetch } = useAuth();
   const navigate = useNavigate();
   const [checking, setChecking] = useState(true);
+  const [csrfReady, setCsrfReady] = useState(false);
 
   const [name, setName] = useState(user?.name ?? user?.fullName ?? '');
   const [facultyId, setFacultyId] = useState<number | ''>('');
@@ -44,7 +46,17 @@ export default function OnboardingPage() {
         setName(me.name ?? me.fullName ?? '');
         setStudyProgram(me.role === 'STUDENT' ? (me.program ?? '') : (me.department ?? ''));
         setStudentId(me.studentId ?? '');
+
+        // SSO can land here before the SPA has refreshed its CSRF cookie, so force a bootstrap
+        // before the user can submit onboarding.
+        const csrfToken = await bootstrapCsrfToken(true);
+        if (!csrfToken) {
+          setError('Unable to initialize secure form submission. Refresh the page and try again.');
+          return;
+        }
+        setCsrfReady(true);
       } catch (err) {
+        setCsrfReady(false);
         setError(err instanceof Error ? err.message : 'Failed to load current user profile.');
       } finally {
         setChecking(false);
@@ -136,6 +148,14 @@ export default function OnboardingPage() {
 
     setSubmitting(true);
     try {
+      const csrfToken = await bootstrapCsrfToken(true);
+      if (!csrfToken) {
+        setCsrfReady(false);
+        setError('Unable to initialize secure form submission. Refresh the page and try again.');
+        return;
+      }
+      setCsrfReady(true);
+
       await authApi.onboarding({
         name: name.trim(),
         faculty: selectedFaculty.name,
@@ -150,7 +170,16 @@ export default function OnboardingPage() {
         setError('Profile is still incomplete. Please check all required fields.');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save onboarding data.');
+      if (err instanceof ApiError) {
+        if (err.status === 403) {
+          setCsrfReady(false);
+          setError('Your secure session token is missing or expired. Refresh the page and try again.');
+        } else {
+          setError(err.message);
+        }
+      } else {
+        setError('Failed to save onboarding data.');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -160,6 +189,9 @@ export default function OnboardingPage() {
     <div className="auth-shell">
       <form className="auth-card su-card" onSubmit={submit}>
         {checking && <div className="alert alert-info py-2">Checking profile...</div>}
+        {!checking && !csrfReady && !error && (
+          <div className="alert alert-info py-2">Preparing secure form submission...</div>
+        )}
         <div className="mb-3">
           <h1 className="h5 su-page-title mb-1">Complete your profile</h1>
           <p className="text-muted small mb-0">
@@ -241,7 +273,7 @@ export default function OnboardingPage() {
         {error && <div className="alert alert-danger py-2">{error}</div>}
 
         <div className="d-grid">
-          <button className="btn btn-primary" type="submit" disabled={submitting || checking}>
+          <button className="btn btn-primary" type="submit" disabled={submitting || checking || !csrfReady}>
             {submitting ? 'Saving...' : 'Complete profile'}
           </button>
         </div>

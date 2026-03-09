@@ -10,8 +10,10 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
@@ -27,11 +29,15 @@ import org.springframework.security.web.header.writers.XXssProtectionHeaderWrite
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.security.web.csrf.InvalidCsrfTokenException;
+import org.springframework.security.web.csrf.MissingCsrfTokenException;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URLEncoder;
@@ -43,6 +49,9 @@ import java.util.Locale;
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
+
+  private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
+  private static final String CSRF_FAILURE_MESSAGE = "Your secure session token is missing or expired. Refresh the page and try again.";
 
   private final UserDetailsServiceImpl userDetailsService;
   private final OidcProvisioningUserService oidcUserService;
@@ -110,9 +119,10 @@ public class SecurityConfig {
       );
 
     if (csrfEnabled) {
+      CookieCsrfTokenRepository csrfTokenRepository = createCsrfTokenRepository();
       http
         .csrf(csrf -> csrf
-          .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+          .csrfTokenRepository(csrfTokenRepository)
         )
         .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class);
     } else {
@@ -161,6 +171,21 @@ public class SecurityConfig {
           return;
         }
         response.sendRedirect(loginRedirect);
+      }).accessDeniedHandler((request, response, accessDeniedException) -> {
+        if (isApiRequest(request)) {
+          logApiAccessDenied(request, accessDeniedException);
+          writeJsonError(
+            response,
+            HttpStatus.FORBIDDEN,
+            isCsrfFailure(accessDeniedException) ? CSRF_FAILURE_MESSAGE : HttpStatus.FORBIDDEN.getReasonPhrase()
+          );
+          return;
+        }
+
+        if (isCsrfFailure(accessDeniedException)) {
+          logApiAccessDenied(request, accessDeniedException);
+        }
+        response.sendError(HttpStatus.FORBIDDEN.value(), HttpStatus.FORBIDDEN.getReasonPhrase());
       }))
       .logout(logout -> logout
         .logoutUrl("/logout")
@@ -246,6 +271,12 @@ public class SecurityConfig {
     return mode == AuthMode.SSO || mode == AuthMode.AAD || mode == AuthMode.HYBRID;
   }
 
+  private static CookieCsrfTokenRepository createCsrfTokenRepository() {
+    CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+    repository.setCookiePath("/");
+    return repository;
+  }
+
   private static String normalizeBaseUrl(String value) {
     if (!StringUtils.hasText(value)) {
       return "";
@@ -304,6 +335,30 @@ public class SecurityConfig {
     }
 
     return message.length() > 220 ? message.substring(0, 220) + "..." : message;
+  }
+
+  private static boolean isCsrfFailure(AccessDeniedException exception) {
+    return exception instanceof MissingCsrfTokenException || exception instanceof InvalidCsrfTokenException;
+  }
+
+  private static void logApiAccessDenied(HttpServletRequest request, AccessDeniedException exception) {
+    String principal = request.getUserPrincipal() != null ? request.getUserPrincipal().getName() : "anonymous";
+    if (isCsrfFailure(exception)) {
+      log.warn("CSRF rejected {} {} for principal={}", request.getMethod(), request.getRequestURI(), principal);
+      return;
+    }
+    log.warn("Access denied {} {} for principal={}", request.getMethod(), request.getRequestURI(), principal);
+  }
+
+  private static void writeJsonError(HttpServletResponse response, HttpStatus status, String message) throws IOException {
+    response.setStatus(status.value());
+    response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+    response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+    response.getWriter().write("{\"error\":\"" + escapeJson(message) + "\"}");
+  }
+
+  private static String escapeJson(String value) {
+    return value.replace("\\", "\\\\").replace("\"", "\\\"");
   }
 
   private static final class CsrfCookieFilter extends OncePerRequestFilter {
