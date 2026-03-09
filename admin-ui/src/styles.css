@@ -22,7 +22,7 @@ body,
 body {
   background: var(--su-gray-50);
   color: var(--su-text);
-  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
 }
 
 /* ======================== HEADER ======================== */
