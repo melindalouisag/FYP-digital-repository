@@ -60,6 +60,7 @@ export interface SubmissionVersion {
   metadataAuthors?: string | null;
   metadataKeywords?: string | null;
   metadataFaculty?: string | null;
+  metadataStudyProgram?: string | null;
   metadataYear?: number | null;
   abstractText?: string | null;
   status: SubmissionStatus;

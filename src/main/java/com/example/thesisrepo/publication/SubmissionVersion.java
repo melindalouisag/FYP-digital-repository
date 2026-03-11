@@ -43,6 +43,8 @@ public class SubmissionVersion {
   private String metadataAuthors;
   private String metadataKeywords;
   private String metadataFaculty;
+  @Column(name = "metadata_study_program")
+  private String metadataStudyProgram;
   private Integer metadataYear;
 
   @Column(columnDefinition = "text")

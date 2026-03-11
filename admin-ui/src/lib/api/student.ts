@@ -39,6 +39,7 @@ export interface SubmissionMetaPayload {
   metadataAuthors?: string;
   metadataKeywords?: string;
   metadataFaculty?: string;
+  metadataStudyProgram?: string;
   metadataYear?: number;
   abstractText?: string;
 }

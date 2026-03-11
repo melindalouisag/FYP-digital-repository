@@ -4,6 +4,7 @@ import ShellLayout from '../../layout/ShellLayout';
 import { studentApi, type SubmissionMetaPayload } from '../../lib/api/student';
 import { masterApi, type Faculty } from '../../lib/api/master';
 import { ApiError } from '../../lib/api/http';
+import { useAuth } from '../../lib/context/AuthContext';
 import type { CaseDetailPayload, SubmissionVersion } from '../../lib/types/workflow';
 import { canUploadSubmission, formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 
@@ -11,6 +12,7 @@ const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 
 export default function StudentCaseSubmissionPage() {
   const { caseId } = useParams();
+  const { user } = useAuth();
   const [detail, setDetail] = useState<CaseDetailPayload | null>(null);
   const [versions, setVersions] = useState<SubmissionVersion[]>([]);
   const [file, setFile] = useState<File | null>(null);
@@ -19,6 +21,7 @@ export default function StudentCaseSubmissionPage() {
     metadataAuthors: '',
     metadataKeywords: '',
     metadataFaculty: '',
+    metadataStudyProgram: '',
     metadataYear: undefined,
     abstractText: '',
   });
@@ -64,6 +67,14 @@ export default function StudentCaseSubmissionPage() {
     };
     void loadFaculties();
   }, []);
+
+  useEffect(() => {
+    setMeta((prev) => ({
+      ...prev,
+      metadataFaculty: prev.metadataFaculty?.trim() ? prev.metadataFaculty : (user?.faculty ?? ''),
+      metadataStudyProgram: prev.metadataStudyProgram?.trim() ? prev.metadataStudyProgram : (user?.program ?? ''),
+    }));
+  }, [user?.faculty, user?.program]);
 
   const uploadAllowed = useMemo(
     () => (detail ? canUploadSubmission(detail.case.status) : false),
@@ -158,7 +169,7 @@ export default function StudentCaseSubmissionPage() {
               <div className="form-text">Only PDF files, max 25 MB.</div>
             </div>
             <div className="col-md-6">
-              <label className="form-label">Metadata Title</label>
+              <label className="form-label">Title</label>
               <input
                 className="form-control"
                 value={meta.metadataTitle ?? ''}
@@ -166,15 +177,15 @@ export default function StudentCaseSubmissionPage() {
               />
             </div>
             <div className="col-md-6">
-              <label className="form-label">Metadata Authors</label>
+              <label className="form-label">Author(s)</label>
               <input
                 className="form-control"
                 value={meta.metadataAuthors ?? ''}
                 onChange={(event) => setMeta((prev) => ({ ...prev, metadataAuthors: event.target.value }))}
               />
             </div>
-            <div className="col-md-3">
-              <label className="form-label">Metadata Year</label>
+            <div className="col-md-4">
+              <label className="form-label">Year</label>
               <input
                 className="form-control"
                 type="number"
@@ -186,8 +197,8 @@ export default function StudentCaseSubmissionPage() {
                 }
               />
             </div>
-            <div className="col-md-3">
-              <label className="form-label">Metadata Faculty</label>
+            <div className="col-md-4">
+              <label className="form-label">Faculty</label>
               {useFacultySelect ? (
                 <select
                   className="form-select"
@@ -206,6 +217,14 @@ export default function StudentCaseSubmissionPage() {
                   onChange={(event) => setMeta((prev) => ({ ...prev, metadataFaculty: event.target.value }))}
                 />
               )}
+            </div>
+            <div className="col-md-4">
+              <label className="form-label">Study Program</label>
+              <input
+                className="form-control"
+                value={meta.metadataStudyProgram ?? ''}
+                onChange={(event) => setMeta((prev) => ({ ...prev, metadataStudyProgram: event.target.value }))}
+              />
             </div>
             <div className="col-12">
               <label className="form-label">Keywords</label>

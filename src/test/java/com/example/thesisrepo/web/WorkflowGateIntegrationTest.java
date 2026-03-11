@@ -2,6 +2,7 @@ package com.example.thesisrepo.web;
 
 import com.example.thesisrepo.profile.LecturerProfile;
 import com.example.thesisrepo.profile.LecturerProfileRepository;
+import com.example.thesisrepo.profile.StudentProfileRepository;
 import com.example.thesisrepo.publication.*;
 import com.example.thesisrepo.publication.repo.*;
 import com.example.thesisrepo.user.Role;
@@ -19,6 +20,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
+import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasItem;
@@ -44,6 +46,7 @@ class WorkflowGateIntegrationTest {
   @Autowired private ChecklistItemV2Repository checklistItems;
   @Autowired private AuditEventRepository auditEvents;
   @Autowired private LecturerProfileRepository lecturerProfiles;
+  @Autowired private StudentProfileRepository studentProfiles;
   @Autowired private com.example.thesisrepo.service.workflow.PublicationWorkflowGateService workflowGates;
 
   private User student;
@@ -306,6 +309,43 @@ class WorkflowGateIntegrationTest {
         event.getEventType() == AuditEventType.SUBMISSION_UPLOADED
           && event.getSubmissionVersionId() != null
           && event.getActorRole() == Role.STUDENT);
+  }
+
+  @Test
+  void uploadSubmissionStoresStudyProgramMetadata() throws Exception {
+    PublicationCase c = cases.save(PublicationCase.builder()
+      .student(student)
+      .type(PublicationType.THESIS)
+      .status(CaseStatus.REGISTRATION_VERIFIED)
+      .build());
+
+    String faculty = studentProfiles.findByUserId(student.getId()).orElseThrow().getFaculty();
+    String studyProgram = studentProfiles.findByUserId(student.getId()).orElseThrow().getProgram();
+    MockHttpSession session = loginAsRole(Role.STUDENT);
+
+    mockMvc.perform(multipart("/api/student/cases/{caseId}/submissions", c.getId())
+        .file(new MockMultipartFile("file", "submission.pdf", "application/pdf", "%PDF-1.4\ncontent".getBytes(StandardCharsets.UTF_8)))
+        .file(new MockMultipartFile(
+          "meta",
+          "",
+          "application/json",
+          """
+            {
+              "metadataTitle":"Submission Title",
+              "metadataAuthors":"Student One",
+              "metadataKeywords":"repository, thesis",
+              "metadataFaculty":"%s",
+              "metadataStudyProgram":"%s",
+              "metadataYear":2026,
+              "abstractText":"Submission abstract."
+            }
+            """.formatted(faculty, studyProgram).getBytes(StandardCharsets.UTF_8)))
+        .session(session))
+      .andExpect(status().isOk());
+
+    SubmissionVersion stored = versions.findTopByPublicationCaseOrderByVersionNumberDesc(c).orElseThrow();
+    assertThat(stored.getMetadataFaculty()).isEqualTo(faculty);
+    assertThat(stored.getMetadataStudyProgram()).isEqualTo(studyProgram);
   }
 
   @Test

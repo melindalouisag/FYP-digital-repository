@@ -256,6 +256,7 @@ public class StudentController {
       .metadataAuthors(meta != null ? meta.getMetadataAuthors() : null)
       .metadataKeywords(meta != null ? meta.getMetadataKeywords() : null)
       .metadataFaculty(meta != null ? meta.getMetadataFaculty() : null)
+      .metadataStudyProgram(meta != null ? meta.getMetadataStudyProgram() : null)
       .metadataYear(meta != null ? meta.getMetadataYear() : null)
       .abstractText(meta != null ? meta.getAbstractText() : null)
       .checklistTemplate(checklistTemplate)
@@ -495,6 +496,7 @@ public class StudentController {
     private String metadataAuthors;
     private String metadataKeywords;
     private String metadataFaculty;
+    private String metadataStudyProgram;
     private Integer metadataYear;
     private String abstractText;
   }
