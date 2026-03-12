@@ -38,6 +38,16 @@ class UiRedirectControllerTest {
   }
 
   @Test
+  void chooseRoleForwardsToSpaWhenUiBaseUrlMatchesRequestOrigin() {
+    UiRedirectController controller = new UiRedirectController("https://repo.example.com");
+    MockHttpServletRequest request = request("https", "repo.example.com", 443, "/choose-role", "source=sso");
+
+    String route = controller.chooseRole(request);
+
+    assertThat(route).isEqualTo("forward:/index.html?source=sso");
+  }
+
+  @Test
   void loginRedirectsToUiBaseUrlWhenOriginDiffers() {
     UiRedirectController controller = new UiRedirectController("https://ui.example.com");
     MockHttpServletRequest request = request("https", "repo.example.com", 443, "/login", "error=oauth_failed");
@@ -55,6 +65,16 @@ class UiRedirectControllerTest {
     String route = controller.register(request);
 
     assertThat(route).isEqualTo("redirect:https://ui.example.com/register?invitation=abc123");
+  }
+
+  @Test
+  void chooseRoleRedirectsToUiBaseUrlWhenOriginDiffers() {
+    UiRedirectController controller = new UiRedirectController("https://ui.example.com");
+    MockHttpServletRequest request = request("https", "repo.example.com", 443, "/choose-role", "source=sso");
+
+    String route = controller.chooseRole(request);
+
+    assertThat(route).isEqualTo("redirect:https://ui.example.com/choose-role?source=sso");
   }
 
   private static MockHttpServletRequest request(

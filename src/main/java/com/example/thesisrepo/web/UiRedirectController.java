@@ -29,6 +29,11 @@ public class UiRedirectController {
     return routeToUiOrSpa("/register", request);
   }
 
+  @GetMapping("/choose-role")
+  public String chooseRole(HttpServletRequest request) {
+    return routeToUiOrSpa("/choose-role", request);
+  }
+
   private String routeToUiOrSpa(String path, HttpServletRequest request) {
     if (shouldForwardToSpa(request)) {
       return buildForwardTarget(request);
