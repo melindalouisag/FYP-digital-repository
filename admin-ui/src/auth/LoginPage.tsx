@@ -53,7 +53,7 @@ export default function LoginPage() {
             href={SSO_URL}
             style={{ fontSize: "0.95rem", borderRadius: "0.6rem", padding: "0.7rem" }}
           >
-            Sign in with Microsoft
+            Sign in with Sampoerna University email
           </a>
 
           <div className="text-center mt-2">
@@ -67,7 +67,7 @@ export default function LoginPage() {
         <div className="text-center">
           <small className="text-muted">First time here? </small>
           <button className="btn btn-link btn-sm p-0" type="button" onClick={() => navigate("/register")}>
-            Sign up with Microsoft
+            Sign up with Sampoerna University email
           </button>
         </div>
       </div>

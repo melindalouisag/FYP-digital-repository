@@ -6,6 +6,7 @@ interface AuthContextValue {
   user: AuthUser | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; user?: AuthUser; error?: string }>;
+  selectRole: (role: AuthUser['role']) => Promise<AuthUser>;
   logout: () => Promise<void>;
   refetch: () => Promise<AuthUser | null>;
 }
@@ -49,6 +50,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const selectRole = useCallback(async (role: AuthUser['role']) => {
+    const nextUser = await authApi.selectRole(role);
+    setUser(nextUser);
+    return nextUser;
+  }, []);
+
   const logout = useCallback(async () => {
     setUser(null);
     try {
@@ -67,10 +74,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       loading,
       login,
+      selectRole,
       logout,
       refetch,
     }),
-    [login, logout, loading, refetch, user]
+    [login, logout, loading, refetch, selectRole, user]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -78,6 +78,8 @@ public class StudentController {
   @PostMapping("/registrations")
   public ResponseEntity<?> createRegistration(@RequestBody CreateRegistrationRequest req) {
     User me = currentUser.requireCurrentUser();
+    ensureStudentCanCreateRegistration(me, req.getType());
+
     StudentProfile studentProfile = studentProfiles.findByUserId(me.getId()).orElse(null);
     if (studentProfile == null || normalize(studentProfile.getProgram()).isBlank()) {
       throw new ResponseStatusException(BAD_REQUEST, "Student profile must include study program before selecting supervisors");
@@ -86,28 +88,7 @@ public class StudentController {
     String studentFaculty = normalize(studentProfile != null ? studentProfile.getFaculty() : null);
 
     User supervisor = resolveRequestedSupervisor(req);
-    if (supervisor.getRole() != Role.LECTURER) {
-      throw new ResponseStatusException(BAD_REQUEST, "Supervisor must be a lecturer.");
-    }
-
-    // Validate study program match via staff_registry or lecturer profile
-    StaffRegistry staffEntry = staffRegistry.findByEmailIgnoreCase(supervisor.getEmail()).orElse(null);
-    LecturerProfile lecturerProfile = lecturerProfiles.findByUserId(supervisor.getId()).orElse(null);
-
-    String supervisorProgram = "";
-    if (staffEntry != null && staffEntry.getStudyProgram() != null) {
-      supervisorProgram = normalize(staffEntry.getStudyProgram());
-    } else if (lecturerProfile != null && lecturerProfile.getDepartment() != null) {
-      supervisorProgram = normalize(lecturerProfile.getDepartment());
-    }
-
-    if (supervisorProgram.isBlank()) {
-      throw new ResponseStatusException(BAD_REQUEST, "Supervisor study program is not configured.");
-    }
-
-    if (!normalizeStudyProgram(supervisorProgram).equals(normalizeStudyProgram(studentProgram))) {
-      throw new ResponseStatusException(BAD_REQUEST, "Supervisor must be from the same study program.");
-    }
+    validateSupervisorForStudent(supervisor, studentProgram);
 
     PublicationCase c = cases.save(PublicationCase.builder()
       .student(me)
@@ -142,9 +123,16 @@ public class StudentController {
   public ResponseEntity<?> updateRegistration(@PathVariable Long caseId, @RequestBody UpdateRegistrationRequest req) {
     PublicationCase c = ownedCase(caseId);
     workflowGates.ensureRegistrationEditable(c);
+    User me = currentUser.requireCurrentUser();
+    StudentProfile studentProfile = studentProfiles.findByUserId(me.getId()).orElse(null);
+    if (studentProfile == null || normalize(studentProfile.getProgram()).isBlank()) {
+      throw new ResponseStatusException(BAD_REQUEST, "Student profile must include study program before selecting supervisors");
+    }
 
     PublicationRegistration registration = registrations.findByPublicationCase(c)
       .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Registration not found"));
+    User supervisor = resolveRequestedSupervisor(req);
+    validateSupervisorForStudent(supervisor, normalize(studentProfile.getProgram()));
 
     registration.setTitle(req.getTitle());
     registration.setYear(req.getYear());
@@ -152,11 +140,20 @@ public class StudentController {
     registration.setFaculty(req.getFaculty());
     registration.setStudentIdNumber(req.getStudentIdNumber());
     registration.setAuthorName(req.getAuthorName());
+
+    if (c.getStatus() == CaseStatus.REGISTRATION_PENDING) {
+      clearRegistrationSubmissionState(registration);
+      resetSupervisorDecisions(c);
+      c.setStatus(CaseStatus.REGISTRATION_DRAFT);
+      cases.save(c);
+    }
+
     registrations.save(registration);
+    replaceSupervisorAssignment(c, supervisor);
 
     auditEvents.log(
       c.getId(),
-      currentUser.requireCurrentUser(),
+      me,
       Role.STUDENT,
       AuditEventType.REGISTRATION_DRAFT_SAVED,
       "Registration draft updated"
@@ -185,6 +182,7 @@ public class StudentController {
     });
     caseSupervisors.saveAll(supervisors);
 
+    clearRegistrationSubmissionState(registration);
     registration.setPermissionAcceptedAt(Instant.now());
     registration.setSubmittedAt(Instant.now());
     registrations.save(registration);
@@ -213,6 +211,7 @@ public class StudentController {
     Map<String, Object> payload = new LinkedHashMap<>();
     payload.put("case", toCaseSummary(c));
     payload.put("registration", reg);
+    payload.put("supervisors", caseSupervisors.findByPublicationCase(c).stream().map(this::toAssignedSupervisor).toList());
     payload.put("versions", versions);
     payload.put("comments", caseComments);
     payload.put("clearance", clearances.findByPublicationCase(c).orElse(null));
@@ -353,6 +352,131 @@ public class StudentController {
     );
   }
 
+  private AssignedSupervisorDto toAssignedSupervisor(CaseSupervisor supervisor) {
+    User lecturer = supervisor.getLecturer();
+    LecturerProfile profile = lecturerProfiles.findByUserId(lecturer.getId()).orElse(null);
+    String name = profile != null && profile.getName() != null && !profile.getName().isBlank()
+      ? profile.getName()
+      : lecturer.getEmail();
+    return new AssignedSupervisorDto(
+      lecturer.getId(),
+      lecturer.getEmail(),
+      name
+    );
+  }
+
+  private void ensureStudentCanCreateRegistration(User student, PublicationType type) {
+    if (type != PublicationType.THESIS) {
+      return;
+    }
+
+    List<PublicationCase> thesisCases = cases.findByStudentAndTypeOrderByUpdatedAtDesc(student, PublicationType.THESIS);
+    if (thesisCases.isEmpty()) {
+      return;
+    }
+
+    PublicationCase canonical = pickCanonicalThesisCase(thesisCases);
+    if (canonical != null) {
+      throw new ResponseStatusException(
+        CONFLICT,
+        "You already have a THESIS registration case (case #" + canonical.getId() + "). Edit the existing case instead of creating a new one."
+      );
+    }
+
+    throw new ResponseStatusException(
+      CONFLICT,
+      "You already have THESIS registration cases. Use an existing case instead of creating a new one."
+    );
+  }
+
+  private PublicationCase pickCanonicalThesisCase(List<PublicationCase> thesisCases) {
+    return thesisCases.stream()
+      .min(Comparator.comparingInt((PublicationCase c) -> thesisCasePriority(c.getStatus()))
+        .thenComparing(PublicationCase::getUpdatedAt, Comparator.nullsLast(Comparator.reverseOrder()))
+        .thenComparing(PublicationCase::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+      .orElse(null);
+  }
+
+  private static int thesisCasePriority(CaseStatus status) {
+    if (status == CaseStatus.REGISTRATION_VERIFIED) {
+      return 0;
+    }
+    if (status == CaseStatus.REGISTRATION_APPROVED) {
+      return 1;
+    }
+    if (status == CaseStatus.REGISTRATION_PENDING) {
+      return 2;
+    }
+    if (status == CaseStatus.REGISTRATION_DRAFT) {
+      return 3;
+    }
+    if (status == CaseStatus.REJECTED) {
+      return 4;
+    }
+    return 5;
+  }
+
+  private void validateSupervisorForStudent(User supervisor, String studentProgram) {
+    if (supervisor.getRole() != Role.LECTURER) {
+      throw new ResponseStatusException(BAD_REQUEST, "Supervisor must be a lecturer.");
+    }
+
+    StaffRegistry staffEntry = staffRegistry.findByEmailIgnoreCase(supervisor.getEmail()).orElse(null);
+    LecturerProfile lecturerProfile = lecturerProfiles.findByUserId(supervisor.getId()).orElse(null);
+
+    String supervisorProgram = "";
+    if (staffEntry != null && staffEntry.getStudyProgram() != null) {
+      supervisorProgram = normalize(staffEntry.getStudyProgram());
+    } else if (lecturerProfile != null && lecturerProfile.getDepartment() != null) {
+      supervisorProgram = normalize(lecturerProfile.getDepartment());
+    }
+
+    if (supervisorProgram.isBlank()) {
+      throw new ResponseStatusException(BAD_REQUEST, "Supervisor study program is not configured.");
+    }
+
+    if (!normalizeStudyProgram(supervisorProgram).equals(normalizeStudyProgram(studentProgram))) {
+      throw new ResponseStatusException(BAD_REQUEST, "Supervisor must be from the same study program.");
+    }
+  }
+
+  private void replaceSupervisorAssignment(PublicationCase publicationCase, User supervisor) {
+    List<CaseSupervisor> existing = caseSupervisors.findByPublicationCase(publicationCase);
+    if (existing.size() == 1 && existing.get(0).getLecturer().getId().equals(supervisor.getId())) {
+      return;
+    }
+
+    if (!existing.isEmpty()) {
+      caseSupervisors.deleteByPublicationCase(publicationCase);
+    }
+
+    caseSupervisors.save(CaseSupervisor.builder()
+      .publicationCase(publicationCase)
+      .lecturer(supervisor)
+      .build());
+  }
+
+  private void clearRegistrationSubmissionState(PublicationRegistration registration) {
+    registration.setSubmittedAt(null);
+    registration.setPermissionAcceptedAt(null);
+    registration.setSupervisorDecisionAt(null);
+    registration.setSupervisorDecisionNote(null);
+  }
+
+  private void resetSupervisorDecisions(PublicationCase publicationCase) {
+    List<CaseSupervisor> supervisors = caseSupervisors.findByPublicationCase(publicationCase);
+    if (supervisors.isEmpty()) {
+      return;
+    }
+
+    supervisors.forEach(supervisor -> {
+      supervisor.setApprovedAt(null);
+      supervisor.setRejectedAt(null);
+      supervisor.setDecisionNote(null);
+    });
+    caseSupervisors.saveAll(supervisors);
+  }
+
   private static String normalize(String value) {
     return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
   }
@@ -371,18 +495,41 @@ public class StudentController {
    * user hasn't logged in yet, auto-provision a User account for them.
    */
   private User resolveRequestedSupervisor(CreateRegistrationRequest req) {
-    String supervisorEmail = normalize(req.getSupervisorEmail());
+    return resolveRequestedSupervisor(
+      req.getSupervisorEmail(),
+      req.getSupervisorUserId(),
+      req.getSupervisorUserIds(),
+      req.getSupervisorEmails()
+    );
+  }
+
+  private User resolveRequestedSupervisor(UpdateRegistrationRequest req) {
+    return resolveRequestedSupervisor(
+      req.getSupervisorEmail(),
+      req.getSupervisorUserId(),
+      req.getSupervisorUserIds(),
+      req.getSupervisorEmails()
+    );
+  }
+
+  private User resolveRequestedSupervisor(
+    String requestedSupervisorEmail,
+    Long requestedSupervisorUserId,
+    List<Long> requestedSupervisorUserIds,
+    List<String> requestedSupervisorEmails
+  ) {
+    String supervisorEmail = normalize(requestedSupervisorEmail);
     if (!supervisorEmail.isBlank()) {
       return findOrProvisionLecturer(supervisorEmail);
     }
 
-    if (req.getSupervisorUserId() != null) {
-      return users.findById(req.getSupervisorUserId())
+    if (requestedSupervisorUserId != null) {
+      return users.findById(requestedSupervisorUserId)
         .orElseThrow(() -> new ResponseStatusException(BAD_REQUEST, "Supervisor not found."));
     }
 
-    if (req.getSupervisorEmails() != null) {
-      List<String> supervisorEmails = req.getSupervisorEmails().stream()
+    if (requestedSupervisorEmails != null) {
+      List<String> supervisorEmails = requestedSupervisorEmails.stream()
         .map(StudentController::normalize)
         .filter(email -> !email.isBlank())
         .distinct()
@@ -396,8 +543,8 @@ public class StudentController {
       return findOrProvisionLecturer(supervisorEmails.get(0));
     }
 
-    if (req.getSupervisorUserIds() != null) {
-      List<Long> supervisorUserIds = req.getSupervisorUserIds().stream()
+    if (requestedSupervisorUserIds != null) {
+      List<Long> supervisorUserIds = requestedSupervisorUserIds.stream()
         .filter(Objects::nonNull)
         .distinct()
         .toList();
@@ -429,6 +576,7 @@ public class StudentController {
       User newUser = users.save(User.builder()
         .email(email)
         .role(Role.LECTURER)
+        .roles(Set.of(Role.LECTURER))
         .passwordHash(passwordEncoder.encode(java.util.UUID.randomUUID().toString()))
         .authProvider(AuthProvider.AAD)
         .emailVerified(true)
@@ -449,6 +597,12 @@ public class StudentController {
     String name,
     String faculty,
     String department
+  ) {}
+
+  public record AssignedSupervisorDto(
+    Long id,
+    String email,
+    String name
   ) {}
 
   @Data

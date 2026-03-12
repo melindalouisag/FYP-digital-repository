@@ -4,7 +4,9 @@ import ShellLayout from '../../layout/ShellLayout';
 import { studentApi, type SubmissionMetaPayload } from '../../lib/api/student';
 import { masterApi, type Faculty } from '../../lib/api/master';
 import { ApiError } from '../../lib/api/http';
+import KeywordChipInput from '../../lib/components/KeywordChipInput';
 import { useAuth } from '../../lib/context/AuthContext';
+import { joinKeywordTokens, splitKeywordString } from '../../lib/keywords';
 import type { CaseDetailPayload, SubmissionVersion } from '../../lib/types/workflow';
 import { canUploadSubmission, formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 
@@ -25,6 +27,7 @@ export default function StudentCaseSubmissionPage() {
     metadataYear: undefined,
     abstractText: '',
   });
+  const [keywordTokens, setKeywordTokens] = useState<string[]>([]);
   const [faculties, setFaculties] = useState<Faculty[]>([]);
   const [facultyLoadError, setFacultyLoadError] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -71,16 +74,47 @@ export default function StudentCaseSubmissionPage() {
   useEffect(() => {
     setMeta((prev) => ({
       ...prev,
-      metadataFaculty: prev.metadataFaculty?.trim() ? prev.metadataFaculty : (user?.faculty ?? ''),
-      metadataStudyProgram: prev.metadataStudyProgram?.trim() ? prev.metadataStudyProgram : (user?.program ?? ''),
+      metadataTitle: prev.metadataTitle?.trim()
+        ? prev.metadataTitle
+        : (detail?.registration?.title ?? versions[0]?.metadataTitle ?? ''),
+      metadataAuthors: prev.metadataAuthors?.trim()
+        ? prev.metadataAuthors
+        : (detail?.registration?.authorName ?? versions[0]?.metadataAuthors ?? ''),
+      metadataFaculty: prev.metadataFaculty?.trim()
+        ? prev.metadataFaculty
+        : (detail?.registration?.faculty ?? user?.faculty ?? versions[0]?.metadataFaculty ?? ''),
+      metadataStudyProgram: prev.metadataStudyProgram?.trim()
+        ? prev.metadataStudyProgram
+        : (user?.program ?? versions[0]?.metadataStudyProgram ?? ''),
+      metadataYear: prev.metadataYear ?? detail?.registration?.year ?? versions[0]?.metadataYear ?? undefined,
+      abstractText: prev.abstractText?.trim() ? prev.abstractText : (versions[0]?.abstractText ?? ''),
     }));
-  }, [user?.faculty, user?.program]);
+    setKeywordTokens((prev) => (prev.length > 0 ? prev : splitKeywordString(versions[0]?.metadataKeywords)));
+  }, [
+    detail?.registration?.authorName,
+    detail?.registration?.faculty,
+    detail?.registration?.title,
+    detail?.registration?.year,
+    user?.faculty,
+    user?.program,
+    versions,
+  ]);
 
   const uploadAllowed = useMemo(
     () => (detail ? canUploadSubmission(detail.case.status) : false),
     [detail]
   );
+  const hasPreviousUploads = versions.length > 0;
   const useFacultySelect = faculties.length > 0 && !facultyLoadError;
+
+  useEffect(() => {
+    const joinedKeywords = joinKeywordTokens(keywordTokens);
+    setMeta((prev) => (
+      prev.metadataKeywords === joinedKeywords
+        ? prev
+        : { ...prev, metadataKeywords: joinedKeywords }
+    ));
+  }, [keywordTokens]);
 
   const validateFile = (candidate: File | null): string => {
     if (!candidate) {
@@ -113,7 +147,7 @@ export default function StudentCaseSubmissionPage() {
     setMessage('');
     try {
       await studentApi.uploadSubmission(Number(caseId), file as File, meta);
-      setMessage('Submission uploaded successfully.');
+      setMessage(hasPreviousUploads ? 'Resubmission submitted successfully.' : 'Submission submitted successfully.');
       setFile(null);
       await load();
     } catch (err) {
@@ -177,7 +211,7 @@ export default function StudentCaseSubmissionPage() {
               />
             </div>
             <div className="col-md-6">
-              <label className="form-label">Author(s)</label>
+              <label className="form-label">Author</label>
               <input
                 className="form-control"
                 value={meta.metadataAuthors ?? ''}
@@ -228,10 +262,11 @@ export default function StudentCaseSubmissionPage() {
             </div>
             <div className="col-12">
               <label className="form-label">Keywords</label>
-              <input
-                className="form-control"
-                value={meta.metadataKeywords ?? ''}
-                onChange={(event) => setMeta((prev) => ({ ...prev, metadataKeywords: event.target.value }))}
+              <KeywordChipInput
+                values={keywordTokens}
+                onChange={setKeywordTokens}
+                disabled={!uploadAllowed || uploading}
+                placeholder="Type one keyword and press Enter"
               />
             </div>
             <div className="col-12">
@@ -245,7 +280,9 @@ export default function StudentCaseSubmissionPage() {
             </div>
             <div className="col-12">
               <button className="btn btn-primary" onClick={() => void onUpload()} disabled={!uploadAllowed || uploading}>
-                {uploading ? 'Uploading...' : 'Upload Version'}
+                {uploading
+                  ? (hasPreviousUploads ? 'Resubmitting...' : 'Submitting...')
+                  : (hasPreviousUploads ? 'Resubmit' : 'Submit')}
               </button>
             </div>
           </div>

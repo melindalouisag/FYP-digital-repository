@@ -11,6 +11,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -19,6 +20,7 @@ public class AuthProvisioningService {
   private final UserRepository users;
   private final StaffRegistryRepository staffRegistry;
   private final PasswordEncoder passwordEncoder;
+  private final UserRoleService userRoles;
 
   private static final String STUDENT_DOMAIN = "@my.sampoernauniversity.ac.id";
   private static final String STAFF_DOMAIN = "@sampoernauniversity.ac.id";
@@ -26,11 +28,13 @@ public class AuthProvisioningService {
   public AuthProvisioningService(
     UserRepository users,
     StaffRegistryRepository staffRegistry,
-    PasswordEncoder passwordEncoder
+    PasswordEncoder passwordEncoder,
+    UserRoleService userRoles
   ) {
     this.users = users;
     this.staffRegistry = staffRegistry;
     this.passwordEncoder = passwordEncoder;
+    this.userRoles = userRoles;
   }
 
   public ProvisioningResult provision(OidcUser oidcUser) {
@@ -44,6 +48,7 @@ public class AuthProvisioningService {
     User user = users.findByEmail(email).orElseGet(() -> users.save(User.builder()
       .email(email)
       .role(inferredRole)
+      .roles(Set.of(inferredRole))
       .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString() + UUID.randomUUID()))
       .authProvider(AuthProvider.AAD)
       .externalSubject(oidcUser.getSubject())
@@ -51,16 +56,12 @@ public class AuthProvisioningService {
       .lastLoginAt(Instant.now())
       .build()));
 
-    // Always enforce role from staff registry (in case role changed in DB)
-    if (user.getRole() != inferredRole) {
-      user.setRole(inferredRole);
-    }
-
     user.setAuthProvider(AuthProvider.AAD);
     user.setExternalSubject(oidcUser.getSubject());
     user.setEmailVerified(true);
     user.setLastLoginAt(Instant.now());
     users.save(user);
+    userRoles.syncAssignedRoles(user, userRoles.resolveAvailableRoles(user));
 
     return new ProvisioningResult(user, emailClaim.key());
   }

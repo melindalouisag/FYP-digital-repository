@@ -48,8 +48,9 @@ public class PublicationWorkflowGateService {
 
   public void ensureRegistrationEditable(PublicationCase c) {
     if (!(c.getStatus() == CaseStatus.REGISTRATION_DRAFT
+      || c.getStatus() == CaseStatus.REGISTRATION_PENDING
       || c.getStatus() == CaseStatus.REJECTED)) {
-      throw new ResponseStatusException(CONFLICT, "Registration can only be edited while draft/rejected");
+      throw new ResponseStatusException(CONFLICT, "Registration can only be edited while draft, pending, or rejected");
     }
   }
 

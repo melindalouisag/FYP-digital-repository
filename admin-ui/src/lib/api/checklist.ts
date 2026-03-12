@@ -39,7 +39,15 @@ export const checklistApi = {
     return getJson(`/api/admin/checklists/templates/${templateId}`);
   },
 
-  saveItems(templateId: number, items: ChecklistEditorItem[]): Promise<{ ok: boolean }> {
+  acquireLock(templateId: number): Promise<{ templateId: number; locked: boolean; lock: ChecklistTemplateResponse['editLock'] }> {
+    return postJson(`/api/admin/checklists/templates/${templateId}/lock`);
+  },
+
+  releaseLock(templateId: number): Promise<{ templateId: number; released: boolean }> {
+    return deleteJson(`/api/admin/checklists/templates/${templateId}/lock`);
+  },
+
+  saveItems(templateId: number, items: ChecklistEditorItem[]): Promise<{ ok: boolean; lockReleased?: boolean }> {
     return putJson(`/api/admin/checklists/templates/${templateId}/items`, items);
   },
 

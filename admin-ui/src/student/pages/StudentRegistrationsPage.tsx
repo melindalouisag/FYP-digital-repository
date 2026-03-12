@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
 import { studentApi } from '../../lib/api/student';
 import type { CaseSummary } from '../../lib/types/workflow';
-import { canSubmitRegistration, formatStatus, statusBadgeClass } from '../../lib/workflowUi';
+import { canEditRegistration, canSubmitRegistration, formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 
 export default function StudentRegistrationsPage() {
   const navigate = useNavigate();
@@ -83,6 +83,7 @@ export default function StudentRegistrationsPage() {
             <tbody>
               {cases.map((c) => {
                 const canSubmit = canSubmitRegistration(c.status);
+                const canEdit = canEditRegistration(c.status);
 
                 return (
                   <tr key={c.id}>
@@ -99,6 +100,15 @@ export default function StudentRegistrationsPage() {
                         <button className="btn btn-outline-primary btn-sm" style={{ borderRadius: '999px' }} onClick={() => navigate(`/student/cases/${c.id}`)}>
                           Open
                         </button>
+                        {canEdit && (
+                          <button
+                            className="btn btn-outline-secondary btn-sm"
+                            style={{ borderRadius: '999px' }}
+                            onClick={() => navigate(`/student/registrations/${c.id}/edit`)}
+                          >
+                            Edit Registration
+                          </button>
+                        )}
                         <button
                           className="btn btn-primary btn-sm"
                           style={{ borderRadius: '999px' }}

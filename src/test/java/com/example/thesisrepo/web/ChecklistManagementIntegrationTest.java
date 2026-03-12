@@ -4,6 +4,7 @@ import com.example.thesisrepo.publication.ChecklistScope;
 import com.example.thesisrepo.publication.ChecklistTemplate;
 import com.example.thesisrepo.publication.repo.ChecklistItemV2Repository;
 import com.example.thesisrepo.publication.repo.ChecklistTemplateRepository;
+import com.example.thesisrepo.user.AuthProvider;
 import com.example.thesisrepo.user.Role;
 import com.example.thesisrepo.user.User;
 import com.example.thesisrepo.user.UserRepository;
@@ -17,6 +18,9 @@ import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.Set;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -34,6 +38,7 @@ class ChecklistManagementIntegrationTest {
   @Autowired private ChecklistTemplateRepository checklistTemplates;
   @Autowired private ChecklistItemV2Repository checklistItems;
   @Autowired private UserRepository users;
+  @Autowired private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
   @Test
   void createEmptyCreatesVersionOneDraftWhenTypeHasNoTemplates() throws Exception {
@@ -91,6 +96,9 @@ class ChecklistManagementIntegrationTest {
       .andReturn().getResponse().getContentAsString();
     Long draftId = objectMapper.readTree(cloneBody).get("id").asLong();
 
+    mockMvc.perform(post("/api/admin/checklists/templates/{templateId}/lock", draftId).session(admin))
+      .andExpect(status().isOk());
+
     mockMvc.perform(put("/api/admin/checklists/templates/{templateId}/items", draftId)
         .session(admin)
         .contentType(MediaType.APPLICATION_JSON)
@@ -126,6 +134,36 @@ class ChecklistManagementIntegrationTest {
     assertThat(checklistTemplates.findById(draftId)).isEmpty();
   }
 
+  @Test
+  void draftLockBlocksSecondAdminUntilFirstAdminSaves() throws Exception {
+    MockHttpSession firstAdmin = loginAsAdmin();
+    User secondAdmin = createAdminUser("test-only-second-admin-password");
+    MockHttpSession secondAdminSession = login(secondAdmin.getEmail(), "test-only-second-admin-password");
+
+    String cloneBody = mockMvc.perform(post("/api/admin/checklists/THESIS/new-draft").session(firstAdmin))
+      .andExpect(status().isOk())
+      .andReturn().getResponse().getContentAsString();
+    Long draftId = objectMapper.readTree(cloneBody).get("id").asLong();
+
+    mockMvc.perform(post("/api/admin/checklists/templates/{templateId}/lock", draftId).session(firstAdmin))
+      .andExpect(status().isOk());
+
+    mockMvc.perform(post("/api/admin/checklists/templates/{templateId}/lock", draftId).session(secondAdminSession))
+      .andExpect(status().isConflict())
+      .andExpect(result -> assertThat(result.getResponse().getContentAsString()).contains(emailForRole(Role.ADMIN)));
+
+    mockMvc.perform(put("/api/admin/checklists/templates/{templateId}/items", draftId)
+        .session(firstAdmin)
+        .contentType(MediaType.APPLICATION_JSON)
+        .content("""
+          [{"orderIndex":1,"section":"Locked","itemText":"First admin item","guidanceText":"Guide","isRequired":true}]
+          """))
+      .andExpect(status().isOk());
+
+    mockMvc.perform(post("/api/admin/checklists/templates/{templateId}/lock", draftId).session(secondAdminSession))
+      .andExpect(status().isOk());
+  }
+
   private ChecklistTemplate ensureActiveTemplate(ChecklistScope scope) {
     return checklistTemplates.findFirstByPublicationTypeAndIsActiveTrue(scope)
       .orElseGet(() -> {
@@ -147,10 +185,14 @@ class ChecklistManagementIntegrationTest {
   }
 
   private MockHttpSession loginAsAdmin() throws Exception {
+    return login(emailForRole(Role.ADMIN), "test-only-admin-password");
+  }
+
+  private MockHttpSession login(String username, String password) throws Exception {
     return (MockHttpSession) mockMvc.perform(post("/api/auth/login")
         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-        .param("username", emailForRole(Role.ADMIN))
-        .param("password", "test-only-admin-password"))
+        .param("username", username)
+        .param("password", password))
       .andExpect(status().isOk())
       .andReturn()
       .getRequest()
@@ -162,5 +204,16 @@ class ChecklistManagementIntegrationTest {
       .findFirst()
       .map(User::getEmail)
       .orElseThrow(() -> new IllegalStateException("No seeded user found for role " + role));
+  }
+
+  private User createAdminUser(String rawPassword) {
+    return users.save(User.builder()
+      .email("admin+" + UUID.randomUUID() + "@sampoernauniversity.ac.id")
+      .passwordHash(passwordEncoder.encode(rawPassword))
+      .role(Role.ADMIN)
+      .roles(Set.of(Role.ADMIN))
+      .authProvider(AuthProvider.LOCAL)
+      .emailVerified(true)
+      .build());
   }
 }

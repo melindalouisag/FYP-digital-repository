@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.Instant;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Entity @Table(name="users")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
@@ -37,4 +39,11 @@ public class User {
 
   @Column(name = "last_login_at")
   private Instant lastLoginAt;
+
+  @Builder.Default
+  @ElementCollection(fetch = FetchType.EAGER)
+  @CollectionTable(name = "user_role_assignment", joinColumns = @JoinColumn(name = "user_id"))
+  @Enumerated(EnumType.STRING)
+  @Column(name = "role", nullable = false)
+  private Set<Role> roles = new LinkedHashSet<>();
 }

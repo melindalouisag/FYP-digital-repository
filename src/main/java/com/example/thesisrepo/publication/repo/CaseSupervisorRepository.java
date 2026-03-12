@@ -15,6 +15,7 @@ public interface CaseSupervisorRepository extends JpaRepository<CaseSupervisor, 
   List<CaseSupervisor> findByPublicationCase(PublicationCase publicationCase);
   boolean existsByPublicationCaseAndLecturer(PublicationCase publicationCase, User lecturer);
   Optional<CaseSupervisor> findByPublicationCaseAndLecturer(PublicationCase publicationCase, User lecturer);
+  void deleteByPublicationCase(PublicationCase publicationCase);
 
   @Query("""
     select cs from CaseSupervisor cs

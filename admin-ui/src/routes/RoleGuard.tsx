@@ -19,6 +19,10 @@ export function RoleGuard({
     return <Navigate to="/login" replace />;
   }
 
+  if (user.roleSelectionRequired) {
+    return <Navigate to="/choose-role" replace />;
+  }
+
   if (!allowedRoles.includes(user.role)) {
     const defaultPath =
       user.role === 'STUDENT'

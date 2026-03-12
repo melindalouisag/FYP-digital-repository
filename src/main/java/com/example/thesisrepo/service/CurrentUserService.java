@@ -23,7 +23,7 @@ public class CurrentUserService {
       throw new IllegalStateException("No authenticated user");
     }
     String email = auth.getName().toLowerCase(Locale.ROOT);
-    return users.findByEmail(email)
+    return users.findByEmailIgnoreCase(email)
       .orElseThrow(() -> new IllegalStateException("User not found: " + email));
   }
 }

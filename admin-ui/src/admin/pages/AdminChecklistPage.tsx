@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import ShellLayout from '../../layout/ShellLayout';
 import { checklistApi, type ChecklistEditorItem, type ChecklistTemplateSummary } from '../../lib/api/checklist';
+import { ApiError } from '../../lib/api/http';
 import type { ChecklistTemplateResponse, PublicationType } from '../../lib/types/workflow';
 
 type ItemDraft = {
@@ -47,6 +48,15 @@ function newItem(partial?: Partial<ItemDraft>): ItemDraft {
   };
 }
 
+function readLockFromError(error: unknown): ChecklistTemplateResponse['editLock'] {
+  if (!(error instanceof ApiError) || !error.details || typeof error.details !== 'object') {
+    return null;
+  }
+
+  const maybeLock = (error.details as { lock?: ChecklistTemplateResponse['editLock'] }).lock;
+  return maybeLock ?? null;
+}
+
 export default function AdminChecklistPage() {
   const [templatesByType, setTemplatesByType] = useState<TemplateMap>(emptyTemplates());
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
@@ -82,6 +92,13 @@ export default function AdminChecklistPage() {
 
   const loadTemplateDetail = async (templateId: number | null) => {
     if (!templateId) {
+      if (selectedTemplateId && selectedTemplate?.editLock?.ownedByCurrentUser) {
+        try {
+          await checklistApi.releaseLock(selectedTemplateId);
+        } catch {
+          // Ignore release failures while clearing the editor state.
+        }
+      }
       setSelectedTemplateId(null);
       setSelectedTemplate(null);
       setCategories([]);
@@ -120,9 +137,61 @@ export default function AdminChecklistPage() {
     }
   };
 
+  const openTemplate = async (template: ChecklistTemplateSummary, requestEditLock = !template.active) => {
+    if (selectedTemplateId && selectedTemplateId !== template.id && selectedTemplate?.editLock?.ownedByCurrentUser) {
+      try {
+        await checklistApi.releaseLock(selectedTemplateId);
+      } catch {
+        // Ignore release failures during navigation between drafts.
+      }
+    }
+
+    setError('');
+    if (requestEditLock) {
+      try {
+        await checklistApi.acquireLock(template.id);
+      } catch (err) {
+        const lock = readLockFromError(err);
+        if (lock) {
+          setError(err instanceof Error ? err.message : 'This draft is currently locked.');
+        }
+      }
+    }
+
+    await loadTemplateDetail(template.id);
+  };
+
   useEffect(() => {
     void loadTemplates();
   }, []);
+
+  useEffect(() => {
+    if (!selectedTemplateId || !selectedTemplate?.editLock?.ownedByCurrentUser || selectedTemplate.template.active) {
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
+      void checklistApi.acquireLock(selectedTemplateId)
+        .then((response) => {
+          setSelectedTemplate((prev) => (
+            prev
+              ? { ...prev, editLock: response.lock ?? null }
+              : prev
+          ));
+        })
+        .catch(() => {
+          // The next explicit action will surface the lock error.
+        });
+    }, 60_000);
+
+    return () => window.clearInterval(intervalId);
+  }, [selectedTemplate?.editLock?.ownedByCurrentUser, selectedTemplate?.template.active, selectedTemplateId]);
+
+  useEffect(() => () => {
+    if (selectedTemplateId && selectedTemplate?.editLock?.ownedByCurrentUser) {
+      void checklistApi.releaseLock(selectedTemplateId);
+    }
+  }, [selectedTemplate?.editLock?.ownedByCurrentUser, selectedTemplateId]);
 
   const focusEditor = () => {
     if (!editorRef.current) return;
@@ -153,7 +222,7 @@ export default function AdminChecklistPage() {
     runMutation(async () => {
       const created = await checklistApi.newDraft(type);
       await loadTemplates();
-      await loadTemplateDetail(created.id);
+      await openTemplate(created, true);
       focusEditor();
     }, `${type} template draft created.`);
 
@@ -163,7 +232,15 @@ export default function AdminChecklistPage() {
     await runMutation(async () => {
       const created = await checklistApi.newVersion(type);
       await loadTemplates();
-      await loadTemplateDetail(created.templateId);
+      const draft = {
+        id: created.templateId,
+        publicationType: type,
+        version: created.version,
+        active: false,
+        createdAt: undefined,
+        itemCount: 0,
+      };
+      await openTemplate(draft, true);
       focusEditor();
     }, `${type} template draft created.`);
   };
@@ -303,6 +380,10 @@ export default function AdminChecklistPage() {
       setError('Cannot edit active template; create a new draft first.');
       return false;
     }
+    if (!selectedTemplate.editLock?.ownedByCurrentUser) {
+      setError('Start editing this draft first to acquire the lock.');
+      return false;
+    }
 
     const payload = validateAndBuildPayload();
     if (!payload) {
@@ -313,7 +394,7 @@ export default function AdminChecklistPage() {
       await checklistApi.saveItems(selectedTemplateId, payload);
       await loadTemplateDetail(selectedTemplateId);
       await loadTemplates();
-    }, 'Draft checklist items saved.');
+    }, 'Draft checklist items saved. Editing lock released.');
   };
 
   const activateTemplateFromTable = (templateId: number) => {
@@ -364,7 +445,9 @@ export default function AdminChecklistPage() {
     }, 'Template version deleted.');
   };
 
-  const isReadOnly = selectedTemplate?.template.active ?? false;
+  const hasOwnedLock = Boolean(selectedTemplate?.editLock?.ownedByCurrentUser);
+  const lockedByOther = Boolean(selectedTemplate?.editLock && !selectedTemplate.editLock.ownedByCurrentUser);
+  const isReadOnly = selectedTemplate ? (selectedTemplate.template.active || !hasOwnedLock) : false;
 
   return (
     <ShellLayout title="Templates" subtitle="Create draft versions, edit items safely, then activate">
@@ -414,8 +497,8 @@ export default function AdminChecklistPage() {
                       <td>{template.createdAt ? new Date(template.createdAt).toLocaleString() : 'N/A'}</td>
                       <td className="text-end">
                         <div className="btn-group btn-group-sm">
-                          <button className="btn btn-outline-primary" onClick={() => void loadTemplateDetail(template.id)}>
-                            Edit Items
+                          <button className="btn btn-outline-primary" onClick={() => void openTemplate(template, !template.active)}>
+                            {template.active ? 'View Items' : 'Edit Items'}
                           </button>
                           <button className="btn btn-danger" onClick={() => void deleteTemplate(template.id)} disabled={isMutating}>
                             Delete
@@ -450,22 +533,69 @@ export default function AdminChecklistPage() {
                 {selectedTemplate.template.active && <span className="badge bg-success ms-1">ACTIVE</span>}
                 {!selectedTemplate.template.active && <span className="badge bg-secondary ms-1">DRAFT</span>}
               </h3>
-              <button
-                className="btn btn-outline-secondary btn-sm"
-                style={{ borderRadius: '999px' }}
-                disabled={isReadOnly}
-                onClick={addCategory}
-              >
-                ➕ Add Category
-              </button>
+              <div className="d-flex flex-wrap gap-2">
+                {!selectedTemplate.template.active && hasOwnedLock && (
+                  <button
+                    className="btn btn-outline-secondary btn-sm"
+                    style={{ borderRadius: '999px' }}
+                    disabled={isMutating}
+                    onClick={() => void runMutation(async () => {
+                      await checklistApi.releaseLock(selectedTemplate.template.id);
+                      await loadTemplateDetail(selectedTemplate.template.id);
+                    }, 'Editing lock released.')}
+                  >
+                    Cancel Editing
+                  </button>
+                )}
+                {!selectedTemplate.template.active && !hasOwnedLock && !lockedByOther && (
+                  <button
+                    className="btn btn-outline-primary btn-sm"
+                    style={{ borderRadius: '999px' }}
+                    disabled={isMutating}
+                    onClick={() => void openTemplate({
+                      id: selectedTemplate.template.id,
+                      publicationType: selectedTemplate.template.publicationType,
+                      version: selectedTemplate.template.version,
+                      active: selectedTemplate.template.active,
+                      createdAt: selectedTemplate.template.createdAt,
+                      itemCount: selectedTemplate.items.length,
+                    }, true)}
+                  >
+                    Resume Editing
+                  </button>
+                )}
+                <button
+                  className="btn btn-outline-secondary btn-sm"
+                  style={{ borderRadius: '999px' }}
+                  disabled={isReadOnly}
+                  onClick={addCategory}
+                >
+                  ➕ Add Category
+                </button>
+              </div>
             </div>
 
-            {isReadOnly && (
+            {selectedTemplate.template.active && (
               <div className="alert alert-warning d-flex flex-wrap align-items-center justify-content-between gap-2 py-2">
                 <div>Active templates are read-only.</div>
                 <button className="btn btn-outline-primary btn-sm" disabled={isMutating} onClick={() => void createDraftToEdit()}>
                   Create Draft to Edit
                 </button>
+              </div>
+            )}
+
+            {!selectedTemplate.template.active && lockedByOther && (
+              <div className="alert alert-danger py-2">
+                This draft is currently being edited by {selectedTemplate.editLock?.lockedByEmail}.
+                {selectedTemplate.editLock?.expiresAt && (
+                  <> The lock expires at {new Date(selectedTemplate.editLock.expiresAt).toLocaleTimeString()}.</>
+                )}
+              </div>
+            )}
+
+            {!selectedTemplate.template.active && !lockedByOther && !hasOwnedLock && (
+              <div className="alert alert-info py-2">
+                This draft is visible to all library admins. Click &quot;Resume Editing&quot; to acquire the exclusive edit lock before making changes.
               </div>
             )}
 

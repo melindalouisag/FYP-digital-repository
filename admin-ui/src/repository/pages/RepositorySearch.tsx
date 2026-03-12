@@ -3,7 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { publicRepositoryApi, type RepositoryItemSummary, type RepositorySearchParams } from '../../lib/api/publicRepository';
 import { masterApi, type Faculty, type Program } from '../../lib/api/master';
 import ThemeSwitch from '../../components/ThemeSwitch';
+import KeywordChipInput from '../../lib/components/KeywordChipInput';
 import { useAuth } from '../../lib/context/AuthContext';
+import { joinKeywordTokens } from '../../lib/keywords';
 import { useTheme } from '../../theme/ThemeContext';
 
 const INITIAL_FILTERS: RepositorySearchParams = {
@@ -20,6 +22,7 @@ export default function RepositorySearchPage() {
   const navigate = useNavigate();
 
   const [filters, setFilters] = useState<RepositorySearchParams>(INITIAL_FILTERS);
+  const [keywordTokens, setKeywordTokens] = useState<string[]>([]);
   const [results, setResults] = useState<RepositoryItemSummary[]>([]);
   const [faculties, setFaculties] = useState<Faculty[]>([]);
   const [programs, setPrograms] = useState<Program[]>([]);
@@ -62,6 +65,15 @@ export default function RepositorySearchPage() {
     void load(filters);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const joinedKeywords = joinKeywordTokens(keywordTokens);
+    setFilters((prev) => (
+      prev.keyword === joinedKeywords
+        ? prev
+        : { ...prev, keyword: joinedKeywords }
+    ));
+  }, [keywordTokens]);
 
   useEffect(() => {
     const loadFaculties = async () => {
@@ -142,6 +154,7 @@ export default function RepositorySearchPage() {
 
   const onReset = async () => {
     setFilters(INITIAL_FILTERS);
+    setKeywordTokens([]);
     setSelectedFacultyId(undefined);
     setSelectedProgramId(undefined);
     setPrograms([]);
@@ -285,12 +298,11 @@ export default function RepositorySearchPage() {
               </div>
 
               <div className="col-md-3">
-                <label className="form-label">Keyword</label>
-                <input
-                  className="form-control"
-                  value={filters.keyword ?? ''}
-                  onChange={(event) => onChange('keyword', event.target.value)}
-                  placeholder="Specific keyword"
+                <label className="form-label">Keywords</label>
+                <KeywordChipInput
+                  values={keywordTokens}
+                  onChange={setKeywordTokens}
+                  placeholder="Type one keyword and press Enter"
                 />
               </div>
 

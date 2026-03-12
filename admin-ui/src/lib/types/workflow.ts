@@ -104,6 +104,11 @@ export interface ChecklistResult {
 export interface CaseDetailPayload {
   case: CaseSummary;
   registration?: PublicationRegistration | null;
+  supervisors?: Array<{
+    id: number;
+    email: string;
+    name: string;
+  }>;
   versions?: SubmissionVersion[];
   submissions?: SubmissionVersion[];
   comments?: WorkflowComment[];
@@ -138,6 +143,14 @@ export interface ChecklistItem {
 export interface ChecklistTemplateResponse {
   template: ChecklistTemplate;
   items: ChecklistItem[];
+  editLock?: {
+    templateId: number;
+    lockedByUserId: number;
+    lockedByEmail: string;
+    lockedAt?: string;
+    expiresAt?: string;
+    ownedByCurrentUser: boolean;
+  } | null;
 }
 
 export interface AdminCaseQueueItem {

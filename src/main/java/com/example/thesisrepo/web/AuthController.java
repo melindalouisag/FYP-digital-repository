@@ -12,6 +12,7 @@ import com.example.thesisrepo.profile.StudentProfile;
 import com.example.thesisrepo.profile.StudentProfileRepository;
 import com.example.thesisrepo.service.AuthRateLimitService;
 import com.example.thesisrepo.service.CurrentUserService;
+import com.example.thesisrepo.service.UserRoleService;
 import com.example.thesisrepo.user.Role;
 import com.example.thesisrepo.user.User;
 import com.example.thesisrepo.user.UserRepository;
@@ -51,6 +52,7 @@ public class AuthController {
   private final AuthRateLimitService authRateLimitService;
   private final AuthProperties authProperties;
   private final UserRepository userRepository;
+  private final UserRoleService userRoles;
 
   private final StudentProfileRepository studentProfiles;
   private final LecturerProfileRepository lecturerProfiles;
@@ -99,22 +101,24 @@ public class AuthController {
     context.setAuthentication(auth);
     SecurityContextHolder.setContext(context);
     request.getSession(true).setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, context);
+    userRoles.initializeSession(request, user);
 
-    return ResponseEntity.ok(toMeResponse(user));
+    return ResponseEntity.ok(toMeResponse(user, request));
   }
 
   @PostMapping("/register")
   public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
     return ResponseEntity.status(FORBIDDEN).body(Map.of(
-      "error", "Self-registration is disabled. Use Sign up with Microsoft."
+      "error", "Self-registration is disabled. Use Sign up with Sampoerna University email."
     ));
   }
 
   @PostMapping("/onboarding")
   @PreAuthorize("isAuthenticated()")
   @Transactional
-  public ResponseEntity<MeResponse> onboarding(@RequestBody OnboardingRequest request) {
+  public ResponseEntity<MeResponse> onboarding(@RequestBody OnboardingRequest request, HttpServletRequest httpRequest) {
     User user = currentUserService.requireCurrentUser();
+    Role activeRole = requireActiveRole(user, httpRequest);
 
     String name = normalizeText(request.name());
     String facultyName = normalizeText(request.faculty());
@@ -125,7 +129,7 @@ public class AuthController {
     Faculty faculty = faculties.findByActiveTrueAndNameIgnoreCase(facultyName)
       .orElseThrow(() -> new ResponseStatusException(BAD_REQUEST, "Invalid faculty/program"));
 
-    if (user.getRole() == Role.STUDENT) {
+    if (activeRole == Role.STUDENT) {
       String programName = firstNonBlank(request.studyProgram(), request.program(), request.department());
       String studentId = normalizeText(request.studentId());
       if (programName.isBlank() || studentId.isBlank()) {
@@ -148,7 +152,7 @@ public class AuthController {
       profile.setProgram(program.getName());
       profile.setStudentId(studentId);
       studentProfiles.save(profile);
-    } else if (user.getRole() == Role.LECTURER) {
+    } else if (activeRole == Role.LECTURER) {
       String departmentName = firstNonBlank(request.studyProgram(), request.department(), request.program());
       if (departmentName.isBlank()) {
         throw new ResponseStatusException(BAD_REQUEST, "Study program is required for lecturers.");
@@ -167,7 +171,7 @@ public class AuthController {
       throw new ResponseStatusException(BAD_REQUEST, "Onboarding is not required for this role.");
     }
 
-    return ResponseEntity.ok(toMeResponse(user));
+    return ResponseEntity.ok(toMeResponse(user, httpRequest));
   }
 
   @PostMapping("/logout")
@@ -195,17 +199,42 @@ public class AuthController {
 
   @GetMapping("/me")
   @PreAuthorize("isAuthenticated()")
-  public ResponseEntity<MeResponse> me() {
+  public ResponseEntity<MeResponse> me(HttpServletRequest request) {
     User user = currentUserService.requireCurrentUser();
-    return ResponseEntity.ok(toMeResponse(user));
+    return ResponseEntity.ok(toMeResponse(user, request));
   }
 
-  private MeResponse toMeResponse(User user) {
-    if (user.getRole() == Role.ADMIN) {
+  @PostMapping("/select-role")
+  @PreAuthorize("isAuthenticated()")
+  public ResponseEntity<MeResponse> selectRole(@RequestBody SelectRoleRequest request, HttpServletRequest httpRequest) {
+    User user = currentUserService.requireCurrentUser();
+    if (request.role() == null) {
+      throw new ResponseStatusException(BAD_REQUEST, "Role is required.");
+    }
+
+    try {
+      userRoles.selectActiveRole(httpRequest, user, request.role());
+    } catch (IllegalArgumentException ex) {
+      throw new ResponseStatusException(FORBIDDEN, ex.getMessage(), ex);
+    }
+
+    return ResponseEntity.ok(toMeResponse(user, httpRequest));
+  }
+
+  private MeResponse toMeResponse(User user, HttpServletRequest request) {
+    Role activeRole = requireDisplayRole(user, request);
+    boolean roleSelectionRequired = request != null
+      ? userRoles.isRoleSelectionRequired(user, request)
+      : false;
+    java.util.List<String> availableRoles = request != null
+      ? userRoles.availableRoleNames(user, request)
+      : userRoles.resolveAvailableRoles(user).stream().map(Enum::name).toList();
+
+    if (activeRole == Role.ADMIN) {
       return new MeResponse(
         user.getId(),
         user.getEmail(),
-        user.getRole().name(),
+        activeRole.name(),
         user.getAuthProvider().name(),
         true,
         user.isEmailVerified(),
@@ -214,11 +243,13 @@ public class AuthController {
         null,
         null,
         null,
-        null
+        null,
+        availableRoles,
+        roleSelectionRequired
       );
     }
 
-    if (user.getRole() == Role.STUDENT) {
+    if (activeRole == Role.STUDENT) {
       StudentProfile profile = studentProfiles.findByUserId(user.getId()).orElse(null);
       String name = profile != null ? normalizeText(profile.getName()) : "";
       String faculty = profile != null ? normalizeText(profile.getFaculty()) : "";
@@ -228,7 +259,7 @@ public class AuthController {
       return new MeResponse(
         user.getId(),
         user.getEmail(),
-        user.getRole().name(),
+        activeRole.name(),
         user.getAuthProvider().name(),
         complete,
         user.isEmailVerified(),
@@ -237,11 +268,13 @@ public class AuthController {
         emptyToNull(faculty),
         emptyToNull(program),
         null,
-        emptyToNull(studentId)
+        emptyToNull(studentId),
+        availableRoles,
+        roleSelectionRequired
       );
     }
 
-    if (user.getRole() == Role.LECTURER) {
+    if (activeRole == Role.LECTURER) {
       LecturerProfile profile = lecturerProfiles.findByUserId(user.getId()).orElse(null);
       String name = profile != null ? normalizeText(profile.getName()) : "";
       String faculty = profile != null ? normalizeText(profile.getFaculty()) : "";
@@ -249,7 +282,7 @@ public class AuthController {
       return new MeResponse(
         user.getId(),
         user.getEmail(),
-        user.getRole().name(),
+        activeRole.name(),
         user.getAuthProvider().name(),
         true,
         user.isEmailVerified(),
@@ -258,14 +291,16 @@ public class AuthController {
         emptyToNull(faculty),
         null,
         emptyToNull(department),
-        null
+        null,
+        availableRoles,
+        roleSelectionRequired
       );
     }
 
     return new MeResponse(
       user.getId(),
       user.getEmail(),
-      user.getRole().name(),
+      activeRole != null ? activeRole.name() : user.getRole().name(),
       user.getAuthProvider().name(),
       false,
       user.isEmailVerified(),
@@ -274,8 +309,25 @@ public class AuthController {
       null,
       null,
       null,
-      null
+      null,
+      availableRoles,
+      roleSelectionRequired
     );
+  }
+
+  private Role requireDisplayRole(User user, HttpServletRequest request) {
+    if (request == null) {
+      return user.getRole();
+    }
+    Role displayRole = userRoles.resolveDisplayRole(user, request);
+    return displayRole != null ? displayRole : user.getRole();
+  }
+
+  private Role requireActiveRole(User user, HttpServletRequest request) {
+    if (request != null && userRoles.isRoleSelectionRequired(user, request)) {
+      throw new ResponseStatusException(CONFLICT, "Please choose a role before continuing.");
+    }
+    return request != null ? requireDisplayRole(user, request) : user.getRole();
   }
 
   private static String normalizeText(String value) {
@@ -350,6 +402,8 @@ public class AuthController {
     String department
   ) {}
 
+  public record SelectRoleRequest(Role role) {}
+
   public record MeResponse(
     Long id,
     String email,
@@ -362,7 +416,9 @@ public class AuthController {
     String faculty,
     String program,
     String department,
-    String studentId
+    String studentId,
+    java.util.List<String> availableRoles,
+    boolean roleSelectionRequired
   ) {}
 
   public record AuthConfigResponse(

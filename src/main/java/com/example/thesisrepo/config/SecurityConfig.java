@@ -23,6 +23,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.header.writers.XXssProtectionHeaderWriter;
@@ -56,6 +57,7 @@ public class SecurityConfig {
   private final UserDetailsServiceImpl userDetailsService;
   private final OidcProvisioningUserService oidcUserService;
   private final RoleBasedAuthSuccessHandler successHandler;
+  private final SessionActiveRoleFilter sessionActiveRoleFilter;
   private final AuthProperties authProperties;
   private final String uiBaseUrl;
   private final List<String> allowedCorsOrigins;
@@ -66,6 +68,7 @@ public class SecurityConfig {
     UserDetailsServiceImpl userDetailsService,
     OidcProvisioningUserService oidcUserService,
     RoleBasedAuthSuccessHandler successHandler,
+    SessionActiveRoleFilter sessionActiveRoleFilter,
     AuthProperties authProperties,
     @Value("${app.ui.base-url:}") String uiBaseUrl,
     @Value("${app.security.cors.allowed-origins:${FRONTEND_URL:${APP_UI_BASE_URL:http://localhost:5173}}}") String allowedCorsOrigins,
@@ -75,6 +78,7 @@ public class SecurityConfig {
     this.userDetailsService = userDetailsService;
     this.oidcUserService = oidcUserService;
     this.successHandler = successHandler;
+    this.sessionActiveRoleFilter = sessionActiveRoleFilter;
     this.authProperties = authProperties;
     this.uiBaseUrl = normalizeBaseUrl(uiBaseUrl);
     this.allowedCorsOrigins = parseAllowedOrigins(allowedCorsOrigins);
@@ -131,6 +135,7 @@ public class SecurityConfig {
 
     http
       .authenticationProvider(authenticationProvider(passwordEncoder))
+      .addFilterBefore(sessionActiveRoleFilter, AuthorizationFilter.class)
       .authorizeHttpRequests(auth -> auth
         // SPA + public assets
         .requestMatchers(

@@ -6,6 +6,8 @@ export interface AuthUser {
   id: number;
   email: string;
   role: Role;
+  availableRoles: Role[];
+  roleSelectionRequired: boolean;
   profileComplete: boolean;
   emailVerified: boolean;
   name?: string;
@@ -60,6 +62,10 @@ export const authApi = {
 
   onboarding(payload: OnboardingPayload): Promise<AuthUser> {
     return postJson<AuthUser>('/api/auth/onboarding', payload);
+  },
+
+  selectRole(role: Role): Promise<AuthUser> {
+    return postJson<AuthUser>('/api/auth/select-role', { role });
   },
 
 };

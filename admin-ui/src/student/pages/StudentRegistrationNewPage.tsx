@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
 import { studentApi, type SupervisorRow } from '../../lib/api/student';
 import { masterApi, type Faculty } from '../../lib/api/master';
-import type { PublicationType } from '../../lib/types/workflow';
+import type { CaseSummary, PublicationType } from '../../lib/types/workflow';
 import { useAuth } from '../../lib/context/AuthContext';
 
 type FormErrors = {
@@ -26,8 +26,11 @@ function supervisorLabel(supervisor: SupervisorRow): string {
 }
 
 export default function StudentRegistrationNewPage() {
+  const { caseId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const editCaseId = caseId ? Number(caseId) : null;
+  const isEditMode = editCaseId !== null && !Number.isNaN(editCaseId);
   const hasStudyProgram = Boolean(user?.program?.trim());
 
   const [title, setTitle] = useState('');
@@ -40,13 +43,48 @@ export default function StudentRegistrationNewPage() {
   const [authorName, setAuthorName] = useState(user?.fullName ?? '');
   const [studentIdNumber, setStudentIdNumber] = useState(user?.studentId ?? '');
   const [supervisors, setSupervisors] = useState<SupervisorRow[]>([]);
+  const [existingCases, setExistingCases] = useState<CaseSummary[]>([]);
   const [selectedSupervisorEmail, setSelectedSupervisorEmail] = useState('');
   const [permissionChecklistOneAccepted, setPermissionChecklistOneAccepted] = useState(false);
   const [permissionChecklistTwoAccepted, setPermissionChecklistTwoAccepted] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [loadingPage, setLoadingPage] = useState(Boolean(isEditMode));
   const [loadingSupervisors, setLoadingSupervisors] = useState(true);
+  const [currentStatus, setCurrentStatus] = useState<string | null>(null);
   const [errors, setErrors] = useState<FormErrors>({});
   const [serverError, setServerError] = useState('');
+
+  const externalThesisCases = useMemo(
+    () => existingCases.filter((item) => item.type === 'THESIS' && item.id !== editCaseId),
+    [editCaseId, existingCases]
+  );
+  const thesisBlocked = !isEditMode && type === 'THESIS' && externalThesisCases.length > 0;
+  const preferredThesisCase = useMemo(() => {
+    const priority = (status: string) => {
+      switch (status) {
+        case 'REGISTRATION_VERIFIED':
+          return 0;
+        case 'REGISTRATION_APPROVED':
+          return 1;
+        case 'REGISTRATION_PENDING':
+          return 2;
+        case 'REGISTRATION_DRAFT':
+          return 3;
+        case 'REJECTED':
+          return 4;
+        default:
+          return 5;
+      }
+    };
+
+    return externalThesisCases
+      .slice()
+      .sort((left, right) => {
+        const byStatus = priority(left.status) - priority(right.status);
+        if (byStatus !== 0) return byStatus;
+        return (right.updatedAt ?? '').localeCompare(left.updatedAt ?? '');
+      })[0] ?? null;
+  }, [externalThesisCases]);
 
   const clearFieldError = (field: keyof FormErrors) => {
     setErrors((prev) => ({ ...prev, [field]: undefined }));
@@ -85,6 +123,7 @@ export default function StudentRegistrationNewPage() {
   const validateForDraft = (): FormErrors => {
     const nextErrors: FormErrors = {};
     if (!title.trim()) nextErrors.title = 'Title is required to save draft.';
+    if (thesisBlocked) nextErrors.publicationType = 'You already have a THESIS registration case.';
     if (!selectedSupervisorEmail.trim()) nextErrors.supervisorIds = 'Please select a supervisor.';
     return nextErrors;
   };
@@ -92,6 +131,7 @@ export default function StudentRegistrationNewPage() {
   const validateForSubmit = (): FormErrors => {
     const nextErrors: FormErrors = {};
     if (!title.trim()) nextErrors.title = 'Title is required.';
+    if (thesisBlocked) nextErrors.publicationType = 'You already have a THESIS registration case.';
     if (!type) nextErrors.publicationType = 'Publication type is required.';
     if (year === undefined || Number.isNaN(year) || !/^\d{4}$/.test(String(year))) {
       nextErrors.year = 'Year is required and must be 4 digits.';
@@ -104,6 +144,46 @@ export default function StudentRegistrationNewPage() {
     if (!permissionChecklistTwoAccepted) nextErrors.agreement2 = 'Please accept agreement checklist 2.';
     return nextErrors;
   };
+
+  useEffect(() => {
+    const loadExistingCases = async () => {
+      try {
+        const rows = await studentApi.listCases();
+        setExistingCases(rows);
+      } catch (err) {
+        setServerError(err instanceof Error ? err.message : 'Failed to load existing registrations.');
+      }
+    };
+    void loadExistingCases();
+  }, []);
+
+  useEffect(() => {
+    const loadEditCase = async () => {
+      if (!isEditMode || !editCaseId) {
+        setLoadingPage(false);
+        return;
+      }
+
+      setLoadingPage(true);
+      try {
+        const detail = await studentApi.caseDetail(editCaseId);
+        setTitle(detail.registration?.title ?? '');
+        setYear(detail.registration?.year ?? new Date().getFullYear());
+        setType(detail.case.type);
+        setFaculty(detail.registration?.faculty ?? user?.faculty ?? '');
+        setArticlePublishIn(detail.registration?.articlePublishIn ?? '');
+        setAuthorName(detail.registration?.authorName ?? user?.fullName ?? '');
+        setStudentIdNumber(detail.registration?.studentIdNumber ?? user?.studentId ?? '');
+        setSelectedSupervisorEmail(detail.supervisors?.[0]?.email ?? '');
+        setCurrentStatus(detail.case.status);
+      } catch (err) {
+        setServerError(err instanceof Error ? err.message : 'Failed to load registration.');
+      } finally {
+        setLoadingPage(false);
+      }
+    };
+    void loadEditCase();
+  }, [editCaseId, isEditMode, user?.faculty, user?.fullName, user?.studentId]);
 
   useEffect(() => {
     const loadSupervisors = async () => {
@@ -151,6 +231,23 @@ export default function StudentRegistrationNewPage() {
 
     setSaving(true);
     try {
+      if (isEditMode && editCaseId) {
+        await studentApi.updateRegistration(editCaseId, {
+          title,
+          year,
+          faculty,
+          articlePublishIn: articlePublishIn || undefined,
+          authorName: authorName || undefined,
+          studentIdNumber: studentIdNumber || undefined,
+          supervisorEmail: selectedSupervisorEmail || undefined,
+        });
+        if (submitForApproval) {
+          await studentApi.submitRegistration(editCaseId, true);
+        }
+        navigate(`/student/cases/${editCaseId}`);
+        return;
+      }
+
       const createResponse = await studentApi.createRegistration({
         title,
         type,
@@ -175,9 +272,40 @@ export default function StudentRegistrationNewPage() {
   };
 
   return (
-    <ShellLayout title="New Publication Registration" subtitle="Create draft then submit when agreement is accepted">
+    <ShellLayout
+      title={isEditMode ? 'Edit Publication Registration' : 'New Publication Registration'}
+      subtitle={isEditMode ? 'Update the same case and resubmit when required' : 'Create draft then submit when agreement is accepted'}
+    >
       <div className="su-card fade-in">
         <div className="card-body p-4">
+          {loadingPage && <div className="alert alert-info">Loading registration...</div>}
+          {thesisBlocked && (
+            <div className="alert alert-warning">
+              You already have a THESIS registration case.
+              {preferredThesisCase && (
+                <>
+                  {' '}Use the existing case instead.
+                  <button
+                    type="button"
+                    className="btn btn-link btn-sm p-0 ms-1 align-baseline"
+                    onClick={() => navigate(`/student/cases/${preferredThesisCase.id}`)}
+                  >
+                    Open case #{preferredThesisCase.id}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+          {isEditMode && currentStatus === 'REGISTRATION_PENDING' && (
+            <div className="alert alert-info">
+              Editing this pending registration will move it back to draft. Save your changes, then resubmit the same case for lecturer approval.
+            </div>
+          )}
+          {isEditMode && currentStatus === 'REJECTED' && (
+            <div className="alert alert-danger">
+              This registration was rejected. Update the same case here, then resubmit it when your revisions are ready.
+            </div>
+          )}
           <form
             className="row g-3"
             onSubmit={(event) => {
@@ -209,13 +337,18 @@ export default function StudentRegistrationNewPage() {
                   setType(event.target.value as PublicationType);
                   clearFieldError('publicationType');
                 }}
+                disabled={isEditMode}
               >
                 <option value="THESIS">THESIS</option>
                 <option value="ARTICLE">ARTICLE</option>
                 <option value="INTERNSHIP_REPORT" disabled>INTERNSHIP_REPORT (Not enabled yet)</option>
                 <option value="OTHER" disabled>OTHER (Not enabled yet)</option>
               </select>
-              <div className="form-text">Only THESIS and ARTICLE are currently enabled.</div>
+              <div className="form-text">
+                {isEditMode
+                  ? 'Publication type cannot be changed for an existing case.'
+                  : 'Only THESIS and ARTICLE are currently enabled.'}
+              </div>
               {errors.publicationType && <div className="text-danger small mt-1">{errors.publicationType}</div>}
             </div>
 
@@ -268,7 +401,7 @@ export default function StudentRegistrationNewPage() {
             </div>
 
             <div className="col-md-6">
-              <label className="form-label" htmlFor="registration-authorName">Author Name</label>
+              <label className="form-label" htmlFor="registration-authorName">Author</label>
               <input
                 id="registration-authorName"
                 className={`form-control${errors.authorName ? ' is-invalid' : ''}`}
@@ -382,17 +515,21 @@ export default function StudentRegistrationNewPage() {
             )}
 
             <div className="col-12 d-flex flex-wrap gap-2">
-              <button className="btn btn-outline-primary" type="submit" disabled={saving || loadingSupervisors} style={{ borderRadius: '999px', padding: '0.5rem 1.5rem' }}>
-                {saving ? '⏳ Saving...' : '💾 Save Draft'}
+              <button className="btn btn-outline-primary" type="submit" disabled={saving || loadingSupervisors || loadingPage} style={{ borderRadius: '999px', padding: '0.5rem 1.5rem' }}>
+                {saving ? '⏳ Saving...' : (isEditMode ? '💾 Save Changes' : '💾 Save Draft')}
               </button>
               <button
                 className="btn btn-primary"
                 type="button"
-                disabled={saving || loadingSupervisors}
+                disabled={saving || loadingSupervisors || loadingPage}
                 onClick={() => void submit(true)}
                 style={{ borderRadius: '999px', padding: '0.5rem 1.5rem' }}
               >
-                {saving ? '⏳ Submitting...' : '📨 Save and Submit for Approval'}
+                {saving
+                  ? '⏳ Submitting...'
+                  : (isEditMode && currentStatus && currentStatus !== 'REGISTRATION_DRAFT'
+                    ? '📨 Save and Resubmit for Approval'
+                    : '📨 Save and Submit for Approval')}
               </button>
             </div>
           </form>

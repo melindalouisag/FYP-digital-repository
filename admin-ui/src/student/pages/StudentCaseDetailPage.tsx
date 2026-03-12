@@ -5,6 +5,7 @@ import { studentApi } from '../../lib/api/student';
 import CaseTimeline from '../../lib/components/CaseTimeline';
 import type { CaseDetailPayload, ChecklistResult } from '../../lib/types/workflow';
 import {
+  canEditRegistration,
   canSubmitClearance,
   canSubmitRegistration,
   canUploadSubmission,
@@ -158,14 +159,25 @@ export default function StudentCaseDetailPage() {
           <div className="small text-muted mb-3">Edit draft and resubmit when required.</div>
           <div className="d-flex flex-wrap justify-content-between align-items-center gap-2">
             <strong>{detail.registration?.title || 'Untitled'}</strong>
-            <button
-              className="btn btn-primary btn-sm"
-              style={{ borderRadius: '999px' }}
-              onClick={() => void submitRegistration()}
-              disabled={!canSubmitRegistration(detail.case.status)}
-            >
-              📨 Submit for Approval
-            </button>
+            <div className="d-flex flex-wrap gap-2">
+              {canEditRegistration(detail.case.status) && (
+                <button
+                  className="btn btn-outline-secondary btn-sm"
+                  style={{ borderRadius: '999px' }}
+                  onClick={() => navigate(`/student/registrations/${detail.case.id}/edit`)}
+                >
+                  Edit Registration
+                </button>
+              )}
+              <button
+                className="btn btn-primary btn-sm"
+                style={{ borderRadius: '999px' }}
+                onClick={() => void submitRegistration()}
+                disabled={!canSubmitRegistration(detail.case.status)}
+              >
+                📨 Submit for Approval
+              </button>
+            </div>
           </div>
         </div>
       </div>

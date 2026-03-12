@@ -73,7 +73,9 @@ public class PublicController {
         predicates.add(cb.equal(root.get("year"), year));
       }
       if (hasText(keyword)) {
-        predicates.add(cb.like(cb.lower(root.get("keywords")), like(keyword)));
+        splitKeywords(keyword).forEach(token ->
+          predicates.add(cb.like(cb.lower(root.get("keywords")), like(token)))
+        );
       }
 
       query.orderBy(cb.desc(root.get("publishedAt")));
@@ -179,6 +181,17 @@ public class PublicController {
 
   private static String like(String value) {
     return "%" + normalize(value) + "%";
+  }
+
+  private static List<String> splitKeywords(String value) {
+    if (!hasText(value)) {
+      return List.of();
+    }
+    return java.util.Arrays.stream(value.split("[,\\n]"))
+      .map(PublicController::normalize)
+      .filter(token -> !token.isBlank())
+      .distinct()
+      .toList();
   }
 
   private static String defaultFilename(String storedKey, String fallback) {

@@ -5,6 +5,7 @@ import com.example.thesisrepo.publication.repo.*;
 import com.example.thesisrepo.profile.StudentProfile;
 import com.example.thesisrepo.profile.StudentProfileRepository;
 import com.example.thesisrepo.service.checklist.ChecklistImportService;
+import com.example.thesisrepo.service.checklist.ChecklistTemplateLockService;
 import com.example.thesisrepo.service.CurrentUserService;
 import com.example.thesisrepo.service.StorageService;
 import com.example.thesisrepo.service.workflow.AuditEventService;
@@ -54,6 +55,7 @@ public class AdminWorkflowController {
   private final ClearanceFormRepository clearances;
   private final PublishedItemRepository publishedItems;
   private final ChecklistImportService checklistImportService;
+  private final ChecklistTemplateLockService checklistLocks;
   private final ObjectMapper objectMapper;
   private final CurrentUserService currentUser;
   private final PublicationWorkflowGateService workflowGates;
@@ -574,7 +576,7 @@ public class AdminWorkflowController {
   @GetMapping("/checklists/full")
   public List<ChecklistTemplateResponse> checklistsFull(@RequestParam("type") ChecklistScope type) {
     return checklistTemplates.findByPublicationTypeOrderByVersionDesc(type).stream()
-      .map(template -> new ChecklistTemplateResponse(template, checklistItems.findByTemplateOrderByOrderIndexAsc(template)))
+      .map(template -> new ChecklistTemplateResponse(template, checklistItems.findByTemplateOrderByOrderIndexAsc(template), null))
       .toList();
   }
 
@@ -622,21 +624,64 @@ public class AdminWorkflowController {
 
   @GetMapping("/checklists/templates/{templateId}")
   public ResponseEntity<ChecklistTemplateResponse> checklistTemplateDetail(@PathVariable Long templateId) {
+    User admin = currentUser.requireCurrentUser();
     ChecklistTemplate template = checklistTemplates.findById(templateId)
       .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Template not found"));
-    return ResponseEntity.ok(new ChecklistTemplateResponse(template, checklistItems.findByTemplateOrderByOrderIndexAsc(template)));
+    return ResponseEntity.ok(new ChecklistTemplateResponse(
+      template,
+      checklistItems.findByTemplateOrderByOrderIndexAsc(template),
+      checklistLocks.current(template, admin)
+    ));
+  }
+
+  @PostMapping("/checklists/templates/{templateId}/lock")
+  @Transactional
+  public ResponseEntity<?> acquireTemplateLock(@PathVariable Long templateId) {
+    User admin = currentUser.requireCurrentUser();
+    ChecklistTemplate template = checklistTemplates.findById(templateId)
+      .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Template not found"));
+    if (template.isActive()) {
+      throw new ResponseStatusException(BAD_REQUEST, "Active templates are read-only.");
+    }
+
+    ChecklistTemplateLockService.LockInfo lock = checklistLocks.acquire(template, admin);
+    if (!lock.ownedByCurrentUser()) {
+      return lockConflict(lock);
+    }
+
+    return ResponseEntity.ok(Map.of(
+      "templateId", templateId,
+      "locked", true,
+      "lock", lock
+    ));
+  }
+
+  @DeleteMapping("/checklists/templates/{templateId}/lock")
+  @Transactional
+  public ResponseEntity<?> releaseTemplateLock(@PathVariable Long templateId) {
+    User admin = currentUser.requireCurrentUser();
+    ChecklistTemplate template = checklistTemplates.findById(templateId)
+      .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Template not found"));
+    checklistLocks.release(template, admin);
+    return ResponseEntity.ok(Map.of("templateId", templateId, "released", true));
   }
 
   @DeleteMapping("/checklists/templates/{templateId}")
   @Transactional
   public ResponseEntity<?> deleteTemplate(@PathVariable Long templateId) {
+    User admin = currentUser.requireCurrentUser();
     ChecklistTemplate template = checklistTemplates.findById(templateId)
       .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Template not found"));
+    ChecklistTemplateLockService.LockInfo lock = checklistLocks.current(template, admin);
+    if (lock != null && !lock.ownedByCurrentUser()) {
+      return lockConflict(lock);
+    }
     if (checklistResults.existsByChecklistItem_Template_Id(templateId)) {
       throw new ResponseStatusException(BAD_REQUEST, "Cannot delete template used by checklist results");
     }
 
     checklistItems.deleteByTemplate(template);
+    checklistLocks.release(template, admin);
     checklistTemplates.delete(template);
     return ResponseEntity.ok(Map.of("deleted", true, "templateId", templateId));
   }
@@ -644,10 +689,21 @@ public class AdminWorkflowController {
   @PutMapping("/checklists/templates/{templateId}/items")
   @Transactional
   public ResponseEntity<?> replaceTemplateItems(@PathVariable Long templateId, @RequestBody JsonNode payload) {
+    User admin = currentUser.requireCurrentUser();
     ChecklistTemplate template = checklistTemplates.findById(templateId)
       .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Template not found"));
     if (template.isActive()) {
       throw new ResponseStatusException(BAD_REQUEST, "Cannot edit active template; create a new draft first.");
+    }
+    ChecklistTemplateLockService.LockInfo lock = checklistLocks.requireCurrentUserLock(template, admin);
+    if (lock == null) {
+      return ResponseEntity.status(CONFLICT).body(Map.of(
+        "error", "Start editing this draft first to acquire the lock.",
+        "templateId", templateId
+      ));
+    }
+    if (!lock.ownedByCurrentUser()) {
+      return lockConflict(lock);
     }
 
     List<ReplaceItem> items = readReplaceItems(payload);
@@ -667,14 +723,20 @@ public class AdminWorkflowController {
         .build());
     }
 
-    return ResponseEntity.ok(Map.of("ok", true));
+    checklistLocks.release(template, admin);
+    return ResponseEntity.ok(Map.of("ok", true, "lockReleased", true));
   }
 
   @PostMapping("/checklists/templates/{templateId}/activate")
   @Transactional
   public ResponseEntity<?> activateTemplate(@PathVariable Long templateId) {
+    User admin = currentUser.requireCurrentUser();
     ChecklistTemplate toActivate = checklistTemplates.findById(templateId)
       .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Template not found"));
+    ChecklistTemplateLockService.LockInfo lock = checklistLocks.current(toActivate, admin);
+    if (lock != null && !lock.ownedByCurrentUser()) {
+      return lockConflict(lock);
+    }
     int itemCount = checklistItems.findByTemplateOrderByOrderIndexAsc(toActivate).size();
     if (itemCount == 0) {
       throw new ResponseStatusException(BAD_REQUEST, "Template must have at least 1 item before activation");
@@ -684,6 +746,7 @@ public class AdminWorkflowController {
       template.setActive(template.getId().equals(templateId));
       checklistTemplates.save(template);
     });
+    checklistLocks.release(toActivate, admin);
 
     return ResponseEntity.ok(Map.of("templateId", templateId, "active", true));
   }
@@ -813,7 +876,18 @@ public class AdminWorkflowController {
     }
   }
 
-  public record ChecklistTemplateResponse(ChecklistTemplate template, List<ChecklistItemV2> items) {}
+  private ResponseEntity<Map<String, Object>> lockConflict(ChecklistTemplateLockService.LockInfo lock) {
+    return ResponseEntity.status(CONFLICT).body(Map.of(
+      "error", "This draft is currently being edited by " + lock.lockedByEmail() + ". Try again after the lock is released.",
+      "lock", lock
+    ));
+  }
+
+  public record ChecklistTemplateResponse(
+    ChecklistTemplate template,
+    List<ChecklistItemV2> items,
+    ChecklistTemplateLockService.LockInfo editLock
+  ) {}
   public record ChecklistTemplateSummaryResponse(
     Long id,
     ChecklistScope publicationType,

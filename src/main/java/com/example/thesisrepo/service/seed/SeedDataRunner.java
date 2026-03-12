@@ -19,6 +19,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 
 @Component
@@ -117,6 +118,7 @@ public class SeedDataRunner implements CommandLineRunner {
         .email(email)
         .passwordHash(encoder.encode(rawPassword))
         .role(role)
+        .roles(Set.of(role))
         .emailVerified(true)
         .build()
     ));

@@ -39,6 +39,14 @@ export function canSubmitRegistration(status: CaseStatus): boolean {
   return status === 'REGISTRATION_DRAFT' || status === 'REJECTED';
 }
 
+export function canEditRegistration(status: CaseStatus): boolean {
+  return (
+    status === 'REGISTRATION_DRAFT' ||
+    status === 'REGISTRATION_PENDING' ||
+    status === 'REJECTED'
+  );
+}
+
 export function canUploadSubmission(status: CaseStatus): boolean {
   return (
     status === 'REGISTRATION_VERIFIED' ||

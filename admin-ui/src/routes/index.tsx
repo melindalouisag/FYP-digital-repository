@@ -3,6 +3,7 @@ import { useAuth } from '../lib/context/AuthContext';
 import LoginPage from '../auth/LoginPage';
 import RegisterPage from '../auth/RegisterPage';
 import OnboardingPage from '../auth/OnboardingPage';
+import RolePickerPage from '../auth/RolePickerPage';
 import RepositorySearchPage from '../repository/pages/RepositorySearch';
 import RepositoryDetail from '../repository/pages/RepositoryDetail';
 import { ProtectedRoute } from './ProtectedRoute';
@@ -50,11 +51,13 @@ export function AppRoutes() {
       <Route path="/repo/:id" element={<RepositoryDetail />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/choose-role" element={<ProtectedRoute user={user} loading={loading}><RolePickerPage /></ProtectedRoute>} />
       <Route path="/onboarding" element={<ProtectedRoute user={user} loading={loading}><OnboardingPage /></ProtectedRoute>} />
 
       <Route path="/student/dashboard" element={<ProtectedRoute user={user} loading={loading}><RoleGuard user={user} allowedRoles={['STUDENT']}><StudentDashboardPage /></RoleGuard></ProtectedRoute>} />
       <Route path="/student/registrations" element={<ProtectedRoute user={user} loading={loading}><RoleGuard user={user} allowedRoles={['STUDENT']}><StudentRegistrationsPage /></RoleGuard></ProtectedRoute>} />
       <Route path="/student/registrations/new" element={<ProtectedRoute user={user} loading={loading}><RoleGuard user={user} allowedRoles={['STUDENT']}><StudentRegistrationNewPage /></RoleGuard></ProtectedRoute>} />
+      <Route path="/student/registrations/:caseId/edit" element={<ProtectedRoute user={user} loading={loading}><RoleGuard user={user} allowedRoles={['STUDENT']}><StudentRegistrationNewPage /></RoleGuard></ProtectedRoute>} />
       <Route path="/student/submissions" element={<ProtectedRoute user={user} loading={loading}><RoleGuard user={user} allowedRoles={['STUDENT']}><StudentSubmissionsPage /></RoleGuard></ProtectedRoute>} />
       <Route path="/student/cases/:caseId" element={<ProtectedRoute user={user} loading={loading}><RoleGuard user={user} allowedRoles={['STUDENT']}><StudentCaseDetailPage /></RoleGuard></ProtectedRoute>} />
       <Route path="/student/cases/:caseId/submission" element={<ProtectedRoute user={user} loading={loading}><RoleGuard user={user} allowedRoles={['STUDENT']}><StudentCaseSubmissionPage /></RoleGuard></ProtectedRoute>} />

@@ -2,6 +2,7 @@ package com.example.thesisrepo.config;
 
 import com.example.thesisrepo.profile.LecturerProfileRepository;
 import com.example.thesisrepo.profile.StudentProfileRepository;
+import com.example.thesisrepo.service.UserRoleService;
 import com.example.thesisrepo.user.Role;
 import com.example.thesisrepo.user.User;
 import com.example.thesisrepo.user.UserRepository;
@@ -28,6 +29,7 @@ public class RoleBasedAuthSuccessHandler implements AuthenticationSuccessHandler
   private final UserRepository users;
   private final StudentProfileRepository studentProfiles;
   private final LecturerProfileRepository lecturerProfiles;
+  private final UserRoleService userRoles;
 
   @Override
   public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication)
@@ -48,10 +50,17 @@ public class RoleBasedAuthSuccessHandler implements AuthenticationSuccessHandler
     // OTP disabled — auto-verify after SSO login
     user.setEmailVerified(true);
     users.save(user);
+    userRoles.initializeSession(request, user);
+
+    if (userRoles.isRoleSelectionRequired(user, request)) {
+      response.sendRedirect(request.getContextPath() + "/choose-role");
+      return;
+    }
 
     // Redirect based on profile completeness and role
-    boolean profileComplete = isProfileComplete(user);
-    if (!profileComplete && user.getRole() != Role.ADMIN) {
+    Role activeRole = userRoles.resolveDisplayRole(user, request);
+    boolean profileComplete = isProfileComplete(user, activeRole);
+    if (!profileComplete && activeRole != Role.ADMIN) {
       response.sendRedirect(request.getContextPath() + "/onboarding");
     } else {
       response.sendRedirect(request.getContextPath() + "/");
@@ -87,11 +96,11 @@ public class RoleBasedAuthSuccessHandler implements AuthenticationSuccessHandler
     return null;
   }
 
-  private boolean isProfileComplete(User user) {
-    if (user.getRole() == Role.STUDENT) {
+  private boolean isProfileComplete(User user, Role activeRole) {
+    if (activeRole == Role.STUDENT) {
       return studentProfiles.findByUserId(user.getId()).isPresent();
     }
-    if (user.getRole() == Role.LECTURER) {
+    if (activeRole == Role.LECTURER) {
       return lecturerProfiles.findByUserId(user.getId()).isPresent();
     }
     return true; // ADMIN always complete

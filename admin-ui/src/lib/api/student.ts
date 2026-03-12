@@ -32,6 +32,10 @@ export interface UpdateRegistrationPayload {
   faculty?: string;
   studentIdNumber?: string;
   authorName?: string;
+  supervisorEmail?: string;
+  supervisorUserId?: number;
+  supervisorUserIds?: number[];
+  supervisorEmails?: string[];
 }
 
 export interface SubmissionMetaPayload {

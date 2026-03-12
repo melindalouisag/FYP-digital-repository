@@ -31,8 +31,11 @@ export function ProtectedRoute({ user, loading, children }: ProtectedRouteProps)
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  if (user.roleSelectionRequired && location.pathname !== '/choose-role') {
+    return <Navigate to="/choose-role" replace />;
+  }
 
-  if (user.role !== 'ADMIN' && !user.profileComplete && location.pathname !== '/onboarding') {
+  if (user.role !== 'ADMIN' && !user.profileComplete && location.pathname !== '/onboarding' && location.pathname !== '/choose-role') {
     return <Navigate to="/onboarding" replace />;
   }
 

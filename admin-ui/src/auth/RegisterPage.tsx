@@ -28,7 +28,7 @@ function RegisterPage() {
 
         <div className="d-grid gap-2">
           <a className="btn btn-primary" style={{ borderRadius: "0.6rem" }} href={SSO_URL}>
-            Sign up with Microsoft
+            Sign up with Sampoerna University email
           </a>
 
           <button className="btn btn-outline-secondary" style={{ borderRadius: "0.6rem" }} onClick={() => navigate("/login")}>

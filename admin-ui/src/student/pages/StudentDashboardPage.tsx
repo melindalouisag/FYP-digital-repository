@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
 import { studentApi } from '../../lib/api/student';
 import type { CaseSummary } from '../../lib/types/workflow';
-import { canSubmitClearance, canSubmitRegistration, canUploadSubmission, formatStatus, statusBadgeClass, getStageKey } from '../../lib/workflowUi';
+import { canEditRegistration, canSubmitClearance, canSubmitRegistration, canUploadSubmission, formatStatus, statusBadgeClass, getStageKey } from '../../lib/workflowUi';
 
 export default function StudentDashboardPage() {
   const navigate = useNavigate();
@@ -112,6 +112,7 @@ export default function StudentDashboardPage() {
                 ? '🏛️'
                 : '👁️';
           const stage = getStageKey(c.status);
+          const canEdit = canEditRegistration(c.status);
 
           return (
             <div className="su-card fade-in" key={c.id} style={{ animationDelay: `${index * 0.05}s` }}>
@@ -134,6 +135,15 @@ export default function StudentDashboardPage() {
                   </div>
 
                   <div className="d-flex flex-wrap gap-2">
+                    {canEdit && (
+                      <button
+                        className="btn btn-outline-secondary btn-sm"
+                        style={{ borderRadius: '999px' }}
+                        onClick={() => navigate(`/student/registrations/${c.id}/edit`)}
+                      >
+                        Edit Registration
+                      </button>
+                    )}
                     <button
                       className="btn btn-outline-primary btn-sm"
                       style={{ borderRadius: '999px' }}
