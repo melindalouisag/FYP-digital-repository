@@ -16,9 +16,14 @@ type CategoryDraft = {
   id: string;
   title: string;
   items: ItemDraft[];
+  expanded: boolean;
   errorCategoryTitle?: string;
   errorAddItem?: string;
 };
+
+type FocusTarget =
+  | { kind: 'category'; categoryId: string }
+  | { kind: 'item'; categoryId: string; itemId: string };
 
 type TemplateMap = Record<PublicationType, ChecklistTemplateSummary[]>;
 
@@ -33,6 +38,7 @@ function newCategory(partial?: Partial<CategoryDraft>): CategoryDraft {
     id: crypto.randomUUID(),
     title: partial?.title ?? '',
     items: partial?.items ?? [],
+    expanded: partial?.expanded ?? true,
     errorAddItem: partial?.errorAddItem,
     errorCategoryTitle: partial?.errorCategoryTitle,
   };
@@ -57,11 +63,18 @@ function readLockFromError(error: unknown): ChecklistTemplateResponse['editLock'
   return maybeLock ?? null;
 }
 
+function categoryLabel(category: CategoryDraft, index: number): string {
+  const title = category.title.trim();
+  return title || `Untitled Category ${index + 1}`;
+}
+
 export default function AdminChecklistPage() {
   const [templatesByType, setTemplatesByType] = useState<TemplateMap>(emptyTemplates());
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<ChecklistTemplateResponse | null>(null);
   const [categories, setCategories] = useState<CategoryDraft[]>([]);
+  const [newCategoryTitle, setNewCategoryTitle] = useState('');
+  const [focusTarget, setFocusTarget] = useState<FocusTarget | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isMutating, setIsMutating] = useState(false);
   const [error, setError] = useState('');
@@ -72,6 +85,25 @@ export default function AdminChecklistPage() {
     THESIS: templatesByType.THESIS.find((template) => template.active) ?? null,
     ARTICLE: templatesByType.ARTICLE.find((template) => template.active) ?? null,
   }), [templatesByType]);
+
+  useEffect(() => {
+    if (!focusTarget) {
+      return;
+    }
+
+    const targetId = focusTarget.kind === 'category'
+      ? `category-title-${focusTarget.categoryId}`
+      : `item-title-${focusTarget.itemId}`;
+    const target = document.getElementById(targetId);
+    if (!(target instanceof HTMLInputElement)) {
+      return;
+    }
+
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    target.focus();
+    target.select();
+    setFocusTarget(null);
+  }, [categories, focusTarget]);
 
   const loadTemplates = async () => {
     setIsLoading(true);
@@ -102,6 +134,8 @@ export default function AdminChecklistPage() {
       setSelectedTemplateId(null);
       setSelectedTemplate(null);
       setCategories([]);
+      setNewCategoryTitle('');
+      setFocusTarget(null);
       return;
     }
 
@@ -118,7 +152,7 @@ export default function AdminChecklistPage() {
         .forEach((item) => {
           const section = (item.section?.trim() || 'General');
           if (!grouped.has(section)) {
-            grouped.set(section, newCategory({ title: section }));
+            grouped.set(section, newCategory({ title: section, expanded: false }));
           }
           grouped.get(section)?.items.push(newItem({
             title: item.itemText,
@@ -127,10 +161,16 @@ export default function AdminChecklistPage() {
           }));
         });
 
-      setCategories(Array.from(grouped.values()));
+      const nextCategories = Array.from(grouped.values()).map((category, index) => ({
+        ...category,
+        expanded: index === 0,
+      }));
+      setCategories(nextCategories);
+      setNewCategoryTitle('');
     } catch (err) {
       setSelectedTemplate(null);
       setCategories([]);
+      setNewCategoryTitle('');
       setError(err instanceof Error ? err.message : 'Failed to load template detail.');
     } finally {
       setIsLoading(false);
@@ -246,7 +286,43 @@ export default function AdminChecklistPage() {
   };
 
   const addCategory = () => {
-    setCategories((prev) => [...prev, newCategory()]);
+    const created = newCategory({
+      title: newCategoryTitle.trim(),
+      expanded: true,
+    });
+    setCategories((prev) => [...prev, created]);
+    setNewCategoryTitle('');
+    setFocusTarget({ kind: 'category', categoryId: created.id });
+  };
+
+  const toggleCategory = (categoryId: string) => {
+    setCategories((prev) =>
+      prev.map((category) =>
+        category.id === categoryId
+          ? { ...category, expanded: !category.expanded }
+          : category
+      )
+    );
+  };
+
+  const setAllCategoriesExpanded = (expanded: boolean) => {
+    setCategories((prev) => prev.map((category) => ({ ...category, expanded })));
+  };
+
+  const deleteCategory = (categoryId: string) => {
+    const category = categories.find((item) => item.id === categoryId);
+    if (!category) {
+      return;
+    }
+
+    const prompt = category.items.length > 0
+      ? `Delete "${categoryLabel(category, categories.indexOf(category))}" and its ${category.items.length} checklist item${category.items.length === 1 ? '' : 's'}?`
+      : `Delete "${categoryLabel(category, categories.indexOf(category))}"?`;
+    if (!window.confirm(prompt)) {
+      return;
+    }
+
+    setCategories((prev) => prev.filter((item) => item.id !== categoryId));
   };
 
   const updateCategoryTitle = (categoryId: string, value: string) => {
@@ -263,6 +339,8 @@ export default function AdminChecklistPage() {
   };
 
   const addItem = (categoryId: string) => {
+    const createdItem = newItem();
+    let addedItem = false;
     setCategories((prev) =>
       prev.map((category) => {
         if (category.id !== categoryId) return category;
@@ -270,6 +348,7 @@ export default function AdminChecklistPage() {
         if (!category.title.trim()) {
           return {
             ...category,
+            expanded: true,
             errorCategoryTitle: 'Please enter a category title first.',
           };
         }
@@ -283,19 +362,26 @@ export default function AdminChecklistPage() {
             );
             return {
               ...category,
+              expanded: true,
               items: updatedItems,
             };
           }
         }
 
+        addedItem = true;
         return {
           ...category,
+          expanded: true,
           errorCategoryTitle: undefined,
           errorAddItem: undefined,
-          items: [...category.items, newItem()],
+          items: [...category.items, createdItem],
         };
       })
     );
+
+    if (addedItem) {
+      setFocusTarget({ kind: 'item', categoryId, itemId: createdItem.id });
+    }
   };
 
   const updateItem = (categoryId: string, itemId: string, patch: Partial<ItemDraft>) => {
@@ -334,14 +420,17 @@ export default function AdminChecklistPage() {
 
     const nextCategories = categories.map((category) => {
       const nextCategory = { ...category, errorCategoryTitle: undefined, errorAddItem: undefined };
+      let categoryHasError = false;
       const title = category.title.trim();
       if (!title) {
         nextCategory.errorCategoryTitle = 'Please enter a category title first.';
         hasError = true;
+        categoryHasError = true;
       }
       if (category.items.length === 0) {
         nextCategory.errorAddItem = 'Each category must have at least 1 item.';
         hasError = true;
+        categoryHasError = true;
       }
 
       nextCategory.items = category.items.map((item) => {
@@ -349,6 +438,7 @@ export default function AdminChecklistPage() {
         if (!item.title.trim()) {
           nextItem.errorTitle = 'Item title is required.';
           hasError = true;
+          categoryHasError = true;
         } else if (title) {
           payload.push({
             orderIndex: orderIndex++,
@@ -360,6 +450,8 @@ export default function AdminChecklistPage() {
         }
         return nextItem;
       });
+
+      nextCategory.expanded = category.expanded || categoryHasError;
 
       return nextCategory;
     });
@@ -448,6 +540,7 @@ export default function AdminChecklistPage() {
   const hasOwnedLock = Boolean(selectedTemplate?.editLock?.ownedByCurrentUser);
   const lockedByOther = Boolean(selectedTemplate?.editLock && !selectedTemplate.editLock.ownedByCurrentUser);
   const isReadOnly = selectedTemplate ? (selectedTemplate.template.active || !hasOwnedLock) : false;
+  const expandedCategoryCount = categories.filter((category) => category.expanded).length;
 
   return (
     <ShellLayout title="Templates" subtitle="Create draft versions, edit items safely, then activate">
@@ -564,14 +657,6 @@ export default function AdminChecklistPage() {
                     Resume Editing
                   </button>
                 )}
-                <button
-                  className="btn btn-outline-secondary btn-sm"
-                  style={{ borderRadius: '999px' }}
-                  disabled={isReadOnly}
-                  onClick={addCategory}
-                >
-                  ➕ Add Category
-                </button>
               </div>
             </div>
 
@@ -599,91 +684,231 @@ export default function AdminChecklistPage() {
               </div>
             )}
 
+            <div
+              className="rounded-3 border p-3 mb-3"
+              style={{ background: '#f8fafc', borderColor: '#e8eff5' }}
+            >
+              <form
+                className="d-flex flex-wrap align-items-end gap-2"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  addCategory();
+                }}
+              >
+                <div className="flex-grow-1" style={{ minWidth: '16rem' }}>
+                  <label className="form-label small mb-1" htmlFor="checklist-new-category-title">New Category</label>
+                  <input
+                    id="checklist-new-category-title"
+                    data-editor-focus="true"
+                    className="form-control form-control-sm"
+                    placeholder="Enter category title, then add the section"
+                    value={newCategoryTitle}
+                    disabled={isReadOnly}
+                    onChange={(event) => setNewCategoryTitle(event.target.value)}
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="btn btn-outline-primary btn-sm"
+                  style={{ borderRadius: '999px' }}
+                  disabled={isReadOnly}
+                >
+                  ➕ Add Category
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary btn-sm"
+                  style={{ borderRadius: '999px' }}
+                  disabled={categories.length === 0}
+                  onClick={() => setAllCategoriesExpanded(true)}
+                >
+                  Expand All
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary btn-sm"
+                  style={{ borderRadius: '999px' }}
+                  disabled={categories.length === 0 || expandedCategoryCount === 0}
+                  onClick={() => setAllCategoriesExpanded(false)}
+                >
+                  Collapse All
+                </button>
+              </form>
+              <div className="form-text mb-0">
+                Add a category once, then manage its checklist items inside that category card.
+              </div>
+            </div>
+
             <div className="vstack gap-3">
-              {categories.map((category) => (
-                <div className="p-3" style={{ background: '#f8fafc', borderRadius: '0.6rem', border: '1px solid #e8eff5' }} key={category.id}>
-                  <div className="mb-2">
-                    <label className="form-label small">Category Title</label>
-                    <input
-                      className="form-control form-control-sm"
-                      value={category.title}
-                      disabled={isReadOnly}
-                      onChange={(event) => updateCategoryTitle(category.id, event.target.value)}
-                    />
-                    {category.errorCategoryTitle && (
-                      <div className="text-danger small mt-1">{category.errorCategoryTitle}</div>
-                    )}
-                  </div>
+              {categories.length === 0 && (
+                <div
+                  className="rounded-3 border p-4 text-center text-muted"
+                  style={{ background: '#f8fafc', borderColor: '#e8eff5' }}
+                >
+                  No categories yet. Add a category above to start this draft.
+                </div>
+              )}
 
-                  <div className="d-flex justify-content-between align-items-center mb-2">
-                    <div className="small text-muted">Checklist Items</div>
-                    <button
-                      className="btn btn-outline-primary btn-sm"
-                      disabled={isReadOnly}
-                      onClick={() => addItem(category.id)}
-                    >
-                      Add Item(s)
-                    </button>
-                  </div>
-
-                  {category.items.length === 0 && (
-                    <div className="small text-muted mb-2">No items yet.</div>
-                  )}
-
-                  <div className="vstack gap-2">
-                    {category.items.map((item) => (
-                      <div className="border rounded p-2" key={item.id}>
-                        <div className="row g-2">
-                          <div className="col-md-5">
-                            <label className="form-label small">Item Title</label>
-                            <input
-                              className="form-control form-control-sm"
-                              value={item.title}
-                              disabled={isReadOnly}
-                              onChange={(event) => updateItem(category.id, item.id, { title: event.target.value })}
-                            />
-                            {item.errorTitle && <div className="text-danger small mt-1">{item.errorTitle}</div>}
-                          </div>
-                          <div className="col-md-5">
-                            <label className="form-label small">Guidance (optional)</label>
-                            <input
-                              className="form-control form-control-sm"
-                              value={item.guidanceText}
-                              disabled={isReadOnly}
-                              onChange={(event) => updateItem(category.id, item.id, { guidanceText: event.target.value })}
-                            />
-                          </div>
-                          <div className="col-md-2">
-                            <label className="form-label small">Required</label>
-                            <div className="form-check mt-1">
-                              <input
-                                type="checkbox"
-                                className="form-check-input"
-                                checked={item.isRequired}
-                                disabled={isReadOnly}
-                                onChange={(event) => updateItem(category.id, item.id, { isRequired: event.target.checked })}
-                              />
+              {categories.map((category, index) => (
+                <div
+                  className="rounded-3 border"
+                  style={{ background: '#f8fafc', borderColor: '#e8eff5' }}
+                  key={category.id}
+                >
+                  <div className="p-3">
+                    <div className="d-flex flex-wrap justify-content-between align-items-start gap-2">
+                      <button
+                        type="button"
+                        className="btn btn-link p-0 text-decoration-none text-start flex-grow-1"
+                        style={{ color: '#1b2a36' }}
+                        onClick={() => toggleCategory(category.id)}
+                      >
+                        <div className="d-flex align-items-center gap-2">
+                          <span className="small text-muted" style={{ width: '1rem' }}>
+                            {category.expanded ? '▾' : '▸'}
+                          </span>
+                          <div>
+                            <div className="fw-semibold">{categoryLabel(category, index)}</div>
+                            <div className="small text-muted">
+                              {category.items.length === 0
+                                ? 'No checklist items yet'
+                                : `${category.items.length} checklist item${category.items.length === 1 ? '' : 's'}`}
                             </div>
                           </div>
                         </div>
-                        <div className="mt-2">
-                          <button
-                            className="btn btn-outline-danger btn-sm"
-                            disabled={isReadOnly}
-                            onClick={() => deleteItem(category.id, item.id)}
-                          >
-                            Delete Item
-                          </button>
-                        </div>
+                      </button>
+
+                      <div className="d-flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className="btn btn-outline-secondary btn-sm"
+                          style={{ borderRadius: '999px' }}
+                          onClick={() => toggleCategory(category.id)}
+                        >
+                          {category.expanded ? 'Collapse' : 'Expand'}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-outline-danger btn-sm"
+                          style={{ borderRadius: '999px' }}
+                          disabled={isReadOnly}
+                          onClick={() => deleteCategory(category.id)}
+                        >
+                          Delete Category
+                        </button>
                       </div>
-                    ))}
+                    </div>
                   </div>
 
-                  {category.errorAddItem && (
-                    <div className="text-danger small mt-1">{category.errorAddItem}</div>
+                  {category.expanded && (
+                    <div className="px-3 pb-3 border-top" style={{ borderColor: '#e8eff5' }}>
+                      <div className="pt-3">
+                        <div className="mb-3">
+                          <label className="form-label small" htmlFor={`category-title-${category.id}`}>Category Title</label>
+                          <input
+                            id={`category-title-${category.id}`}
+                            className="form-control form-control-sm"
+                            value={category.title}
+                            disabled={isReadOnly}
+                            onChange={(event) => updateCategoryTitle(category.id, event.target.value)}
+                          />
+                          {category.errorCategoryTitle && (
+                            <div className="text-danger small mt-1">{category.errorCategoryTitle}</div>
+                          )}
+                        </div>
+
+                        <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                          <div className="small text-muted">Checklist Items</div>
+                          <button
+                            type="button"
+                            className="btn btn-outline-primary btn-sm"
+                            style={{ borderRadius: '999px' }}
+                            disabled={isReadOnly}
+                            onClick={() => addItem(category.id)}
+                          >
+                            Add Item
+                          </button>
+                        </div>
+
+                        {category.items.length === 0 && (
+                          <div className="small text-muted mb-2">No items yet.</div>
+                        )}
+
+                        <div className="vstack gap-2">
+                          {category.items.map((item) => (
+                            <div className="border rounded p-2" key={item.id}>
+                              <div className="row g-2">
+                                <div className="col-md-5">
+                                  <label className="form-label small" htmlFor={`item-title-${item.id}`}>Item Title</label>
+                                  <input
+                                    id={`item-title-${item.id}`}
+                                    className="form-control form-control-sm"
+                                    value={item.title}
+                                    disabled={isReadOnly}
+                                    onChange={(event) => updateItem(category.id, item.id, { title: event.target.value })}
+                                  />
+                                  {item.errorTitle && <div className="text-danger small mt-1">{item.errorTitle}</div>}
+                                </div>
+                                <div className="col-md-5">
+                                  <label className="form-label small">Guidance (optional)</label>
+                                  <input
+                                    className="form-control form-control-sm"
+                                    value={item.guidanceText}
+                                    disabled={isReadOnly}
+                                    onChange={(event) => updateItem(category.id, item.id, { guidanceText: event.target.value })}
+                                  />
+                                </div>
+                                <div className="col-md-2">
+                                  <label className="form-label small">Required</label>
+                                  <div className="form-check mt-1">
+                                    <input
+                                      type="checkbox"
+                                      className="form-check-input"
+                                      checked={item.isRequired}
+                                      disabled={isReadOnly}
+                                      onChange={(event) => updateItem(category.id, item.id, { isRequired: event.target.checked })}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="mt-2">
+                                <button
+                                  type="button"
+                                  className="btn btn-outline-danger btn-sm"
+                                  style={{ borderRadius: '999px' }}
+                                  disabled={isReadOnly}
+                                  onClick={() => deleteItem(category.id, item.id)}
+                                >
+                                  Delete Item
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {category.errorAddItem && (
+                          <div className="text-danger small mt-2">{category.errorAddItem}</div>
+                        )}
+                      </div>
+                    </div>
                   )}
                 </div>
               ))}
+            </div>
+
+            <div className="mt-3 pt-3 border-top d-flex flex-wrap justify-content-between align-items-center gap-2" style={{ borderColor: '#e8eff5' }}>
+              <div className="small text-muted">
+                Add the next category here without scrolling back to the top of the editor.
+              </div>
+              <button
+                type="button"
+                className="btn btn-outline-primary btn-sm"
+                style={{ borderRadius: '999px' }}
+                disabled={isReadOnly}
+                onClick={addCategory}
+              >
+                ➕ Add Another Category
+              </button>
             </div>
 
             <div className="mt-4 d-flex flex-wrap gap-2">
