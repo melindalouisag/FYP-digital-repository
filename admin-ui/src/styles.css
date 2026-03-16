@@ -225,6 +225,67 @@ body {
   margin-bottom: 0.35rem;
 }
 
+.su-checklist-card-header {
+  cursor: pointer;
+  transition: background var(--su-transition);
+}
+
+.su-checklist-card-header:hover {
+  background: rgba(11, 117, 132, 0.04);
+}
+
+.su-checklist-card-header:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px rgba(11, 117, 132, 0.15);
+}
+
+.su-checklist-category-input {
+  width: 100%;
+  color: var(--text);
+  font-weight: 600;
+  line-height: 1.35;
+  min-height: auto;
+}
+
+.su-checklist-category-input.form-control-plaintext {
+  border: 1px solid transparent;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  margin-bottom: 0;
+}
+
+.su-checklist-category-input.form-control-plaintext::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
+.su-checklist-category-label {
+  color: var(--text);
+  line-height: 1.35;
+}
+
+.su-icon-action {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.su-icon-action svg {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.su-icon-action-close {
+  width: 1.85rem;
+  height: 1.85rem;
+}
+
 /* ======================== TABLES ======================== */
 .table {
   border-color: #e5ecf2;

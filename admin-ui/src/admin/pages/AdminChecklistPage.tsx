@@ -68,12 +68,48 @@ function categoryLabel(category: CategoryDraft, index: number): string {
   return title || `Untitled Category ${index + 1}`;
 }
 
+function ChevronIcon({ expanded }: { expanded: boolean }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 16 16"
+      fill="none"
+      className="flex-shrink-0"
+      style={{ width: '0.95rem', height: '0.95rem' }}
+    >
+      <path
+        d={expanded ? 'M3.5 6 8 10.5 12.5 6' : 'M6 3.5 10.5 8 6 12.5'}
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor">
+      <path d="M6.5 1.75h3A1.75 1.75 0 0 1 11.25 3H14a.75.75 0 0 1 0 1.5h-.56l-.58 8.11A2 2 0 0 1 10.87 14.5H5.13a2 2 0 0 1-1.99-1.89L2.56 4.5H2a.75.75 0 0 1 0-1.5h2.75A1.75 1.75 0 0 1 6.5 1.75Zm3.25 1.25a.25.25 0 0 0-.25-.25h-3a.25.25 0 0 0-.25.25V3h3.5ZM4.64 4.5l.57 7.99a.5.5 0 0 0 .5.47h5.16a.5.5 0 0 0 .5-.47l.57-7.99Zm2 1.25c.4 0 .72.32.72.72v4.06a.72.72 0 0 1-1.44 0V6.47c0-.4.32-.72.72-.72Zm2.72.72a.72.72 0 1 0-1.44 0v4.06a.72.72 0 0 0 1.44 0Z" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 16 16" fill="none">
+      <path d="m4 4 8 8m0-8-8 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export default function AdminChecklistPage() {
   const [templatesByType, setTemplatesByType] = useState<TemplateMap>(emptyTemplates());
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<ChecklistTemplateResponse | null>(null);
   const [categories, setCategories] = useState<CategoryDraft[]>([]);
-  const [newCategoryTitle, setNewCategoryTitle] = useState('');
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
   const [focusTarget, setFocusTarget] = useState<FocusTarget | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isMutating, setIsMutating] = useState(false);
@@ -101,9 +137,11 @@ export default function AdminChecklistPage() {
 
     target.scrollIntoView({ behavior: 'smooth', block: 'center' });
     target.focus();
-    target.select();
+    if (target instanceof HTMLInputElement && target.type !== 'checkbox') {
+      target.select();
+    }
     setFocusTarget(null);
-  }, [categories, focusTarget]);
+  }, [categories, editingCategoryId, focusTarget]);
 
   const loadTemplates = async () => {
     setIsLoading(true);
@@ -134,7 +172,7 @@ export default function AdminChecklistPage() {
       setSelectedTemplateId(null);
       setSelectedTemplate(null);
       setCategories([]);
-      setNewCategoryTitle('');
+      setEditingCategoryId(null);
       setFocusTarget(null);
       return;
     }
@@ -166,11 +204,11 @@ export default function AdminChecklistPage() {
         expanded: index === 0,
       }));
       setCategories(nextCategories);
-      setNewCategoryTitle('');
+      setEditingCategoryId(null);
     } catch (err) {
       setSelectedTemplate(null);
       setCategories([]);
-      setNewCategoryTitle('');
+      setEditingCategoryId(null);
       setError(err instanceof Error ? err.message : 'Failed to load template detail.');
     } finally {
       setIsLoading(false);
@@ -286,27 +324,30 @@ export default function AdminChecklistPage() {
   };
 
   const addCategory = () => {
-    const created = newCategory({
-      title: newCategoryTitle.trim(),
-      expanded: true,
-    });
+    const created = newCategory({ expanded: true });
     setCategories((prev) => [...prev, created]);
-    setNewCategoryTitle('');
+    setEditingCategoryId(created.id);
     setFocusTarget({ kind: 'category', categoryId: created.id });
   };
 
   const toggleCategory = (categoryId: string) => {
-    setCategories((prev) =>
-      prev.map((category) =>
-        category.id === categoryId
-          ? { ...category, expanded: !category.expanded }
-          : category
-      )
-    );
-  };
+    const category = categories.find((item) => item.id === categoryId);
+    if (!category) {
+      return;
+    }
 
-  const setAllCategoriesExpanded = (expanded: boolean) => {
-    setCategories((prev) => prev.map((category) => ({ ...category, expanded })));
+    const nextExpanded = !category.expanded;
+    setCategories((prev) =>
+      prev.map((item) => (
+        item.id === categoryId
+          ? { ...item, expanded: nextExpanded }
+          : item
+      ))
+    );
+
+    if (!nextExpanded && editingCategoryId === categoryId) {
+      setEditingCategoryId(null);
+    }
   };
 
   const deleteCategory = (categoryId: string) => {
@@ -322,6 +363,9 @@ export default function AdminChecklistPage() {
       return;
     }
 
+    if (editingCategoryId === categoryId) {
+      setEditingCategoryId(null);
+    }
     setCategories((prev) => prev.filter((item) => item.id !== categoryId));
   };
 
@@ -341,11 +385,13 @@ export default function AdminChecklistPage() {
   const addItem = (categoryId: string) => {
     const createdItem = newItem();
     let addedItem = false;
+    let needsCategoryTitle = false;
     setCategories((prev) =>
       prev.map((category) => {
         if (category.id !== categoryId) return category;
 
         if (!category.title.trim()) {
+          needsCategoryTitle = true;
           return {
             ...category,
             expanded: true,
@@ -381,6 +427,9 @@ export default function AdminChecklistPage() {
 
     if (addedItem) {
       setFocusTarget({ kind: 'item', categoryId, itemId: createdItem.id });
+    } else if (needsCategoryTitle) {
+      setEditingCategoryId(categoryId);
+      setFocusTarget({ kind: 'category', categoryId });
     }
   };
 
@@ -417,6 +466,8 @@ export default function AdminChecklistPage() {
     let hasError = false;
     const payload: ChecklistEditorItem[] = [];
     let orderIndex = 1;
+    let firstFocusTarget: FocusTarget | null = null;
+    let firstMissingCategoryId: string | null = null;
 
     const nextCategories = categories.map((category) => {
       const nextCategory = { ...category, errorCategoryTitle: undefined, errorAddItem: undefined };
@@ -426,6 +477,12 @@ export default function AdminChecklistPage() {
         nextCategory.errorCategoryTitle = 'Please enter a category title first.';
         hasError = true;
         categoryHasError = true;
+        if (!firstFocusTarget) {
+          firstFocusTarget = { kind: 'category', categoryId: category.id };
+        }
+        if (!firstMissingCategoryId) {
+          firstMissingCategoryId = category.id;
+        }
       }
       if (category.items.length === 0) {
         nextCategory.errorAddItem = 'Each category must have at least 1 item.';
@@ -439,6 +496,9 @@ export default function AdminChecklistPage() {
           nextItem.errorTitle = 'Item title is required.';
           hasError = true;
           categoryHasError = true;
+          if (!firstFocusTarget) {
+            firstFocusTarget = { kind: 'item', categoryId: category.id, itemId: item.id };
+          }
         } else if (title) {
           payload.push({
             orderIndex: orderIndex++,
@@ -459,10 +519,17 @@ export default function AdminChecklistPage() {
     setCategories(nextCategories);
 
     if (hasError) {
+      if (firstMissingCategoryId) {
+        setEditingCategoryId(firstMissingCategoryId);
+      }
+      if (firstFocusTarget) {
+        setFocusTarget(firstFocusTarget);
+      }
       setError('Please fix checklist validation errors before saving.');
       return null;
     }
 
+    setEditingCategoryId(null);
     return payload;
   };
 
@@ -540,7 +607,6 @@ export default function AdminChecklistPage() {
   const hasOwnedLock = Boolean(selectedTemplate?.editLock?.ownedByCurrentUser);
   const lockedByOther = Boolean(selectedTemplate?.editLock && !selectedTemplate.editLock.ownedByCurrentUser);
   const isReadOnly = selectedTemplate ? (selectedTemplate.template.active || !hasOwnedLock) : false;
-  const expandedCategoryCount = categories.filter((category) => category.expanded).length;
 
   return (
     <ShellLayout title="Templates" subtitle="Create draft versions, edit items safely, then activate">
@@ -684,59 +750,16 @@ export default function AdminChecklistPage() {
               </div>
             )}
 
-            <div
-              className="rounded-3 border p-3 mb-3"
-              style={{ background: '#f8fafc', borderColor: '#e8eff5' }}
-            >
-              <form
-                className="d-flex flex-wrap align-items-end gap-2"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  addCategory();
-                }}
+            <div className="mb-3">
+              <button
+                type="button"
+                className="btn btn-outline-primary btn-sm"
+                style={{ borderRadius: '999px' }}
+                disabled={isReadOnly}
+                onClick={addCategory}
               >
-                <div className="flex-grow-1" style={{ minWidth: '16rem' }}>
-                  <label className="form-label small mb-1" htmlFor="checklist-new-category-title">New Category</label>
-                  <input
-                    id="checklist-new-category-title"
-                    data-editor-focus="true"
-                    className="form-control form-control-sm"
-                    placeholder="Enter category title, then add the section"
-                    value={newCategoryTitle}
-                    disabled={isReadOnly}
-                    onChange={(event) => setNewCategoryTitle(event.target.value)}
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="btn btn-outline-primary btn-sm"
-                  style={{ borderRadius: '999px' }}
-                  disabled={isReadOnly}
-                >
-                  ➕ Add Category
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-outline-secondary btn-sm"
-                  style={{ borderRadius: '999px' }}
-                  disabled={categories.length === 0}
-                  onClick={() => setAllCategoriesExpanded(true)}
-                >
-                  Expand All
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-outline-secondary btn-sm"
-                  style={{ borderRadius: '999px' }}
-                  disabled={categories.length === 0 || expandedCategoryCount === 0}
-                  onClick={() => setAllCategoriesExpanded(false)}
-                >
-                  Collapse All
-                </button>
-              </form>
-              <div className="form-text mb-0">
-                Add a category once, then manage its checklist items inside that category card.
-              </div>
+                ➕ Add Category
+              </button>
             </div>
 
             <div className="vstack gap-3">
@@ -755,68 +778,83 @@ export default function AdminChecklistPage() {
                   style={{ background: '#f8fafc', borderColor: '#e8eff5' }}
                   key={category.id}
                 >
-                  <div className="p-3">
-                    <div className="d-flex flex-wrap justify-content-between align-items-start gap-2">
-                      <button
-                        type="button"
-                        className="btn btn-link p-0 text-decoration-none text-start flex-grow-1"
-                        style={{ color: '#1b2a36' }}
-                        onClick={() => toggleCategory(category.id)}
-                      >
-                        <div className="d-flex align-items-center gap-2">
-                          <span className="small text-muted" style={{ width: '1rem' }}>
-                            {category.expanded ? '▾' : '▸'}
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={category.expanded}
+                    className="p-3 su-checklist-card-header"
+                    onClick={() => toggleCategory(category.id)}
+                    onKeyDown={(event) => {
+                      if (event.target !== event.currentTarget) {
+                        return;
+                      }
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        toggleCategory(category.id);
+                      }
+                    }}
+                  >
+                    <div className="d-flex flex-wrap justify-content-between align-items-start gap-3">
+                      <div className="flex-grow-1" style={{ minWidth: '14rem' }}>
+                        <div className="d-flex align-items-start gap-2">
+                          <span className="small text-muted pt-1">
+                            <ChevronIcon expanded={category.expanded} />
                           </span>
-                          <div>
-                            <div className="fw-semibold">{categoryLabel(category, index)}</div>
+                          <div className="flex-grow-1">
+                            {category.expanded && !isReadOnly ? (
+                              <input
+                                id={`category-title-${category.id}`}
+                                className={`su-checklist-category-input ${editingCategoryId === category.id ? 'form-control form-control-sm' : 'form-control-plaintext'}`}
+                                placeholder={`Untitled Category ${index + 1}`}
+                                value={category.title}
+                                onFocus={() => setEditingCategoryId(category.id)}
+                                onBlur={() => setEditingCategoryId((current) => (current === category.id ? null : current))}
+                                onClick={(event) => event.stopPropagation()}
+                                onChange={(event) => updateCategoryTitle(category.id, event.target.value)}
+                                onKeyDown={(event) => {
+                                  event.stopPropagation();
+                                  if (event.key === 'Enter') {
+                                    event.preventDefault();
+                                    event.currentTarget.blur();
+                                  }
+                                }}
+                              />
+                            ) : (
+                              <div className="fw-semibold su-checklist-category-label">
+                                {categoryLabel(category, index)}
+                              </div>
+                            )}
                             <div className="small text-muted">
                               {category.items.length === 0
                                 ? 'No checklist items yet'
                                 : `${category.items.length} checklist item${category.items.length === 1 ? '' : 's'}`}
                             </div>
+                            {category.errorCategoryTitle && (
+                              <div className="text-danger small mt-1">{category.errorCategoryTitle}</div>
+                            )}
                           </div>
                         </div>
-                      </button>
-
-                      <div className="d-flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          className="btn btn-outline-secondary btn-sm"
-                          style={{ borderRadius: '999px' }}
-                          onClick={() => toggleCategory(category.id)}
-                        >
-                          {category.expanded ? 'Collapse' : 'Expand'}
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-outline-danger btn-sm"
-                          style={{ borderRadius: '999px' }}
-                          disabled={isReadOnly}
-                          onClick={() => deleteCategory(category.id)}
-                        >
-                          Delete Category
-                        </button>
                       </div>
+
+                      <button
+                        type="button"
+                        className="btn btn-outline-danger btn-sm su-icon-action"
+                        disabled={isReadOnly}
+                        aria-label={`Delete ${categoryLabel(category, index)}`}
+                        title="Delete category"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          deleteCategory(category.id);
+                        }}
+                      >
+                        <TrashIcon />
+                      </button>
                     </div>
                   </div>
 
                   {category.expanded && (
                     <div className="px-3 pb-3 border-top" style={{ borderColor: '#e8eff5' }}>
                       <div className="pt-3">
-                        <div className="mb-3">
-                          <label className="form-label small" htmlFor={`category-title-${category.id}`}>Category Title</label>
-                          <input
-                            id={`category-title-${category.id}`}
-                            className="form-control form-control-sm"
-                            value={category.title}
-                            disabled={isReadOnly}
-                            onChange={(event) => updateCategoryTitle(category.id, event.target.value)}
-                          />
-                          {category.errorCategoryTitle && (
-                            <div className="text-danger small mt-1">{category.errorCategoryTitle}</div>
-                          )}
-                        </div>
-
                         <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
                           <div className="small text-muted">Checklist Items</div>
                           <button
@@ -836,7 +874,19 @@ export default function AdminChecklistPage() {
 
                         <div className="vstack gap-2">
                           {category.items.map((item) => (
-                            <div className="border rounded p-2" key={item.id}>
+                            <div className="border rounded p-3" key={item.id}>
+                              <div className="d-flex justify-content-end mb-2">
+                                <button
+                                  type="button"
+                                  className="btn btn-outline-secondary btn-sm su-icon-action su-icon-action-close"
+                                  disabled={isReadOnly}
+                                  aria-label="Delete item"
+                                  title="Delete item"
+                                  onClick={() => deleteItem(category.id, item.id)}
+                                >
+                                  <CloseIcon />
+                                </button>
+                              </div>
                               <div className="row g-2">
                                 <div className="col-md-5">
                                   <label className="form-label small" htmlFor={`item-title-${item.id}`}>Item Title</label>
@@ -871,17 +921,6 @@ export default function AdminChecklistPage() {
                                   </div>
                                 </div>
                               </div>
-                              <div className="mt-2">
-                                <button
-                                  type="button"
-                                  className="btn btn-outline-danger btn-sm"
-                                  style={{ borderRadius: '999px' }}
-                                  disabled={isReadOnly}
-                                  onClick={() => deleteItem(category.id, item.id)}
-                                >
-                                  Delete Item
-                                </button>
-                              </div>
                             </div>
                           ))}
                         </div>
@@ -894,21 +933,6 @@ export default function AdminChecklistPage() {
                   )}
                 </div>
               ))}
-            </div>
-
-            <div className="mt-3 pt-3 border-top d-flex flex-wrap justify-content-between align-items-center gap-2" style={{ borderColor: '#e8eff5' }}>
-              <div className="small text-muted">
-                Add the next category here without scrolling back to the top of the editor.
-              </div>
-              <button
-                type="button"
-                className="btn btn-outline-primary btn-sm"
-                style={{ borderRadius: '999px' }}
-                disabled={isReadOnly}
-                onClick={addCategory}
-              >
-                ➕ Add Another Category
-              </button>
             </div>
 
             <div className="mt-4 d-flex flex-wrap gap-2">
