@@ -30,6 +30,7 @@ import AdminClearancePage from '../admin/pages/AdminClearancePage';
 import AdminPublishPage from '../admin/pages/AdminPublishPage';
 import AdminPublishDetailPage from '../admin/pages/AdminPublishDetailPage';
 import AdminChecklistPage from '../admin/pages/AdminChecklistPage';
+import AdminChecklistEditorPage from '../admin/pages/AdminChecklistEditorPage';
 
 const ROUTE_PATHS = {
   LECTURER_REVIEW: '/lecturer/review',
@@ -80,6 +81,7 @@ export function AppRoutes() {
       <Route path="/admin/publish" element={<ProtectedRoute user={user} loading={loading}><RoleGuard user={user} allowedRoles={['ADMIN']}><AdminPublishPage /></RoleGuard></ProtectedRoute>} />
       <Route path="/admin/publish/:caseId" element={<ProtectedRoute user={user} loading={loading}><RoleGuard user={user} allowedRoles={['ADMIN']}><AdminPublishDetailPage /></RoleGuard></ProtectedRoute>} />
       <Route path="/admin/checklists" element={<ProtectedRoute user={user} loading={loading}><RoleGuard user={user} allowedRoles={['ADMIN']}><AdminChecklistPage /></RoleGuard></ProtectedRoute>} />
+      <Route path="/admin/checklists/:templateId/edit" element={<ProtectedRoute user={user} loading={loading}><RoleGuard user={user} allowedRoles={['ADMIN']}><AdminChecklistEditorPage /></RoleGuard></ProtectedRoute>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
