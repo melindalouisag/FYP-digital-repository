@@ -630,25 +630,13 @@ export default function AdminChecklistEditorPage() {
               </div>
             )}
 
-            <div className="mb-3">
-              <button
-                type="button"
-                className="btn btn-outline-primary btn-sm"
-                style={{ borderRadius: '999px' }}
-                disabled={isReadOnly}
-                onClick={addCategory}
-              >
-                ➕ Add Category
-              </button>
-            </div>
-
             <div className="vstack gap-3">
               {categories.length === 0 && (
                 <div
                   className="rounded-3 border p-4 text-center text-muted"
                   style={{ background: '#f8fafc', borderColor: '#e8eff5' }}
                 >
-                  No categories yet. Add a category above to start this draft.
+                  No categories yet. Add a category below to start this draft.
                 </div>
               )}
 
@@ -735,28 +723,39 @@ export default function AdminChecklistEditorPage() {
                   {category.expanded && (
                     <div className="px-3 pb-3 border-top" style={{ borderColor: '#e8eff5' }}>
                       <div className="pt-3">
-                        <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-                          <div className="small text-muted">Checklist Items</div>
-                          <button
-                            type="button"
-                            className="btn btn-outline-primary btn-sm"
-                            style={{ borderRadius: '999px' }}
-                            disabled={isReadOnly}
-                            onClick={() => addItem(category.id)}
-                          >
-                            Add Item
-                          </button>
-                        </div>
+                        <div className="small text-muted mb-2">Checklist Items</div>
 
                         {category.items.length === 0 && (
-                          <div className="small text-muted mb-2">No items yet.</div>
+                          <div className="border rounded p-3 mb-2">
+                            <div className="row g-3 align-items-end">
+                              <div className="col-lg-9">
+                                <div className="small text-muted">No items yet. Add the first item for this category.</div>
+                              </div>
+                              <div className="col-lg-3">
+                                <label className="form-label small">Actions</label>
+                                <div className="d-flex align-items-center gap-2 mt-1">
+                                  <button
+                                    type="button"
+                                    className="btn btn-outline-primary btn-sm"
+                                    style={{ borderRadius: '999px', whiteSpace: 'nowrap' }}
+                                    disabled={isReadOnly}
+                                    onClick={() => addItem(category.id)}
+                                  >
+                                    Add Item
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
                         )}
 
                         <div className="vstack gap-2">
-                          {category.items.map((item) => (
+                          {category.items.map((item, itemIndex) => {
+                            const isNewestItem = itemIndex === category.items.length - 1;
+                            return (
                             <div className="border rounded p-3" key={item.id}>
                               <div className="row g-3 align-items-end">
-                                <div className="col-md-5">
+                                <div className="col-lg-5 col-md-6">
                                   <label className="form-label small" htmlFor={`item-title-${item.id}`}>Item Title</label>
                                   <input
                                     id={`item-title-${item.id}`}
@@ -767,7 +766,7 @@ export default function AdminChecklistEditorPage() {
                                   />
                                   {item.errorTitle && <div className="text-danger small mt-1">{item.errorTitle}</div>}
                                 </div>
-                                <div className="col-md-5">
+                                <div className="col-lg-4 col-md-6">
                                   <label className="form-label small">Guidance (optional)</label>
                                   <input
                                     className="form-control form-control-sm"
@@ -776,9 +775,9 @@ export default function AdminChecklistEditorPage() {
                                     onChange={(event) => updateItem(category.id, item.id, { guidanceText: event.target.value })}
                                   />
                                 </div>
-                                <div className="col-md-2">
+                                <div className="col-lg-3">
                                   <label className="form-label small">Required</label>
-                                  <div className="d-flex align-items-center gap-2 mt-1">
+                                  <div className="d-flex flex-wrap align-items-center gap-2 mt-1">
                                     <div className="form-check m-0">
                                       <input
                                         type="checkbox"
@@ -795,14 +794,26 @@ export default function AdminChecklistEditorPage() {
                                       aria-label="Delete item"
                                       title="Delete item"
                                       onClick={() => deleteItem(category.id, item.id)}
-                                    >
-                                      <CloseIcon />
-                                    </button>
+                                      >
+                                        <CloseIcon />
+                                      </button>
+                                    {isNewestItem && (
+                                      <button
+                                        type="button"
+                                        className="btn btn-outline-primary btn-sm"
+                                        style={{ borderRadius: '999px', whiteSpace: 'nowrap' }}
+                                        disabled={isReadOnly}
+                                        onClick={() => addItem(category.id)}
+                                      >
+                                        Add Item
+                                      </button>
+                                    )}
                                   </div>
                                 </div>
                               </div>
                             </div>
-                          ))}
+                            );
+                          })}
                         </div>
 
                         {category.errorAddItem && (
@@ -813,6 +824,18 @@ export default function AdminChecklistEditorPage() {
                   )}
                 </div>
               ))}
+
+              <div>
+                <button
+                  type="button"
+                  className="btn btn-outline-primary btn-sm"
+                  style={{ borderRadius: '999px' }}
+                  disabled={isReadOnly}
+                  onClick={addCategory}
+                >
+                  ➕ Add Category
+                </button>
+              </div>
             </div>
 
             <div className="mt-4 d-flex flex-wrap gap-2">
