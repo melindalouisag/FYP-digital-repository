@@ -26,6 +26,14 @@ type FocusTarget =
   | { kind: 'category'; categoryId: string }
   | { kind: 'item'; categoryId: string; itemId: string };
 
+type ReusableItemSuggestion = {
+  key: string;
+  title: string;
+  guidanceText: string;
+  isRequired: boolean;
+  usageCount: number;
+};
+
 function newCategory(partial?: Partial<CategoryDraft>): CategoryDraft {
   return {
     id: crypto.randomUUID(),
@@ -59,6 +67,88 @@ function readLockFromError(error: unknown): ChecklistTemplateResponse['editLock'
 function categoryLabel(category: CategoryDraft, index: number): string {
   const title = category.title.trim();
   return title || `Untitled Category ${index + 1}`;
+}
+
+function normalizeSuggestionText(value: string): string {
+  return value.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function suggestionKey(item: Pick<ItemDraft, 'title' | 'guidanceText' | 'isRequired'>): string {
+  return [
+    normalizeSuggestionText(item.title),
+    normalizeSuggestionText(item.guidanceText),
+    item.isRequired ? '1' : '0',
+  ].join('::');
+}
+
+function reusableItemSuggestions(
+  categories: CategoryDraft[],
+  currentCategoryId: string,
+  currentItemId: string,
+  query: string,
+): ReusableItemSuggestion[] {
+  const normalizedQuery = normalizeSuggestionText(query);
+  if (!normalizedQuery) {
+    return [];
+  }
+
+  const unique = new Map<string, ReusableItemSuggestion>();
+
+  categories.forEach((category) => {
+    category.items.forEach((item) => {
+      if (category.id === currentCategoryId && item.id === currentItemId) {
+        return;
+      }
+
+      const title = item.title.trim();
+      if (!title) {
+        return;
+      }
+
+      const guidanceText = item.guidanceText.trim();
+      const normalizedTitle = normalizeSuggestionText(title);
+      const normalizedGuidance = normalizeSuggestionText(guidanceText);
+      const matchesQuery = normalizedTitle.includes(normalizedQuery) || normalizedGuidance.includes(normalizedQuery);
+      if (!matchesQuery) {
+        return;
+      }
+
+      const key = suggestionKey({ title, guidanceText, isRequired: item.isRequired });
+      const existing = unique.get(key);
+      if (existing) {
+        existing.usageCount += 1;
+        return;
+      }
+
+      unique.set(key, {
+        key,
+        title,
+        guidanceText,
+        isRequired: item.isRequired,
+        usageCount: 1,
+      });
+    });
+  });
+
+  return Array.from(unique.values())
+    .sort((left, right) => {
+      const leftTitle = normalizeSuggestionText(left.title);
+      const rightTitle = normalizeSuggestionText(right.title);
+      const leftStartsWith = leftTitle.startsWith(normalizedQuery);
+      const rightStartsWith = rightTitle.startsWith(normalizedQuery);
+      if (leftStartsWith !== rightStartsWith) {
+        return leftStartsWith ? -1 : 1;
+      }
+      if (left.usageCount !== right.usageCount) {
+        return right.usageCount - left.usageCount;
+      }
+      const byTitle = left.title.localeCompare(right.title);
+      if (byTitle !== 0) {
+        return byTitle;
+      }
+      return left.guidanceText.localeCompare(right.guidanceText);
+    })
+    .slice(0, 6);
 }
 
 function categoriesFromTemplate(detail: ChecklistTemplateResponse): CategoryDraft[] {
@@ -128,6 +218,8 @@ export default function AdminChecklistEditorPage() {
   const [categories, setCategories] = useState<CategoryDraft[]>([]);
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
   const [focusTarget, setFocusTarget] = useState<FocusTarget | null>(null);
+  const [activeSuggestionItemId, setActiveSuggestionItemId] = useState<string | null>(null);
+  const [highlightedSuggestionIndex, setHighlightedSuggestionIndex] = useState(-1);
   const [isLoading, setIsLoading] = useState(true);
   const [isMutating, setIsMutating] = useState(false);
   const [error, setError] = useState('');
@@ -187,10 +279,14 @@ export default function AdminChecklistEditorPage() {
       setSelectedTemplate(detail);
       setCategories(categoriesFromTemplate(detail));
       setEditingCategoryId(null);
+      setActiveSuggestionItemId(null);
+      setHighlightedSuggestionIndex(-1);
     } catch (err) {
       setSelectedTemplate(null);
       setCategories([]);
       setEditingCategoryId(null);
+      setActiveSuggestionItemId(null);
+      setHighlightedSuggestionIndex(-1);
       setError(err instanceof Error ? err.message : 'Failed to load template detail.');
     } finally {
       setIsLoading(false);
@@ -204,6 +300,8 @@ export default function AdminChecklistEditorPage() {
       setSelectedTemplate(null);
       setCategories([]);
       setEditingCategoryId(null);
+      setActiveSuggestionItemId(null);
+      setHighlightedSuggestionIndex(-1);
       setError('Template version not found.');
       setIsLoading(false);
       return;
@@ -383,6 +481,8 @@ export default function AdminChecklistEditorPage() {
     );
 
     if (addedItem) {
+      setActiveSuggestionItemId(createdItem.id);
+      setHighlightedSuggestionIndex(-1);
       setFocusTarget({ kind: 'item', categoryId, itemId: createdItem.id });
     } else if (needsCategoryTitle) {
       setEditingCategoryId(categoryId);
@@ -414,6 +514,10 @@ export default function AdminChecklistEditorPage() {
   };
 
   const deleteItem = (categoryId: string, itemId: string) => {
+    if (activeSuggestionItemId === itemId) {
+      setActiveSuggestionItemId(null);
+      setHighlightedSuggestionIndex(-1);
+    }
     setCategories((prev) =>
       prev.map((category) =>
         category.id === categoryId
@@ -421,6 +525,16 @@ export default function AdminChecklistEditorPage() {
           : category
       )
     );
+  };
+
+  const applySuggestion = (categoryId: string, itemId: string, suggestion: ReusableItemSuggestion) => {
+    updateItem(categoryId, itemId, {
+      title: suggestion.title,
+      guidanceText: suggestion.guidanceText,
+      isRequired: suggestion.isRequired,
+    });
+    setActiveSuggestionItemId(null);
+    setHighlightedSuggestionIndex(-1);
   };
 
   const validateAndBuildPayload = (): ChecklistEditorItem[] | null => {
@@ -752,66 +866,148 @@ export default function AdminChecklistEditorPage() {
                         <div className="vstack gap-2">
                           {category.items.map((item, itemIndex) => {
                             const isNewestItem = itemIndex === category.items.length - 1;
+                            const matchingSuggestions = activeSuggestionItemId === item.id
+                              ? reusableItemSuggestions(categories, category.id, item.id, item.title)
+                              : [];
+                            const showSuggestions = !isReadOnly && matchingSuggestions.length > 0;
                             return (
-                            <div className="border rounded p-3" key={item.id}>
-                              <div className="row g-3 align-items-end">
-                                <div className="col-lg-5 col-md-6">
-                                  <label className="form-label small" htmlFor={`item-title-${item.id}`}>Item Title</label>
-                                  <input
-                                    id={`item-title-${item.id}`}
-                                    className="form-control form-control-sm"
-                                    value={item.title}
-                                    disabled={isReadOnly}
-                                    onChange={(event) => updateItem(category.id, item.id, { title: event.target.value })}
-                                  />
-                                  {item.errorTitle && <div className="text-danger small mt-1">{item.errorTitle}</div>}
-                                </div>
-                                <div className="col-lg-4 col-md-6">
-                                  <label className="form-label small">Guidance (optional)</label>
-                                  <input
-                                    className="form-control form-control-sm"
-                                    value={item.guidanceText}
-                                    disabled={isReadOnly}
-                                    onChange={(event) => updateItem(category.id, item.id, { guidanceText: event.target.value })}
-                                  />
-                                </div>
-                                <div className="col-lg-3">
-                                  <label className="form-label small">Required</label>
-                                  <div className="d-flex flex-wrap align-items-center gap-2 mt-1">
-                                    <div className="form-check m-0">
+                              <div className="border rounded p-3" key={item.id}>
+                                <div className="row g-3 align-items-end">
+                                  <div className="col-lg-5 col-md-6">
+                                    <label className="form-label small" htmlFor={`item-title-${item.id}`}>Item Title</label>
+                                    <div className="position-relative">
                                       <input
-                                        type="checkbox"
-                                        className="form-check-input"
-                                        checked={item.isRequired}
+                                        id={`item-title-${item.id}`}
+                                        className="form-control form-control-sm"
+                                        value={item.title}
+                                        autoComplete="off"
                                         disabled={isReadOnly}
-                                        onChange={(event) => updateItem(category.id, item.id, { isRequired: event.target.checked })}
+                                        onFocus={() => {
+                                          setActiveSuggestionItemId(item.id);
+                                          setHighlightedSuggestionIndex(0);
+                                        }}
+                                        onBlur={() => {
+                                          window.setTimeout(() => {
+                                            setActiveSuggestionItemId((current) => (current === item.id ? null : current));
+                                            setHighlightedSuggestionIndex(-1);
+                                          }, 120);
+                                        }}
+                                        onChange={(event) => {
+                                          setActiveSuggestionItemId(item.id);
+                                          setHighlightedSuggestionIndex(0);
+                                          updateItem(category.id, item.id, { title: event.target.value });
+                                        }}
+                                        onKeyDown={(event) => {
+                                          if (!showSuggestions) {
+                                            if (event.key === 'Escape') {
+                                              setActiveSuggestionItemId(null);
+                                              setHighlightedSuggestionIndex(-1);
+                                            }
+                                            return;
+                                          }
+
+                                          if (event.key === 'ArrowDown') {
+                                            event.preventDefault();
+                                            setHighlightedSuggestionIndex((current) => (
+                                              current >= matchingSuggestions.length - 1 ? 0 : current + 1
+                                            ));
+                                          } else if (event.key === 'ArrowUp') {
+                                            event.preventDefault();
+                                            setHighlightedSuggestionIndex((current) => (
+                                              current <= 0 ? matchingSuggestions.length - 1 : current - 1
+                                            ));
+                                          } else if (event.key === 'Enter') {
+                                            const suggestion = matchingSuggestions[highlightedSuggestionIndex] ?? matchingSuggestions[0];
+                                            if (!suggestion) {
+                                              return;
+                                            }
+                                            event.preventDefault();
+                                            applySuggestion(category.id, item.id, suggestion);
+                                          } else if (event.key === 'Escape') {
+                                            event.preventDefault();
+                                            setActiveSuggestionItemId(null);
+                                            setHighlightedSuggestionIndex(-1);
+                                          }
+                                        }}
                                       />
+                                      {showSuggestions && (
+                                        <div className="dropdown-menu show su-item-suggestion-menu">
+                                          {matchingSuggestions.map((suggestion, suggestionIndex) => (
+                                            <button
+                                              key={suggestion.key}
+                                              type="button"
+                                              className={`dropdown-item su-item-suggestion-option ${suggestionIndex === highlightedSuggestionIndex ? 'active' : ''}`}
+                                              onMouseDown={(event) => {
+                                                event.preventDefault();
+                                                applySuggestion(category.id, item.id, suggestion);
+                                              }}
+                                              onMouseEnter={() => setHighlightedSuggestionIndex(suggestionIndex)}
+                                            >
+                                              <div className="fw-semibold">{suggestion.title}</div>
+                                              <div className="small text-muted">
+                                                {suggestion.guidanceText || 'No guidance text'}
+                                              </div>
+                                              <div className="d-flex justify-content-between align-items-center gap-2 mt-1">
+                                                <span className="badge text-bg-light border">
+                                                  {suggestion.isRequired ? 'Required' : 'Optional'}
+                                                </span>
+                                                {suggestion.usageCount > 1 && (
+                                                  <span className="small text-muted">Used {suggestion.usageCount}x</span>
+                                                )}
+                                              </div>
+                                            </button>
+                                          ))}
+                                        </div>
+                                      )}
                                     </div>
-                                    <button
-                                      type="button"
-                                      className="btn btn-outline-secondary btn-sm su-icon-action su-icon-action-close"
+                                    {item.errorTitle && <div className="text-danger small mt-1">{item.errorTitle}</div>}
+                                  </div>
+                                  <div className="col-lg-4 col-md-6">
+                                    <label className="form-label small">Guidance (optional)</label>
+                                    <input
+                                      className="form-control form-control-sm"
+                                      value={item.guidanceText}
                                       disabled={isReadOnly}
-                                      aria-label="Delete item"
-                                      title="Delete item"
-                                      onClick={() => deleteItem(category.id, item.id)}
+                                      onChange={(event) => updateItem(category.id, item.id, { guidanceText: event.target.value })}
+                                    />
+                                  </div>
+                                  <div className="col-lg-3">
+                                    <label className="form-label small">Required</label>
+                                    <div className="d-flex flex-wrap align-items-center gap-2 mt-1">
+                                      <div className="form-check m-0">
+                                        <input
+                                          type="checkbox"
+                                          className="form-check-input"
+                                          checked={item.isRequired}
+                                          disabled={isReadOnly}
+                                          onChange={(event) => updateItem(category.id, item.id, { isRequired: event.target.checked })}
+                                        />
+                                      </div>
+                                      <button
+                                        type="button"
+                                        className="btn btn-outline-secondary btn-sm su-icon-action su-icon-action-close"
+                                        disabled={isReadOnly}
+                                        aria-label="Delete item"
+                                        title="Delete item"
+                                        onClick={() => deleteItem(category.id, item.id)}
                                       >
                                         <CloseIcon />
                                       </button>
-                                    {isNewestItem && (
-                                      <button
-                                        type="button"
-                                        className="btn btn-outline-primary btn-sm"
-                                        style={{ borderRadius: '999px', whiteSpace: 'nowrap' }}
-                                        disabled={isReadOnly}
-                                        onClick={() => addItem(category.id)}
-                                      >
-                                        Add Item
-                                      </button>
-                                    )}
+                                      {isNewestItem && (
+                                        <button
+                                          type="button"
+                                          className="btn btn-outline-primary btn-sm"
+                                          style={{ borderRadius: '999px', whiteSpace: 'nowrap' }}
+                                          disabled={isReadOnly}
+                                          onClick={() => addItem(category.id)}
+                                        >
+                                          Add Item
+                                        </button>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            </div>
                             );
                           })}
                         </div>
