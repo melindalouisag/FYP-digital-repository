@@ -15,7 +15,7 @@ export interface ChecklistEditorItem {
   section?: string;
   itemText: string;
   guidanceText?: string;
-  isRequired: boolean;
+  required: boolean;
 }
 
 export const checklistApi = {

@@ -23,6 +23,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -78,7 +79,7 @@ class ChecklistManagementIntegrationTest {
         .session(admin)
         .contentType(MediaType.APPLICATION_JSON)
         .content("""
-          [{"orderIndex":1,"section":"S","itemText":"X","guidanceText":"G","isRequired":true}]
+          [{"orderIndex":1,"section":"S","itemText":"X","guidanceText":"G","required":true}]
           """))
       .andExpect(status().isBadRequest())
       .andReturn().getResponse().getErrorMessage();
@@ -103,7 +104,7 @@ class ChecklistManagementIntegrationTest {
         .session(admin)
         .contentType(MediaType.APPLICATION_JSON)
         .content("""
-          [{"orderIndex":1,"section":"New","itemText":"Article check","guidanceText":"Guidance","isRequired":true}]
+          [{"orderIndex":1,"section":"New","itemText":"Article check","guidanceText":"Guidance","required":true}]
           """))
       .andExpect(status().isOk());
 
@@ -156,12 +157,57 @@ class ChecklistManagementIntegrationTest {
         .session(firstAdmin)
         .contentType(MediaType.APPLICATION_JSON)
         .content("""
-          [{"orderIndex":1,"section":"Locked","itemText":"First admin item","guidanceText":"Guide","isRequired":true}]
+          [{"orderIndex":1,"section":"Locked","itemText":"First admin item","guidanceText":"Guide","required":true}]
           """))
       .andExpect(status().isOk());
 
     mockMvc.perform(post("/api/admin/checklists/templates/{templateId}/lock", draftId).session(secondAdminSession))
       .andExpect(status().isOk());
+  }
+
+  @Test
+  void saveAndReloadPreservesRequiredFlags() throws Exception {
+    MockHttpSession admin = loginAsAdmin();
+
+    String cloneBody = mockMvc.perform(post("/api/admin/checklists/THESIS/new-draft").session(admin))
+      .andExpect(status().isOk())
+      .andReturn().getResponse().getContentAsString();
+    Long draftId = objectMapper.readTree(cloneBody).get("id").asLong();
+
+    mockMvc.perform(post("/api/admin/checklists/templates/{templateId}/lock", draftId).session(admin))
+      .andExpect(status().isOk());
+
+    mockMvc.perform(put("/api/admin/checklists/templates/{templateId}/items", draftId)
+        .session(admin)
+        .contentType(MediaType.APPLICATION_JSON)
+        .content("""
+          [
+            {"orderIndex":1,"section":"Formatting","itemText":"Title","guidanceText":"Times New Roman","required":true},
+            {"orderIndex":2,"section":"Formatting","itemText":"SU logo","guidanceText":"Use official asset","required":false}
+          ]
+          """))
+      .andExpect(status().isOk());
+
+    String afterSaveBody = mockMvc.perform(get("/api/admin/checklists/templates/{templateId}", draftId).session(admin))
+      .andExpect(status().isOk())
+      .andReturn().getResponse().getContentAsString();
+
+    JsonNode afterSaveItems = objectMapper.readTree(afterSaveBody).get("items");
+    assertThat(afterSaveItems).hasSize(2);
+    assertThat(afterSaveItems.get(0).get("required").asBoolean()).isTrue();
+    assertThat(afterSaveItems.get(1).get("required").asBoolean()).isFalse();
+
+    mockMvc.perform(post("/api/admin/checklists/templates/{templateId}/lock", draftId).session(admin))
+      .andExpect(status().isOk());
+
+    String reopenedBody = mockMvc.perform(get("/api/admin/checklists/templates/{templateId}", draftId).session(admin))
+      .andExpect(status().isOk())
+      .andReturn().getResponse().getContentAsString();
+
+    JsonNode reopenedItems = objectMapper.readTree(reopenedBody).get("items");
+    assertThat(reopenedItems).hasSize(2);
+    assertThat(reopenedItems.get(0).get("required").asBoolean()).isTrue();
+    assertThat(reopenedItems.get(1).get("required").asBoolean()).isFalse();
   }
 
   private ChecklistTemplate ensureActiveTemplate(ChecklistScope scope) {

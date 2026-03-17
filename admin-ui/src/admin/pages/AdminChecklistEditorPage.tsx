@@ -419,6 +419,20 @@ export default function AdminChecklistEditorPage() {
     setCategories((prev) => prev.filter((item) => item.id !== categoryId));
   };
 
+  const requireAllItems = (categoryId: string) => {
+    setCategories((prev) =>
+      prev.map((category) => {
+        if (category.id !== categoryId) {
+          return category;
+        }
+        return {
+          ...category,
+          items: category.items.map((item) => ({ ...item, isRequired: true })),
+        };
+      })
+    );
+  };
+
   const updateCategoryTitle = (categoryId: string, value: string) => {
     setCategories((prev) =>
       prev.map((category) => {
@@ -580,7 +594,7 @@ export default function AdminChecklistEditorPage() {
             section: title,
             itemText: item.title.trim(),
             guidanceText: item.guidanceText.trim() || undefined,
-            isRequired: item.isRequired,
+            required: item.isRequired,
           });
         }
         return nextItem;
@@ -754,12 +768,14 @@ export default function AdminChecklistEditorPage() {
                 </div>
               )}
 
-              {categories.map((category, index) => (
-                <div
-                  className="rounded-3 border"
-                  style={{ background: '#f8fafc', borderColor: '#e8eff5' }}
-                  key={category.id}
-                >
+              {categories.map((category, index) => {
+                const allItemsRequired = category.items.length > 0 && category.items.every((item) => item.isRequired);
+                return (
+                  <div
+                    className="rounded-3 border"
+                    style={{ background: '#f8fafc', borderColor: '#e8eff5' }}
+                    key={category.id}
+                  >
                   <div
                     role="button"
                     tabIndex={0}
@@ -818,19 +834,33 @@ export default function AdminChecklistEditorPage() {
                         </div>
                       </div>
 
-                      <button
-                        type="button"
-                        className="btn btn-outline-danger btn-sm su-icon-action"
-                        disabled={isReadOnly}
-                        aria-label={`Delete ${categoryLabel(category, index)}`}
-                        title="Delete category"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          deleteCategory(category.id);
-                        }}
-                      >
-                        <TrashIcon />
-                      </button>
+                      <div className="d-flex flex-wrap align-items-center gap-2">
+                        <button
+                          type="button"
+                          className="btn btn-outline-secondary btn-sm"
+                          style={{ borderRadius: '999px', whiteSpace: 'nowrap' }}
+                          disabled={isReadOnly || category.items.length === 0 || allItemsRequired}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            requireAllItems(category.id);
+                          }}
+                        >
+                          Require all
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-outline-danger btn-sm su-icon-action"
+                          disabled={isReadOnly}
+                          aria-label={`Delete ${categoryLabel(category, index)}`}
+                          title="Delete category"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            deleteCategory(category.id);
+                          }}
+                        >
+                          <TrashIcon />
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -1019,7 +1049,8 @@ export default function AdminChecklistEditorPage() {
                     </div>
                   )}
                 </div>
-              ))}
+                );
+              })}
 
               <div>
                 <button
