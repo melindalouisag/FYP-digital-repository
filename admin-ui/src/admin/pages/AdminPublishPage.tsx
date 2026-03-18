@@ -9,7 +9,9 @@ export default function AdminPublishPage() {
   const navigate = useNavigate();
   const [cases, setCases] = useState<AdminPublishQueueItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [workingCaseId, setWorkingCaseId] = useState<number | null>(null);
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
 
   const load = async () => {
     setLoading(true);
@@ -28,9 +30,25 @@ export default function AdminPublishPage() {
     void load();
   }, []);
 
+  const publishCase = async (caseId: number) => {
+    setWorkingCaseId(caseId);
+    setError('');
+    setMessage('');
+    try {
+      await adminApi.publish(caseId);
+      setMessage(`Case #${caseId} published to repository.`);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Publish action failed.');
+    } finally {
+      setWorkingCaseId(null);
+    }
+  };
+
   return (
     <ShellLayout title="Publish Manager" subtitle="Publish cases that are ready for repository release">
-      {error && <div className="alert alert-danger">{error}</div>}
+      {error && <div className="alert alert-danger d-flex align-items-center gap-2" style={{ borderRadius: '0.75rem' }}><span>⚠️</span> {error}</div>}
+      {message && <div className="alert alert-success d-flex align-items-center gap-2" style={{ borderRadius: '0.75rem' }}><span>✅</span> {message}</div>}
 
       {loading && (
         <div className="text-center py-5">
@@ -66,9 +84,29 @@ export default function AdminPublishPage() {
                     <span className="text-muted small">Updated: {c.updatedAt ? new Date(c.updatedAt).toLocaleString() : 'N/A'}</span>
                   </div>
                 </div>
-                <span className="btn btn-primary btn-sm" style={{ borderRadius: '999px' }}>
-                  🚀 Open Details →
-                </span>
+                <div className="d-flex flex-wrap gap-2">
+                  <button
+                    className="btn btn-success btn-sm"
+                    style={{ borderRadius: '999px' }}
+                    disabled={workingCaseId === c.caseId || c.status !== 'READY_TO_PUBLISH'}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void publishCase(c.caseId);
+                    }}
+                  >
+                    {workingCaseId === c.caseId ? '⏳ Publishing...' : '🚀 Publish'}
+                  </button>
+                  <button
+                    className="btn btn-outline-primary btn-sm"
+                    style={{ borderRadius: '999px' }}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      navigate(`/admin/publish/${c.caseId}`);
+                    }}
+                  >
+                    Open Details →
+                  </button>
+                </div>
               </div>
             </div>
           </div>

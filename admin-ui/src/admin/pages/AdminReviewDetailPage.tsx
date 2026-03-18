@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
 import { adminApi } from '../../lib/api/admin';
 import CaseTimeline from '../../lib/components/CaseTimeline';
+import DownloadFilenameLink from '../../lib/components/DownloadFilenameLink';
 import type {
   CaseDetailPayload,
   ChecklistItem,
@@ -62,6 +63,8 @@ export default function AdminReviewDetailPage() {
   const [message, setMessage] = useState('');
 
   const submissions = detail?.submissions ?? detail?.versions ?? [];
+  const latestSubmission = submissions[0];
+  const latestSubmissionDownloadHref = detail ? `/api/admin/cases/${detail.case.id}/file/latest` : '';
 
   const selectedSubmission = useMemo(
     () => submissions.find((submission) => submission.id === selectedSubmissionId) ?? submissions[0],
@@ -242,6 +245,17 @@ export default function AdminReviewDetailPage() {
                     </div>
                   </div>
                 </div>
+                {latestSubmission && (
+                  <div className="col-12">
+                    <div className="mt-3 pt-3" style={{ borderTop: '1px solid #f0f0f0' }}>
+                      <div className="text-muted small mb-1">Latest file</div>
+                      <DownloadFilenameLink
+                        href={latestSubmissionDownloadHref}
+                        filename={latestSubmission.originalFilename || `Submission v${latestSubmission.versionNumber}`}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

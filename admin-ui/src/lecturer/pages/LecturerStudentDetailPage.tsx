@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
 import { lecturerApi, type LecturerCaseWorkItem, type LecturerStudentGroup, type LecturerSubmissionVersion } from '../../lib/api/lecturer';
 import CaseTimeline from '../../lib/components/CaseTimeline';
+import DownloadFilenameLink from '../../lib/components/DownloadFilenameLink';
 import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 import type { TimelineItem } from '../../lib/types/workflow';
 
@@ -49,6 +50,40 @@ export default function LecturerStudentDetailPage() {
   useEffect(() => {
     void load();
   }, [studentId, year]);
+
+  useEffect(() => {
+    if (!group) return;
+
+    const pendingCaseIds = group.cases
+      .filter((item) => item.latestSubmissionAt && submissions[item.caseId] === undefined)
+      .map((item) => item.caseId);
+
+    if (pendingCaseIds.length === 0) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void Promise.all(
+      pendingCaseIds.map(async (caseId) => {
+        const items = await lecturerApi.caseSubmissions(caseId).catch(() => []);
+        return [caseId, items] as const;
+      })
+    ).then((results) => {
+      if (cancelled) return;
+      setSubmissions((prev) => {
+        const next = { ...prev };
+        for (const [caseId, items] of results) {
+          next[caseId] = items;
+        }
+        return next;
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [group, submissions]);
 
   const yearOptions = useMemo(() => {
     const current = new Date().getFullYear();
@@ -154,6 +189,7 @@ export default function LecturerStudentDetailPage() {
             {group.cases.map((c, index) => {
               const canAct = tab !== 'library' && supervisorStatuses.includes(c.status);
               const busy = workingCaseId === c.caseId;
+              const latestSubmission = submissions[c.caseId]?.[0];
               return (
                 <div key={c.caseId} className="su-card fade-in" style={{ animationDelay: `${index * 0.06}s` }}>
                   <div className="card-body p-4">
@@ -166,13 +202,25 @@ export default function LecturerStudentDetailPage() {
                           {c.registrationYear && <span className="text-muted small">📅 {c.registrationYear}</span>}
                         </div>
                       </div>
-                      <a
-                        className="btn btn-outline-primary btn-sm"
-                        style={{ borderRadius: '999px' }}
-                        href={`/api/lecturer/cases/${c.caseId}/submissions/latest/download`}
-                      >
-                        ⬇️ Download Latest
-                      </a>
+                      <div className="text-md-end">
+                        <div className="text-muted small mb-1">Latest file</div>
+                        {latestSubmission ? (
+                          <DownloadFilenameLink
+                            href={`/api/lecturer/cases/${c.caseId}/submissions/latest/download`}
+                            filename={latestSubmission.originalFilename || 'Latest submission'}
+                          />
+                        ) : c.latestSubmissionAt ? (
+                          <a
+                            className="btn btn-outline-primary btn-sm"
+                            style={{ borderRadius: '999px' }}
+                            href={`/api/lecturer/cases/${c.caseId}/submissions/latest/download`}
+                          >
+                            ⬇️ Download Latest
+                          </a>
+                        ) : (
+                          <span className="text-muted small">No submission file yet.</span>
+                        )}
+                      </div>
                     </div>
 
                     {/* Timestamps */}
@@ -221,14 +269,18 @@ export default function LecturerStudentDetailPage() {
                             {(submissions[c.caseId] ?? []).map((version) => (
                               <div key={version.id} className="d-flex justify-content-between align-items-center p-2 bg-white" style={{ borderRadius: '0.4rem', border: '1px solid #e8eff5' }}>
                                 <div>
-                                  <span className="fw-semibold">v{version.versionNumber}</span> — {version.originalFilename}
+                                  <div className="d-flex flex-wrap align-items-center gap-2">
+                                    <span className="fw-semibold">v{version.versionNumber}</span>
+                                    <span className="text-muted">•</span>
+                                    <DownloadFilenameLink
+                                      href={`/api/lecturer/cases/${c.caseId}/submissions/${version.id}/download`}
+                                      filename={version.originalFilename || `Submission v${version.versionNumber}`}
+                                    />
+                                  </div>
                                   <div className="text-muted small">Uploaded: {version.createdAt ? new Date(version.createdAt).toLocaleString() : 'N/A'}</div>
                                 </div>
                                 <div className="d-flex gap-2 align-items-center">
                                   <span className="badge bg-secondary" style={{ borderRadius: '999px' }}>{version.status}</span>
-                                  <a className="btn btn-outline-primary btn-sm" style={{ borderRadius: '999px' }} href={`/api/lecturer/cases/${c.caseId}/submissions/${version.id}/download`}>
-                                    ⬇️
-                                  </a>
                                 </div>
                               </div>
                             ))}

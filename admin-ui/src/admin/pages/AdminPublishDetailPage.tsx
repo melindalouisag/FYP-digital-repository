@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
+import DownloadFilenameLink from '../../lib/components/DownloadFilenameLink';
 import { adminApi } from '../../lib/api/admin';
 import type { AdminPublishDetail } from '../../lib/types/workflow';
 
@@ -18,6 +19,7 @@ export default function AdminPublishDetailPage() {
   const isPublished = detail?.status === 'PUBLISHED';
   const isReadyToPublish = detail?.status === 'READY_TO_PUBLISH';
   const canUnpublish = isPublished && unpublishReason.trim().length >= 5 && !working;
+  const latestSubmissionDownloadHref = detail ? `/api/admin/cases/${detail.caseId}/file/latest` : '';
 
   const load = async () => {
     if (!caseId) return;
@@ -124,8 +126,16 @@ export default function AdminPublishDetailPage() {
                 <h3 className="h6 mb-3 su-page-title">📄 Latest Submission</h3>
                 {detail.latestSubmission ? (
                   <>
+                    <div className="d-flex py-2" style={{ borderBottom: '1px solid #f0f0f0' }}>
+                      <div className="text-muted small" style={{ width: 100 }}>File</div>
+                      <div className="fw-semibold">
+                        <DownloadFilenameLink
+                          href={latestSubmissionDownloadHref}
+                          filename={detail.latestSubmission.originalFilename || 'Latest submission'}
+                        />
+                      </div>
+                    </div>
                     {[
-                      { label: 'File', value: detail.latestSubmission.originalFilename || 'N/A' },
                       { label: 'Uploaded', value: detail.latestSubmission.createdAt ? new Date(detail.latestSubmission.createdAt).toLocaleString() : 'N/A' },
                       { label: 'Size', value: detail.latestSubmission.fileSize ? `${(detail.latestSubmission.fileSize / 1024).toFixed(1)} KB` : 'N/A' },
                     ].map((row) => (
@@ -134,11 +144,6 @@ export default function AdminPublishDetailPage() {
                         <div className="fw-semibold">{row.value}</div>
                       </div>
                     ))}
-                    {detail.latestSubmission.downloadUrl && (
-                      <a className="btn btn-outline-primary btn-sm mt-3" style={{ borderRadius: '999px' }} href={detail.latestSubmission.downloadUrl}>
-                        ⬇️ Download File
-                      </a>
-                    )}
                   </>
                 ) : (
                   <div className="text-muted">No submission file found.</div>
