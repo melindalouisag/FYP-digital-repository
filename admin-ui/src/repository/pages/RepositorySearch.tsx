@@ -6,6 +6,7 @@ import ThemeSwitch from '../../components/ThemeSwitch';
 import KeywordChipInput from '../../lib/components/KeywordChipInput';
 import { useAuth } from '../../lib/context/AuthContext';
 import { joinKeywordTokens } from '../../lib/keywords';
+import type { PagedResponse } from '../../lib/types/workflow';
 import { useTheme } from '../../theme/ThemeContext';
 
 const INITIAL_FILTERS: RepositorySearchParams = {
@@ -16,14 +17,28 @@ const INITIAL_FILTERS: RepositorySearchParams = {
   keyword: '',
 };
 
+const PAGE_SIZE = 10;
+
+const EMPTY_PAGE: PagedResponse<RepositoryItemSummary> = {
+  items: [],
+  page: 0,
+  size: PAGE_SIZE,
+  totalElements: 0,
+  totalPages: 0,
+  hasNext: false,
+  hasPrevious: false,
+};
+
 export default function RepositorySearchPage() {
   const { user, logout } = useAuth();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
 
   const [filters, setFilters] = useState<RepositorySearchParams>(INITIAL_FILTERS);
+  const [submittedFilters, setSubmittedFilters] = useState<RepositorySearchParams>(INITIAL_FILTERS);
   const [keywordTokens, setKeywordTokens] = useState<string[]>([]);
-  const [results, setResults] = useState<RepositoryItemSummary[]>([]);
+  const [pageData, setPageData] = useState<PagedResponse<RepositoryItemSummary>>(EMPTY_PAGE);
+  const [page, setPage] = useState(0);
   const [faculties, setFaculties] = useState<Faculty[]>([]);
   const [programs, setPrograms] = useState<Program[]>([]);
   const [selectedFacultyId, setSelectedFacultyId] = useState<number | undefined>(undefined);
@@ -47,24 +62,27 @@ export default function RepositorySearchPage() {
     [filters]
   );
 
-  const load = async (params: RepositorySearchParams) => {
+  const load = async (params: RepositorySearchParams, requestedPage: number) => {
     setLoading(true);
     setError('');
     try {
-      const response = await publicRepositoryApi.search(params);
-      setResults(response.results);
+      const response = await publicRepositoryApi.search({ ...params, page: requestedPage, size: PAGE_SIZE });
+      if (response.totalPages > 0 && requestedPage >= response.totalPages) {
+        setPage(response.totalPages - 1);
+        return;
+      }
+      setPageData(response);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load repository data.');
-      setResults([]);
+      setPageData(EMPTY_PAGE);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    void load(filters);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    void load(submittedFilters, page);
+  }, [submittedFilters, page]);
 
   useEffect(() => {
     const joinedKeywords = joinKeywordTokens(keywordTokens);
@@ -149,17 +167,23 @@ export default function RepositorySearchPage() {
 
   const onSearch = async (event: React.FormEvent) => {
     event.preventDefault();
-    await load(filters);
+    setPage(0);
+    setSubmittedFilters(filters);
   };
 
-  const onReset = async () => {
+  const onReset = () => {
     setFilters(INITIAL_FILTERS);
+    setSubmittedFilters(INITIAL_FILTERS);
+    setPage(0);
     setKeywordTokens([]);
     setSelectedFacultyId(undefined);
     setSelectedProgramId(undefined);
     setPrograms([]);
-    await load(INITIAL_FILTERS);
   };
+
+  const results = pageData.items;
+  const pageStart = pageData.totalElements === 0 ? 0 : pageData.page * pageData.size + 1;
+  const pageEnd = pageStart === 0 ? 0 : pageStart + results.length - 1;
 
   return (
     <div className="min-vh-100" style={{ background: 'linear-gradient(180deg, #f0f6fa 0%, #fff 30%)' }}>
@@ -231,7 +255,7 @@ export default function RepositorySearchPage() {
             <div className="col-lg-5 text-center mt-3 mt-lg-0">
               <div className="d-flex justify-content-center gap-3">
                 <div className="text-center">
-                  <div style={{ fontSize: '2.5rem', fontWeight: 800 }}>{results.length}</div>
+                  <div style={{ fontSize: '2.5rem', fontWeight: 800 }}>{pageData.totalElements}</div>
                   <div style={{ fontSize: '0.78rem', opacity: 0.7, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Publications</div>
                 </div>
                 <div style={{ width: 1, background: 'rgba(255,255,255,0.2)', margin: '0.5rem 0' }} />
@@ -326,7 +350,7 @@ export default function RepositorySearchPage() {
                     <><span className="su-spinner d-inline-block me-2" style={{ width: '1rem', height: '1rem', borderWidth: 2 }} /> Searching...</>
                   ) : '🔎 Search Repository'}
                 </button>
-                <button className="btn btn-outline-secondary" type="button" onClick={() => void onReset()} disabled={loading}>
+                <button className="btn btn-outline-secondary" type="button" onClick={onReset} disabled={loading}>
                   Reset Filters
                 </button>
                 {activeFilterCount > 0 && (
@@ -350,7 +374,7 @@ export default function RepositorySearchPage() {
         <div className="d-flex justify-content-between align-items-center mb-3">
           <h3 className="h5 mb-0 su-page-title">📚 Search Results</h3>
           <span className="badge bg-secondary-subtle text-secondary-emphasis" style={{ borderRadius: '999px', fontSize: '0.8rem' }}>
-            {results.length} item{results.length !== 1 ? 's' : ''}
+            {pageData.totalElements} item{pageData.totalElements !== 1 ? 's' : ''}
           </span>
         </div>
 
@@ -398,6 +422,43 @@ export default function RepositorySearchPage() {
             </div>
           )}
         </div>
+
+        {!loading && pageData.totalElements > 0 && (
+          <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-4">
+            <div className="text-muted small">
+              Showing {pageStart}-{pageEnd} of {pageData.totalElements}
+            </div>
+            <nav aria-label="Repository search pagination">
+              <ul className="pagination pagination-sm mb-0">
+                <li className={`page-item ${!pageData.hasPrevious || loading ? 'disabled' : ''}`}>
+                  <button
+                    className="page-link"
+                    type="button"
+                    onClick={() => setPage((current) => Math.max(current - 1, 0))}
+                    disabled={!pageData.hasPrevious || loading}
+                  >
+                    Previous
+                  </button>
+                </li>
+                <li className="page-item disabled">
+                  <span className="page-link">
+                    Page {pageData.page + 1} of {Math.max(pageData.totalPages, 1)}
+                  </span>
+                </li>
+                <li className={`page-item ${!pageData.hasNext || loading ? 'disabled' : ''}`}>
+                  <button
+                    className="page-link"
+                    type="button"
+                    onClick={() => setPage((current) => current + 1)}
+                    disabled={!pageData.hasNext || loading}
+                  >
+                    Next
+                  </button>
+                </li>
+              </ul>
+            </nav>
+          </div>
+        )}
 
         <footer className="text-center text-muted small py-4 mt-4">
           <div className="fw-semibold">Sampoerna University Library</div>

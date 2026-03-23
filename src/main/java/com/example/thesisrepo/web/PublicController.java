@@ -6,11 +6,15 @@ import com.example.thesisrepo.publication.repo.DownloadEventRepository;
 import com.example.thesisrepo.publication.repo.PublishedItemRepository;
 import com.example.thesisrepo.service.CurrentUserService;
 import com.example.thesisrepo.service.StorageService;
+import com.example.thesisrepo.web.dto.PagedResponse;
 import com.example.thesisrepo.web.dto.PublicRepositoryItemDetailDto;
 import com.example.thesisrepo.web.dto.PublicRepositoryItemDto;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -37,19 +41,24 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class PublicController {
 
+  private static final int DEFAULT_PAGE_SIZE = 10;
+  private static final int MAX_PAGE_SIZE = 50;
+
   private final PublishedItemRepository publishedItems;
   private final DownloadEventRepository downloadEvents;
   private final StorageService storageService;
   private final CurrentUserService currentUserService;
 
   @GetMapping("/repository/search")
-  public ResponseEntity<SearchResponse> searchRepository(
+  public ResponseEntity<PagedResponse<PublicRepositoryItemDto>> searchRepository(
     @RequestParam(required = false) String title,
     @RequestParam(required = false) String author,
     @RequestParam(required = false) String faculty,
     @RequestParam(required = false) String program,
     @RequestParam(required = false) Integer year,
-    @RequestParam(required = false) String keyword
+    @RequestParam(required = false) String keyword,
+    @RequestParam(defaultValue = "0") int page,
+    @RequestParam(defaultValue = "" + DEFAULT_PAGE_SIZE) int size
   ) {
     Specification<PublishedItem> spec = (root, query, cb) -> {
       List<Predicate> predicates = new ArrayList<>();
@@ -78,15 +87,22 @@ public class PublicController {
         );
       }
 
-      query.orderBy(cb.desc(root.get("publishedAt")));
       return cb.and(predicates.toArray(Predicate[]::new));
     };
 
-    List<PublicRepositoryItemDto> results = publishedItems.findAll(spec).stream()
+    Page<PublishedItem> resultPage = publishedItems.findAll(
+      spec,
+      PageRequest.of(
+        Math.max(page, 0),
+        normalizePageSize(size),
+        Sort.by(Sort.Order.desc("publishedAt"), Sort.Order.desc("id"))
+      )
+    );
+    List<PublicRepositoryItemDto> results = resultPage.getContent().stream()
       .map(this::toPublicSummary)
       .toList();
 
-    return ResponseEntity.ok(new SearchResponse(results.size(), results));
+    return ResponseEntity.ok(PagedResponse.from(resultPage, results));
   }
 
   @GetMapping("/repository/{id}")
@@ -212,5 +228,10 @@ public class PublicController {
     return value == null ? "" : value.toLowerCase(Locale.ROOT).trim();
   }
 
-  public record SearchResponse(int total, List<PublicRepositoryItemDto> results) {}
+  private int normalizePageSize(int requestedSize) {
+    if (requestedSize < 1) {
+      return DEFAULT_PAGE_SIZE;
+    }
+    return Math.min(requestedSize, MAX_PAGE_SIZE);
+  }
 }

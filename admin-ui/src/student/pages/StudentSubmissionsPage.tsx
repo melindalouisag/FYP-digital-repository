@@ -2,22 +2,40 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
 import { studentApi } from '../../lib/api/student';
-import type { CaseSummary } from '../../lib/types/workflow';
+import type { CaseSummary, PagedResponse } from '../../lib/types/workflow';
 import { canUploadSubmission, formatStatus, statusBadgeClass } from '../../lib/workflowUi';
+
+const PAGE_SIZE = 10;
+
+const EMPTY_PAGE: PagedResponse<CaseSummary> = {
+  items: [],
+  page: 0,
+  size: PAGE_SIZE,
+  totalElements: 0,
+  totalPages: 0,
+  hasNext: false,
+  hasPrevious: false,
+};
 
 export default function StudentSubmissionsPage() {
   const navigate = useNavigate();
-  const [cases, setCases] = useState<CaseSummary[]>([]);
+  const [pageData, setPageData] = useState<PagedResponse<CaseSummary>>(EMPTY_PAGE);
+  const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const load = async () => {
+  const load = async (requestedPage: number) => {
     setLoading(true);
     setError('');
     try {
-      setCases(await studentApi.listCases());
+      const response = await studentApi.listCasesPage({ page: requestedPage, size: PAGE_SIZE });
+      if (response.totalPages > 0 && requestedPage >= response.totalPages) {
+        setPage(response.totalPages - 1);
+        return;
+      }
+      setPageData(response);
     } catch (err) {
-      setCases([]);
+      setPageData(EMPTY_PAGE);
       setError(err instanceof Error ? err.message : 'Unable to load submissions.');
     } finally {
       setLoading(false);
@@ -25,13 +43,17 @@ export default function StudentSubmissionsPage() {
   };
 
   useEffect(() => {
-    void load();
-  }, []);
+    void load(page);
+  }, [page]);
+
+  const cases = pageData.items;
+  const pageStart = pageData.totalElements === 0 ? 0 : pageData.page * pageData.size + 1;
+  const pageEnd = pageStart === 0 ? 0 : pageStart + cases.length - 1;
 
   return (
     <ShellLayout title="Submission" subtitle="Upload thesis/article files after registration approvals">
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <button className="btn btn-outline-secondary btn-sm" style={{ borderRadius: '999px' }} onClick={() => void load()} disabled={loading}>
+        <button className="btn btn-outline-secondary btn-sm" style={{ borderRadius: '999px' }} onClick={() => void load(page)} disabled={loading}>
           {loading ? '⏳ Loading...' : '🔄 Refresh'}
         </button>
       </div>
@@ -94,6 +116,43 @@ export default function StudentSubmissionsPage() {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {!loading && pageData.totalElements > 0 && (
+        <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-4">
+          <div className="text-muted small">
+            Showing {pageStart}-{pageEnd} of {pageData.totalElements}
+          </div>
+          <nav aria-label="Submission list pagination">
+            <ul className="pagination pagination-sm mb-0">
+              <li className={`page-item ${!pageData.hasPrevious || loading ? 'disabled' : ''}`}>
+                <button
+                  className="page-link"
+                  type="button"
+                  onClick={() => setPage((current) => Math.max(current - 1, 0))}
+                  disabled={!pageData.hasPrevious || loading}
+                >
+                  Previous
+                </button>
+              </li>
+              <li className="page-item disabled">
+                <span className="page-link">
+                  Page {pageData.page + 1} of {Math.max(pageData.totalPages, 1)}
+                </span>
+              </li>
+              <li className={`page-item ${!pageData.hasNext || loading ? 'disabled' : ''}`}>
+                <button
+                  className="page-link"
+                  type="button"
+                  onClick={() => setPage((current) => current + 1)}
+                  disabled={!pageData.hasNext || loading}
+                >
+                  Next
+                </button>
+              </li>
+            </ul>
+          </nav>
         </div>
       )}
     </ShellLayout>

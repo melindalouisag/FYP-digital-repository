@@ -23,10 +23,12 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -71,6 +73,47 @@ class ChecklistManagementIntegrationTest {
   }
 
   @Test
+  void newVersionAndTemplateDetailUseStableDtoShapeWithoutEntityLeakage() throws Exception {
+    MockHttpSession admin = loginAsAdmin();
+    ChecklistTemplate active = ensureActiveTemplate(ChecklistScope.THESIS);
+
+    String fullBody = mockMvc.perform(get("/api/admin/checklists/full?type=THESIS").session(admin))
+      .andExpect(status().isOk())
+      .andReturn().getResponse().getContentAsString();
+    JsonNode fullJson = objectMapper.readTree(fullBody);
+    JsonNode activeEntry = null;
+    for (JsonNode entry : fullJson) {
+      if (entry.path("template").path("id").asLong() == active.getId()) {
+        activeEntry = entry;
+        break;
+      }
+    }
+    assertThat(activeEntry).isNotNull();
+    assertThat(activeEntry.path("template").path("active").asBoolean()).isTrue();
+    assertThat(activeEntry.path("items").get(0).path("required").asBoolean()).isTrue();
+    assertThat(activeEntry.path("items").get(0).has("template")).isFalse();
+
+    String createBody = mockMvc.perform(post("/api/admin/checklists/THESIS/new-version").session(admin))
+      .andExpect(status().isOk())
+      .andExpect(jsonPath("$.templateId", notNullValue()))
+      .andExpect(jsonPath("$.version", notNullValue()))
+      .andReturn().getResponse().getContentAsString();
+
+    Long templateId = objectMapper.readTree(createBody).get("templateId").asLong();
+
+    String detailBody = mockMvc.perform(get("/api/admin/checklists/templates/{templateId}", templateId).session(admin))
+      .andExpect(status().isOk())
+      .andExpect(jsonPath("$.template.id").value(templateId))
+      .andExpect(jsonPath("$.template.active").value(false))
+      .andExpect(jsonPath("$.items").isArray())
+      .andReturn().getResponse().getContentAsString();
+
+    assertThat(fullBody).doesNotContain("\"isRequired\":");
+    assertThat(detailBody).doesNotContain("\"isRequired\":");
+    assertThat(detailBody).doesNotContain("\"template\":{\"template\"");
+  }
+
+  @Test
   void cannotEditItemsOnActiveTemplate() throws Exception {
     ChecklistTemplate active = ensureActiveTemplate(ChecklistScope.THESIS);
     MockHttpSession admin = loginAsAdmin();
@@ -98,7 +141,11 @@ class ChecklistManagementIntegrationTest {
     Long draftId = objectMapper.readTree(cloneBody).get("id").asLong();
 
     mockMvc.perform(post("/api/admin/checklists/templates/{templateId}/lock", draftId).session(admin))
-      .andExpect(status().isOk());
+      .andExpect(status().isOk())
+      .andExpect(jsonPath("$.templateId").value(draftId))
+      .andExpect(jsonPath("$.locked").value(true))
+      .andExpect(jsonPath("$.lock.templateId").value(draftId))
+      .andExpect(jsonPath("$.lock.ownedByCurrentUser").value(true));
 
     mockMvc.perform(put("/api/admin/checklists/templates/{templateId}/items", draftId)
         .session(admin)
@@ -106,10 +153,14 @@ class ChecklistManagementIntegrationTest {
         .content("""
           [{"orderIndex":1,"section":"New","itemText":"Article check","guidanceText":"Guidance","required":true}]
           """))
-      .andExpect(status().isOk());
+      .andExpect(status().isOk())
+      .andExpect(jsonPath("$.ok").value(true))
+      .andExpect(jsonPath("$.lockReleased").value(true));
 
     mockMvc.perform(post("/api/admin/checklists/templates/{templateId}/activate", draftId).session(admin))
-      .andExpect(status().isOk());
+      .andExpect(status().isOk())
+      .andExpect(jsonPath("$.templateId").value(draftId))
+      .andExpect(jsonPath("$.active").value(true));
 
     ChecklistTemplate activeAfter = checklistTemplates.findFirstByPublicationTypeAndIsActiveTrue(ChecklistScope.ARTICLE).orElseThrow();
     assertThat(activeAfter.getId()).isEqualTo(draftId);
@@ -130,7 +181,9 @@ class ChecklistManagementIntegrationTest {
     Long draftId = objectMapper.readTree(cloneBody).get("id").asLong();
 
     mockMvc.perform(delete("/api/admin/checklists/templates/{templateId}", draftId).session(admin))
-      .andExpect(status().isOk());
+      .andExpect(status().isOk())
+      .andExpect(jsonPath("$.deleted").value(true))
+      .andExpect(jsonPath("$.templateId").value(draftId));
 
     assertThat(checklistTemplates.findById(draftId)).isEmpty();
   }
@@ -147,10 +200,14 @@ class ChecklistManagementIntegrationTest {
     Long draftId = objectMapper.readTree(cloneBody).get("id").asLong();
 
     mockMvc.perform(post("/api/admin/checklists/templates/{templateId}/lock", draftId).session(firstAdmin))
-      .andExpect(status().isOk());
+      .andExpect(status().isOk())
+      .andExpect(jsonPath("$.templateId").value(draftId))
+      .andExpect(jsonPath("$.lock.ownedByCurrentUser").value(true));
 
     mockMvc.perform(post("/api/admin/checklists/templates/{templateId}/lock", draftId).session(secondAdminSession))
       .andExpect(status().isConflict())
+      .andExpect(jsonPath("$.error").exists())
+      .andExpect(jsonPath("$.lock.lockedByEmail").value(emailForRole(Role.ADMIN)))
       .andExpect(result -> assertThat(result.getResponse().getContentAsString()).contains(emailForRole(Role.ADMIN)));
 
     mockMvc.perform(put("/api/admin/checklists/templates/{templateId}/items", draftId)
@@ -159,10 +216,14 @@ class ChecklistManagementIntegrationTest {
         .content("""
           [{"orderIndex":1,"section":"Locked","itemText":"First admin item","guidanceText":"Guide","required":true}]
           """))
-      .andExpect(status().isOk());
+      .andExpect(status().isOk())
+      .andExpect(jsonPath("$.ok").value(true))
+      .andExpect(jsonPath("$.lockReleased").value(true));
 
     mockMvc.perform(post("/api/admin/checklists/templates/{templateId}/lock", draftId).session(secondAdminSession))
-      .andExpect(status().isOk());
+      .andExpect(status().isOk())
+      .andExpect(jsonPath("$.templateId").value(draftId))
+      .andExpect(jsonPath("$.lock.ownedByCurrentUser").value(true));
   }
 
   @Test
@@ -175,7 +236,9 @@ class ChecklistManagementIntegrationTest {
     Long draftId = objectMapper.readTree(cloneBody).get("id").asLong();
 
     mockMvc.perform(post("/api/admin/checklists/templates/{templateId}/lock", draftId).session(admin))
-      .andExpect(status().isOk());
+      .andExpect(status().isOk())
+      .andExpect(jsonPath("$.templateId").value(draftId))
+      .andExpect(jsonPath("$.lock.ownedByCurrentUser").value(true));
 
     mockMvc.perform(put("/api/admin/checklists/templates/{templateId}/items", draftId)
         .session(admin)
@@ -208,6 +271,11 @@ class ChecklistManagementIntegrationTest {
     assertThat(reopenedItems).hasSize(2);
     assertThat(reopenedItems.get(0).get("required").asBoolean()).isTrue();
     assertThat(reopenedItems.get(1).get("required").asBoolean()).isFalse();
+
+    mockMvc.perform(delete("/api/admin/checklists/templates/{templateId}/lock", draftId).session(admin))
+      .andExpect(status().isOk())
+      .andExpect(jsonPath("$.templateId").value(draftId))
+      .andExpect(jsonPath("$.released").value(true));
   }
 
   private ChecklistTemplate ensureActiveTemplate(ChecklistScope scope) {

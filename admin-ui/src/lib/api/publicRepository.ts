@@ -1,3 +1,4 @@
+import type { PagedResponse } from '../types/workflow';
 import { getJson } from './http';
 
 export interface RepositorySearchParams {
@@ -26,7 +27,7 @@ export interface RepositoryItemDetail extends RepositoryItemSummary {
   caseId: number;
 }
 
-function buildQuery(params: RepositorySearchParams): string {
+function buildQuery(params: RepositorySearchParams & { page?: number; size?: number }): string {
   const query = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== '') {
@@ -38,7 +39,7 @@ function buildQuery(params: RepositorySearchParams): string {
 }
 
 export const publicRepositoryApi = {
-  search(params: RepositorySearchParams): Promise<{ total: number; results: RepositoryItemSummary[] }> {
+  search(params: RepositorySearchParams & { page?: number; size?: number }): Promise<PagedResponse<RepositoryItemSummary>> {
     return getJson(`/api/public/repository/search${buildQuery(params)}`);
   },
 

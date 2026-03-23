@@ -2,6 +2,7 @@ import type {
   CaseDetailPayload,
   CaseSummary,
   ChecklistResult,
+  PagedResponse,
   PublicationType,
   SubmissionVersion,
 } from '../types/workflow';
@@ -56,9 +57,30 @@ export interface SupervisorRow {
   department?: string | null;
 }
 
+const STUDENT_CASES_COMPAT_SIZE = 200;
+
+function buildPageQuery(page?: number, size?: number): string {
+  const query = new URLSearchParams();
+  if (page !== undefined) {
+    query.set('page', String(page));
+  }
+  if (size !== undefined) {
+    query.set('size', String(size));
+  }
+  const raw = query.toString();
+  return raw.length > 0 ? `?${raw}` : '';
+}
+
 export const studentApi = {
-  listCases(): Promise<CaseSummary[]> {
-    return getJson('/api/student/cases');
+  async listCases(): Promise<CaseSummary[]> {
+    const response = await getJson<PagedResponse<CaseSummary>>(
+      `/api/student/cases${buildPageQuery(0, STUDENT_CASES_COMPAT_SIZE)}`
+    );
+    return response.items;
+  },
+
+  listCasesPage(params?: { page?: number; size?: number }): Promise<PagedResponse<CaseSummary>> {
+    return getJson(`/api/student/cases${buildPageQuery(params?.page, params?.size)}`);
   },
 
   listSupervisors(): Promise<SupervisorRow[]> {

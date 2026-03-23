@@ -5,19 +5,27 @@ import com.example.thesisrepo.profile.StudentProfileRepository;
 import com.example.thesisrepo.publication.*;
 import com.example.thesisrepo.publication.repo.*;
 import com.example.thesisrepo.service.CurrentUserService;
+import com.example.thesisrepo.service.LecturerReviewService;
+import com.example.thesisrepo.service.RegistrationService;
 import com.example.thesisrepo.service.StorageService;
-import com.example.thesisrepo.service.workflow.AuditEventService;
-import com.example.thesisrepo.service.workflow.CaseTimelineService;
 import com.example.thesisrepo.service.workflow.PublicationWorkflowGateService;
 import com.example.thesisrepo.user.Role;
 import com.example.thesisrepo.user.User;
+import com.example.thesisrepo.web.dto.CaseStatusResponse;
 import com.example.thesisrepo.web.dto.LecturerApprovalQueueRowDto;
 import com.example.thesisrepo.web.dto.LecturerCaseWorkItemDto;
+import com.example.thesisrepo.web.dto.LecturerStudentCaseResponse;
 import com.example.thesisrepo.web.dto.LecturerStudentGroupDto;
+import com.example.thesisrepo.web.dto.OperationResultResponse;
+import com.example.thesisrepo.web.dto.PagedResponse;
+import com.example.thesisrepo.web.dto.StudentCaseSummaryResponse;
+import com.example.thesisrepo.web.dto.SubmissionSummaryResponse;
 import com.example.thesisrepo.web.dto.TimelineItemDto;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -38,8 +46,10 @@ import static org.springframework.http.HttpStatus.*;
 @PreAuthorize("hasRole('LECTURER')")
 public class LecturerWorkflowController {
 
+  private static final int DEFAULT_PAGE_SIZE = 10;
+  private static final int MAX_PAGE_SIZE = 100;
+
   private final CaseSupervisorRepository caseSupervisors;
-  private final PublicationCaseRepository cases;
   private final PublicationRegistrationRepository registrations;
   private final WorkflowCommentRepository comments;
   private final SubmissionVersionRepository submissionVersions;
@@ -47,141 +57,55 @@ public class LecturerWorkflowController {
   private final StudentProfileRepository studentProfiles;
   private final StorageService storageService;
   private final CurrentUserService currentUser;
+  private final RegistrationService registrationService;
+  private final LecturerReviewService lecturerReviewService;
   private final PublicationWorkflowGateService workflowGates;
-  private final AuditEventService auditEvents;
-  private final CaseTimelineService timelineService;
 
   @GetMapping("/approvals")
-  public List<PublicationCase> approvalQueue() {
+  public List<StudentCaseSummaryResponse> approvalQueue() {
     User me = currentUser.requireCurrentUser();
-    return caseSupervisors.findPendingApprovalsForLecturer(me.getId()).stream()
-      .map(CaseSupervisor::getPublicationCase)
-      .toList();
+    return lecturerReviewService.approvalQueue(me);
   }
 
   @GetMapping("/approval-queue")
-  public List<LecturerApprovalQueueRowDto> approvalQueueDetail() {
+  public PagedResponse<LecturerApprovalQueueRowDto> approvalQueueDetail(
+    @RequestParam(defaultValue = "0") int page,
+    @RequestParam(defaultValue = "10") int size
+  ) {
     User me = currentUser.requireCurrentUser();
-    List<PublicationCase> approvalCases = caseSupervisors.findPendingApprovalsForLecturer(me.getId()).stream()
-      .map(CaseSupervisor::getPublicationCase)
-      .toList();
-    if (approvalCases.isEmpty()) {
-      return List.of();
-    }
+    Page<PublicationRegistration> registrationsPage = registrations.findLecturerApprovalQueue(
+      me.getId(),
+      PageRequest.of(Math.max(page, 0), normalizePageSize(size))
+    );
 
-    Map<Long, PublicationRegistration> registrationByCase = registrations.findByPublicationCaseIn(approvalCases).stream()
-      .collect(Collectors.toMap(r -> r.getPublicationCase().getId(), r -> r));
+    List<PublicationRegistration> approvalRegistrations = registrationsPage.getContent();
+    List<PublicationCase> approvalCases = approvalRegistrations.stream()
+      .map(PublicationRegistration::getPublicationCase)
+      .toList();
     Map<Long, StudentProfile> profileByUser = loadStudentProfiles(approvalCases);
 
-    return approvalCases.stream()
-      .map(c -> {
-        PublicationRegistration registration = registrationByCase.get(c.getId());
-        StudentProfile profile = profileByUser.get(c.getStudent().getId());
-        return new LecturerApprovalQueueRowDto(
-          c.getId(),
-          c.getType(),
-          c.getStatus(),
-          c.getUpdatedAt(),
-          c.getStudent().getId(),
-          c.getStudent().getEmail(),
-          profile != null ? profile.getName() : c.getStudent().getEmail(),
-          profile != null ? profile.getStudentId() : null,
-          profile != null ? profile.getFaculty() : null,
-          profile != null ? profile.getProgram() : null,
-          registration != null ? registration.getTitle() : null,
-          registration != null ? registration.getYear() : null,
-          registration != null ? registration.getSubmittedAt() : null
-        );
-      })
-      .sorted(Comparator.comparing(LecturerApprovalQueueRowDto::registrationSubmittedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+    List<LecturerApprovalQueueRowDto> items = approvalRegistrations.stream()
+      .map(registration -> toApprovalQueueRow(registration, profileByUser))
       .toList();
+    return PagedResponse.from(registrationsPage, items);
   }
 
   @PostMapping("/approvals/{caseId}/approve")
-  public ResponseEntity<?> approveRegistration(@PathVariable Long caseId) {
+  public ResponseEntity<CaseStatusResponse> approveRegistration(@PathVariable Long caseId) {
     User me = currentUser.requireCurrentUser();
-    PublicationCase c = workflowGates.requireCase(caseId);
-    CaseSupervisor supervisor = workflowGates.ensureLecturerCanApproveRegistration(me, c);
-
-    supervisor.approve();
-    caseSupervisors.save(supervisor);
-
-    List<CaseSupervisor> supervisors = caseSupervisors.findByCaseId(c.getId());
-    boolean anyRejected = supervisors.stream().anyMatch(s -> s.getRejectedAt() != null);
-    boolean allApproved = supervisors.stream().allMatch(s -> s.getApprovedAt() != null);
-    CaseStatus nextStatus = anyRejected
-      ? CaseStatus.REJECTED
-      : (allApproved ? CaseStatus.REGISTRATION_APPROVED : CaseStatus.REGISTRATION_PENDING);
-
-    if (nextStatus != c.getStatus()) {
-      c.setStatus(nextStatus);
-      cases.save(c);
-
-      PublicationRegistration registration = registrations.findByPublicationCase(c).orElse(null);
-      if (registration != null) {
-        if (nextStatus == CaseStatus.REGISTRATION_APPROVED) {
-          registration.setSupervisorDecisionAt(Instant.now());
-          registration.setSupervisorDecisionNote("Approved by all supervisors");
-          registrations.save(registration);
-        } else if (nextStatus == CaseStatus.REJECTED) {
-          registration.setSupervisorDecisionAt(Instant.now());
-          registration.setSupervisorDecisionNote(supervisor.getDecisionNote());
-          registrations.save(registration);
-        }
-      }
-    }
-
-    auditEvents.log(
-      c.getId(),
-      me,
-      Role.LECTURER,
-      AuditEventType.SUPERVISOR_APPROVED_REGISTRATION,
-      "Supervisor approved registration"
-    );
-
-    return ResponseEntity.ok(Map.of("caseId", c.getId(), "status", c.getStatus()));
+    return ResponseEntity.ok(registrationService.approveRegistrationByLecturer(me, caseId));
   }
 
   @PostMapping("/approvals/{caseId}/reject")
-  public ResponseEntity<?> rejectRegistration(@PathVariable Long caseId, @RequestBody DecisionRequest req) {
-    if (!hasText(req.getNote())) {
-      throw new ResponseStatusException(BAD_REQUEST, "Rejection note is required");
-    }
-
+  public ResponseEntity<CaseStatusResponse> rejectRegistration(@PathVariable Long caseId, @RequestBody DecisionRequest req) {
     User me = currentUser.requireCurrentUser();
-    PublicationCase c = workflowGates.requireCase(caseId);
-    CaseSupervisor supervisor = workflowGates.ensureLecturerCanApproveRegistration(me, c);
-
-    supervisor.reject(req.getNote());
-    caseSupervisors.save(supervisor);
-
-    c.setStatus(CaseStatus.REJECTED);
-    cases.save(c);
-
-    PublicationRegistration registration = registrations.findByPublicationCase(c)
-      .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Registration not found"));
-    registration.setSupervisorDecisionAt(Instant.now());
-    registration.setSupervisorDecisionNote(req.getNote());
-    registrations.save(registration);
-
-    auditEvents.log(
-      c.getId(),
-      me,
-      Role.LECTURER,
-      AuditEventType.SUPERVISOR_REJECTED_REGISTRATION,
-      req.getNote()
-    );
-
-    return ResponseEntity.ok(Map.of("caseId", c.getId(), "status", c.getStatus()));
+    return ResponseEntity.ok(registrationService.rejectRegistrationByLecturer(me, caseId, req.getNote()));
   }
 
   @GetMapping("/review")
-  public List<PublicationCase> reviewQueue() {
+  public List<StudentCaseSummaryResponse> reviewQueue() {
     User me = currentUser.requireCurrentUser();
-    return caseSupervisors.findByLecturer(me).stream()
-      .map(CaseSupervisor::getPublicationCase)
-      .filter(c -> c.getStatus() == CaseStatus.UNDER_SUPERVISOR_REVIEW || c.getStatus() == CaseStatus.NEEDS_REVISION_SUPERVISOR)
-      .toList();
+    return lecturerReviewService.reviewQueue(me);
   }
 
   @GetMapping("/pending-supervisor")
@@ -218,156 +142,51 @@ public class LecturerWorkflowController {
   }
 
   @PostMapping("/cases/{caseId}/comment")
-  public ResponseEntity<?> addComment(@PathVariable Long caseId, @RequestBody CommentRequest req) {
-    PublicationCase c = supervisedCase(caseId);
-    if (!hasText(req.getBody())) {
-      throw new ResponseStatusException(BAD_REQUEST, "Comment body is required");
-    }
+  public ResponseEntity<OperationResultResponse> addComment(@PathVariable Long caseId, @RequestBody CommentRequest req) {
     User me = currentUser.requireCurrentUser();
-    WorkflowComment comment = comments.save(WorkflowComment.builder()
-      .publicationCase(c)
-      .author(me)
-      .authorRole(Role.LECTURER)
-      .authorEmail(me.getEmail())
-      .body(req.getBody())
-      .build());
-
-    auditEvents.log(
-      c.getId(),
-      comment.getSubmissionVersion() != null ? comment.getSubmissionVersion().getId() : null,
-      me,
-      Role.LECTURER,
-      AuditEventType.FEEDBACK_ADDED,
-      summarizeComment(req.getBody(), "Lecturer feedback posted")
-    );
-
-    return ResponseEntity.ok(Map.of("ok", true));
+    return ResponseEntity.ok(lecturerReviewService.addComment(me, caseId, req.getBody()));
   }
 
   @PostMapping("/cases/{caseId}/request-revision")
-  public ResponseEntity<?> requestRevision(@PathVariable Long caseId, @RequestBody RevisionRequest req) {
-    if (!hasText(req.getReason())) {
-      throw new ResponseStatusException(BAD_REQUEST, "Revision reason is required");
-    }
-
+  public ResponseEntity<CaseStatusResponse> requestRevision(@PathVariable Long caseId, @RequestBody RevisionRequest req) {
     User me = currentUser.requireCurrentUser();
-    PublicationCase c = workflowGates.requireCase(caseId);
-    workflowGates.ensureLecturerCanRequestRevision(me, c);
-
-    c.setStatus(CaseStatus.NEEDS_REVISION_SUPERVISOR);
-    cases.save(c);
-
-    WorkflowComment comment = comments.save(WorkflowComment.builder()
-      .publicationCase(c)
-      .author(me)
-      .authorRole(Role.LECTURER)
-      .authorEmail(me.getEmail())
-      .body(req.getReason())
-      .build());
-
-    auditEvents.log(
-      c.getId(),
-      me,
-      Role.LECTURER,
-      AuditEventType.SUPERVISOR_REQUESTED_REVISION,
-      req.getReason()
-    );
-    auditEvents.log(
-      c.getId(),
-      comment.getSubmissionVersion() != null ? comment.getSubmissionVersion().getId() : null,
-      me,
-      Role.LECTURER,
-      AuditEventType.FEEDBACK_ADDED,
-      summarizeComment(req.getReason(), "Lecturer revision feedback posted")
-    );
-
-    return ResponseEntity.ok(Map.of("caseId", c.getId(), "status", c.getStatus()));
+    return ResponseEntity.ok(lecturerReviewService.requestRevision(me, caseId, req.getReason()));
   }
 
   @PostMapping("/cases/{caseId}/mark-ready")
-  public ResponseEntity<?> markReady(@PathVariable Long caseId) {
+  public ResponseEntity<CaseStatusResponse> markReady(@PathVariable Long caseId) {
     User me = currentUser.requireCurrentUser();
-    PublicationCase c = workflowGates.requireCase(caseId);
-    workflowGates.ensureLecturerCanMarkReady(me, c);
-
-    c.setStatus(CaseStatus.READY_TO_FORWARD);
-    cases.save(c);
-
-    auditEvents.log(
-      c.getId(),
-      me,
-      Role.LECTURER,
-      AuditEventType.SUPERVISOR_MARKED_READY,
-      "Supervisor marked submission ready for library"
-    );
-
-    return ResponseEntity.ok(Map.of("caseId", c.getId(), "status", c.getStatus()));
+    return ResponseEntity.ok(lecturerReviewService.markReady(me, caseId));
   }
 
   @PostMapping("/cases/{caseId}/forward-to-library")
-  public ResponseEntity<?> forwardToLibrary(@PathVariable Long caseId) {
+  public ResponseEntity<CaseStatusResponse> forwardToLibrary(@PathVariable Long caseId) {
     // Backward-compatible alias that keeps the transition logic centralized.
     return approveAndForward(caseId);
   }
 
   @PostMapping("/cases/{caseId}/approve-and-forward")
-  public ResponseEntity<?> approveAndForward(@PathVariable Long caseId) {
+  public ResponseEntity<CaseStatusResponse> approveAndForward(@PathVariable Long caseId) {
     User me = currentUser.requireCurrentUser();
-    PublicationCase c = workflowGates.requireCase(caseId);
-
-    if (c.getStatus() == CaseStatus.UNDER_SUPERVISOR_REVIEW) {
-      workflowGates.ensureLecturerCanMarkReady(me, c);
-      c.setStatus(CaseStatus.READY_TO_FORWARD);
-      cases.save(c);
-      auditEvents.log(
-        c.getId(),
-        me,
-        Role.LECTURER,
-        AuditEventType.SUPERVISOR_MARKED_READY,
-        "Supervisor marked submission ready for library"
-      );
-    }
-
-    workflowGates.ensureLecturerCanForward(me, c);
-    c.setStatus(CaseStatus.FORWARDED_TO_LIBRARY);
-    cases.save(c);
-
-    auditEvents.log(
-      c.getId(),
-      me,
-      Role.LECTURER,
-      AuditEventType.SUPERVISOR_FORWARDED_TO_LIBRARY,
-      "Supervisor approved and forwarded case to library"
-    );
-
-    return ResponseEntity.ok(Map.of("caseId", c.getId(), "status", c.getStatus()));
+    return ResponseEntity.ok(lecturerReviewService.approveAndForward(me, caseId));
   }
 
   @GetMapping("/students")
-  public List<Map<String, Object>> students() {
+  public List<LecturerStudentCaseResponse> students() {
     User me = currentUser.requireCurrentUser();
-    return caseSupervisors.findByLecturer(me).stream()
-      .map(CaseSupervisor::getPublicationCase)
-      .sorted(Comparator.comparing(PublicationCase::getUpdatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
-      .map(c -> Map.<String, Object>of(
-        "caseId", c.getId(),
-        "studentId", c.getStudent().getId(),
-        "status", c.getStatus(),
-        "type", c.getType()
-      ))
-      .toList();
+    return lecturerReviewService.students(me);
   }
 
   @GetMapping("/cases/{caseId}/timeline")
   public List<TimelineItemDto> caseTimeline(@PathVariable Long caseId) {
-    PublicationCase c = supervisedCase(caseId);
-    return timelineService.buildTimeline(c);
+    User me = currentUser.requireCurrentUser();
+    return lecturerReviewService.caseTimeline(me, caseId);
   }
 
   @GetMapping("/cases/{caseId}/submissions")
-  public List<SubmissionVersion> caseSubmissions(@PathVariable Long caseId) {
-    PublicationCase c = supervisedCase(caseId);
-    return submissionVersions.findByPublicationCaseOrderByVersionNumberDesc(c);
+  public List<SubmissionSummaryResponse> caseSubmissions(@PathVariable Long caseId) {
+    User me = currentUser.requireCurrentUser();
+    return lecturerReviewService.caseSubmissions(me, caseId);
   }
 
   @GetMapping("/cases/{caseId}/submissions/latest/download")
@@ -533,17 +352,39 @@ public class LecturerWorkflowController {
       .collect(Collectors.toMap(StudentProfile::getUserId, profile -> profile));
   }
 
-  private static String summarizeComment(String body, String fallback) {
-    if (!hasText(body)) {
-      return fallback;
-    }
-    String trimmed = body.trim();
-    return trimmed.length() <= 120 ? trimmed : trimmed.substring(0, 117) + "...";
+  private LecturerApprovalQueueRowDto toApprovalQueueRow(
+    PublicationRegistration registration,
+    Map<Long, StudentProfile> profileByUser
+  ) {
+    PublicationCase publicationCase = registration.getPublicationCase();
+    StudentProfile profile = profileByUser.get(publicationCase.getStudent().getId());
+    return new LecturerApprovalQueueRowDto(
+      publicationCase.getId(),
+      publicationCase.getType(),
+      publicationCase.getStatus(),
+      publicationCase.getUpdatedAt(),
+      publicationCase.getStudent().getId(),
+      publicationCase.getStudent().getEmail(),
+      profile != null ? profile.getName() : publicationCase.getStudent().getEmail(),
+      profile != null ? profile.getStudentId() : null,
+      profile != null ? profile.getFaculty() : null,
+      profile != null ? profile.getProgram() : null,
+      registration.getTitle(),
+      registration.getYear(),
+      registration.getSubmittedAt()
+    );
   }
 
   private static String sanitizeFilename(String candidate, String fallback) {
     String value = hasText(candidate) ? candidate.trim() : fallback;
     return value.replaceAll("[\\\\/\\r\\n\\t\"]", "_");
+  }
+
+  private static int normalizePageSize(int requestedSize) {
+    if (requestedSize < 1) {
+      return DEFAULT_PAGE_SIZE;
+    }
+    return Math.min(requestedSize, MAX_PAGE_SIZE);
   }
 
   private static boolean hasText(String value) {

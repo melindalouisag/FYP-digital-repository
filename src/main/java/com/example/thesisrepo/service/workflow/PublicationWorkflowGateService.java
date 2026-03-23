@@ -143,6 +143,30 @@ public class PublicationWorkflowGateService {
     }
   }
 
+  public void ensureAdminCanSaveChecklist(PublicationCase c) {
+    ensureLibraryReviewStage(c);
+  }
+
+  public void ensureAdminCanRequestLibraryRevision(PublicationCase c) {
+    ensureLibraryReviewStage(c);
+  }
+
+  public void ensureAdminCanApproveLibraryReview(PublicationCase c) {
+    ensureLibraryReviewStage(c);
+  }
+
+  public void ensureAdminCanRejectLibraryReview(PublicationCase c) {
+    ensureLibraryReviewStage(c);
+  }
+
+  public void ensureAdminCanApproveClearance(PublicationCase c) {
+    ensureClearanceQueueStage(c);
+  }
+
+  public void ensureAdminCanRequestClearanceCorrection(PublicationCase c) {
+    ensureClearanceQueueStage(c);
+  }
+
   // Gate 4: Publish requires approved clearance and approved latest submission.
   public SubmissionVersion ensureAdminCanPublish(PublicationCase c) {
     if (c.getStatus() != CaseStatus.READY_TO_PUBLISH) {
@@ -166,6 +190,12 @@ public class PublicationWorkflowGateService {
     }
 
     return latest;
+  }
+
+  public void ensureAdminCanUnpublish(PublicationCase c) {
+    if (c.getStatus() != CaseStatus.PUBLISHED) {
+      throw new ResponseStatusException(CONFLICT, "Case is not published.");
+    }
   }
 
   public int nextSubmissionVersion(PublicationCase c) {
@@ -196,5 +226,19 @@ public class PublicationWorkflowGateService {
 
     return checklistTemplates.findFirstByPublicationTypeAndIsActiveTrue(scope)
       .orElseThrow(() -> new ResponseStatusException(CONFLICT, "No active checklist template for " + scope));
+  }
+
+  private void ensureLibraryReviewStage(PublicationCase c) {
+    if (!(c.getStatus() == CaseStatus.FORWARDED_TO_LIBRARY
+      || c.getStatus() == CaseStatus.UNDER_LIBRARY_REVIEW
+      || c.getStatus() == CaseStatus.NEEDS_REVISION_LIBRARY)) {
+      throw new ResponseStatusException(CONFLICT, "Case is not in library review stage");
+    }
+  }
+
+  private void ensureClearanceQueueStage(PublicationCase c) {
+    if (c.getStatus() != CaseStatus.CLEARANCE_SUBMITTED) {
+      throw new ResponseStatusException(CONFLICT, "Case is not in clearance queue");
+    }
   }
 }

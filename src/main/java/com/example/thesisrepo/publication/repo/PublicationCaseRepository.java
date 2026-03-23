@@ -4,12 +4,16 @@ import com.example.thesisrepo.publication.CaseStatus;
 import com.example.thesisrepo.publication.PublicationCase;
 import com.example.thesisrepo.publication.PublicationType;
 import com.example.thesisrepo.user.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 
 public interface PublicationCaseRepository extends JpaRepository<PublicationCase, Long> {
   List<PublicationCase> findByStudentOrderByUpdatedAtDesc(User student);
+  Page<PublicationCase> findByStudent(User student, Pageable pageable);
   List<PublicationCase> findByStudentAndTypeOrderByUpdatedAtDesc(User student, PublicationType type);
   List<PublicationCase> findByStatusInOrderByUpdatedAtDesc(List<CaseStatus> statuses);
+  Page<PublicationCase> findByStatusIn(List<CaseStatus> statuses, Pageable pageable);
 }

@@ -7,15 +7,36 @@ import com.example.thesisrepo.profile.StudentProfileRepository;
 import com.example.thesisrepo.publication.*;
 import com.example.thesisrepo.publication.repo.*;
 import com.example.thesisrepo.service.CurrentUserService;
-import com.example.thesisrepo.service.StorageService;
+import com.example.thesisrepo.service.RegistrationService;
+import com.example.thesisrepo.service.SubmissionService;
 import com.example.thesisrepo.service.workflow.AuditEventService;
 import com.example.thesisrepo.service.workflow.CaseTimelineService;
 import com.example.thesisrepo.service.workflow.PublicationWorkflowGateService;
-import com.example.thesisrepo.user.*;
-
-import jakarta.validation.constraints.NotBlank;
+import com.example.thesisrepo.user.Role;
+import com.example.thesisrepo.user.StaffRegistry;
+import com.example.thesisrepo.user.StaffRegistryRepository;
+import com.example.thesisrepo.user.User;
+import com.example.thesisrepo.web.dto.AssignedSupervisorResponse;
+import com.example.thesisrepo.web.dto.CaseStatusResponse;
+import com.example.thesisrepo.web.dto.ChecklistResultResponse;
+import com.example.thesisrepo.web.dto.ClearanceResponse;
+import com.example.thesisrepo.web.dto.CreateRegistrationRequest;
+import com.example.thesisrepo.web.dto.PagedResponse;
+import com.example.thesisrepo.web.dto.RegistrationDetailResponse;
+import com.example.thesisrepo.web.dto.StudentCaseDetailResponse;
+import com.example.thesisrepo.web.dto.StudentCaseSummaryResponse;
+import com.example.thesisrepo.web.dto.SubmissionDetailResponse;
+import com.example.thesisrepo.web.dto.SubmissionSummaryResponse;
+import com.example.thesisrepo.web.dto.SubmissionUploadMetadataRequest;
+import com.example.thesisrepo.web.dto.SubmissionUploadResponse;
+import com.example.thesisrepo.web.dto.SubmitRegistrationRequest;
+import com.example.thesisrepo.web.dto.UpdateRegistrationRequest;
+import com.example.thesisrepo.web.dto.WorkflowCommentResponse;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -33,6 +54,9 @@ import static org.springframework.http.HttpStatus.*;
 @PreAuthorize("hasRole('STUDENT')")
 public class StudentController {
 
+  private static final int DEFAULT_PAGE_SIZE = 10;
+  private static final int MAX_PAGE_SIZE = 50;
+
   private final PublicationCaseRepository cases;
   private final PublicationRegistrationRepository registrations;
   private final CaseSupervisorRepository caseSupervisors;
@@ -42,19 +66,32 @@ public class StudentController {
   private final ClearanceFormRepository clearances;
   private final LecturerProfileRepository lecturerProfiles;
   private final StudentProfileRepository studentProfiles;
-  private final UserRepository users;
   private final StaffRegistryRepository staffRegistry;
   private final CurrentUserService currentUser;
-  private final StorageService storage;
+  private final RegistrationService registrationService;
+  private final SubmissionService submissionService;
   private final PublicationWorkflowGateService workflowGates;
   private final AuditEventService auditEvents;
   private final CaseTimelineService timelineService;
-  private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
   @GetMapping("/cases")
-  public List<Map<String, Object>> listCases() {
+  public PagedResponse<StudentCaseSummaryResponse> listCases(
+    @RequestParam(defaultValue = "0") int page,
+    @RequestParam(defaultValue = "" + DEFAULT_PAGE_SIZE) int size
+  ) {
     User me = currentUser.requireCurrentUser();
-    return cases.findByStudentOrderByUpdatedAtDesc(me).stream().map(this::toCaseSummary).toList();
+    Page<PublicationCase> casePage = cases.findByStudent(
+      me,
+      PageRequest.of(
+        Math.max(page, 0),
+        normalizePageSize(size),
+        Sort.by(Sort.Order.desc("updatedAt"), Sort.Order.desc("id"))
+      )
+    );
+    List<StudentCaseSummaryResponse> items = casePage.getContent().stream()
+      .map(this::toCaseSummary)
+      .toList();
+    return PagedResponse.from(casePage, items);
   }
 
   @GetMapping("/supervisors")
@@ -76,224 +113,98 @@ public class StudentController {
   }
 
   @PostMapping("/registrations")
-  public ResponseEntity<?> createRegistration(@RequestBody CreateRegistrationRequest req) {
+  public ResponseEntity<CaseStatusResponse> createRegistration(@RequestBody CreateRegistrationRequest req) {
     User me = currentUser.requireCurrentUser();
-    ensureStudentCanCreateRegistration(me, req.getType());
-
-    StudentProfile studentProfile = studentProfiles.findByUserId(me.getId()).orElse(null);
-    if (studentProfile == null || normalize(studentProfile.getProgram()).isBlank()) {
-      throw new ResponseStatusException(BAD_REQUEST, "Student profile must include study program before selecting supervisors");
-    }
-    String studentProgram = normalize(studentProfile != null ? studentProfile.getProgram() : null);
-    String studentFaculty = normalize(studentProfile != null ? studentProfile.getFaculty() : null);
-
-    User supervisor = resolveRequestedSupervisor(req);
-    validateSupervisorForStudent(supervisor, studentProgram);
-
-    PublicationCase c = cases.save(PublicationCase.builder()
-      .student(me)
-      .type(req.getType())
-      .status(CaseStatus.REGISTRATION_DRAFT)
-      .build());
-
-    registrations.save(PublicationRegistration.builder()
-      .publicationCase(c)
-      .title(req.getTitle())
-      .year(req.getYear())
-      .articlePublishIn(req.getArticlePublishIn())
-      .faculty(req.getFaculty())
-      .studentIdNumber(req.getStudentIdNumber())
-      .authorName(req.getAuthorName())
-      .build());
-
-    caseSupervisors.save(CaseSupervisor.builder().publicationCase(c).lecturer(supervisor).build());
-
-    auditEvents.log(
-      c.getId(),
-      me,
-      Role.STUDENT,
-      AuditEventType.REGISTRATION_DRAFT_SAVED,
-      "Registration draft created"
+    RegistrationService.CreateRegistrationCommand command = new RegistrationService.CreateRegistrationCommand(
+      req.getType(),
+      req.getTitle(),
+      req.getYear(),
+      req.getArticlePublishIn(),
+      req.getFaculty(),
+      req.getStudentIdNumber(),
+      req.getAuthorName(),
+      req.getSupervisorEmail(),
+      req.getSupervisorUserId(),
+      req.getSupervisorUserIds(),
+      req.getSupervisorEmails()
     );
-
-    return ResponseEntity.ok(Map.of("caseId", c.getId(), "status", c.getStatus()));
+    return ResponseEntity.ok(registrationService.createStudentRegistration(me, command));
   }
 
   @PutMapping("/registrations/{caseId}")
-  public ResponseEntity<?> updateRegistration(@PathVariable Long caseId, @RequestBody UpdateRegistrationRequest req) {
-    PublicationCase c = ownedCase(caseId);
-    workflowGates.ensureRegistrationEditable(c);
+  public ResponseEntity<CaseStatusResponse> updateRegistration(@PathVariable Long caseId, @RequestBody UpdateRegistrationRequest req) {
     User me = currentUser.requireCurrentUser();
-    StudentProfile studentProfile = studentProfiles.findByUserId(me.getId()).orElse(null);
-    if (studentProfile == null || normalize(studentProfile.getProgram()).isBlank()) {
-      throw new ResponseStatusException(BAD_REQUEST, "Student profile must include study program before selecting supervisors");
-    }
-
-    PublicationRegistration registration = registrations.findByPublicationCase(c)
-      .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Registration not found"));
-    User supervisor = resolveRequestedSupervisor(req);
-    validateSupervisorForStudent(supervisor, normalize(studentProfile.getProgram()));
-
-    registration.setTitle(req.getTitle());
-    registration.setYear(req.getYear());
-    registration.setArticlePublishIn(req.getArticlePublishIn());
-    registration.setFaculty(req.getFaculty());
-    registration.setStudentIdNumber(req.getStudentIdNumber());
-    registration.setAuthorName(req.getAuthorName());
-
-    if (c.getStatus() == CaseStatus.REGISTRATION_PENDING) {
-      clearRegistrationSubmissionState(registration);
-      resetSupervisorDecisions(c);
-      c.setStatus(CaseStatus.REGISTRATION_DRAFT);
-      cases.save(c);
-    }
-
-    registrations.save(registration);
-    replaceSupervisorAssignment(c, supervisor);
-
-    auditEvents.log(
-      c.getId(),
-      me,
-      Role.STUDENT,
-      AuditEventType.REGISTRATION_DRAFT_SAVED,
-      "Registration draft updated"
+    RegistrationService.UpdateRegistrationCommand command = new RegistrationService.UpdateRegistrationCommand(
+      req.getTitle(),
+      req.getYear(),
+      req.getArticlePublishIn(),
+      req.getFaculty(),
+      req.getStudentIdNumber(),
+      req.getAuthorName(),
+      req.getSupervisorEmail(),
+      req.getSupervisorUserId(),
+      req.getSupervisorUserIds(),
+      req.getSupervisorEmails()
     );
-
-    return ResponseEntity.ok(Map.of("caseId", c.getId(), "status", c.getStatus()));
+    return ResponseEntity.ok(registrationService.updateStudentRegistration(me, caseId, command));
   }
 
   @PostMapping("/registrations/{caseId}/submit")
-  public ResponseEntity<?> submitRegistration(@PathVariable Long caseId, @RequestBody SubmitRegistrationRequest req) {
+  public ResponseEntity<CaseStatusResponse> submitRegistration(@PathVariable Long caseId, @RequestBody SubmitRegistrationRequest req) {
     User me = currentUser.requireCurrentUser();
-    PublicationCase c = ownedCase(caseId);
-    workflowGates.ensureRegistrationSubmittable(c);
-
-    PublicationRegistration registration = registrations.findByPublicationCase(c)
-      .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Registration not found"));
-    if (!req.isPermissionAccepted()) {
-      throw new ResponseStatusException(BAD_REQUEST, "Permission must be accepted");
-    }
-
-    List<CaseSupervisor> supervisors = caseSupervisors.findByPublicationCase(c);
-    supervisors.forEach(supervisor -> {
-      supervisor.setApprovedAt(null);
-      supervisor.setRejectedAt(null);
-      supervisor.setDecisionNote(null);
-    });
-    caseSupervisors.saveAll(supervisors);
-
-    clearRegistrationSubmissionState(registration);
-    registration.setPermissionAcceptedAt(Instant.now());
-    registration.setSubmittedAt(Instant.now());
-    registrations.save(registration);
-
-    c.setStatus(CaseStatus.REGISTRATION_PENDING);
-    cases.save(c);
-
-    auditEvents.log(
-      c.getId(),
-      me,
-      Role.STUDENT,
-      AuditEventType.REGISTRATION_SUBMITTED,
-      "Registration submitted for supervisor approval"
-    );
-
-    return ResponseEntity.ok(Map.of("caseId", c.getId(), "status", c.getStatus()));
+    return ResponseEntity.ok(registrationService.submitStudentRegistration(me, caseId, req.isPermissionAccepted()));
   }
 
   @GetMapping("/cases/{caseId}")
-  public ResponseEntity<?> caseDetail(@PathVariable Long caseId) {
+  public ResponseEntity<StudentCaseDetailResponse> caseDetail(@PathVariable Long caseId) {
     PublicationCase c = ownedCase(caseId);
     PublicationRegistration reg = registrations.findByPublicationCase(c).orElse(null);
-    List<SubmissionVersion> versions = submissionVersions.findByPublicationCaseOrderByVersionNumberDesc(c);
-    List<WorkflowComment> caseComments = comments.findByPublicationCaseOrderByCreatedAtAsc(c);
+    List<SubmissionSummaryResponse> versions = submissionService.listSubmissionSummaries(c);
+    List<WorkflowCommentResponse> caseComments = comments.findByPublicationCaseOrderByCreatedAtAsc(c).stream()
+      .map(this::toWorkflowCommentResponse)
+      .toList();
 
-    Map<String, Object> payload = new LinkedHashMap<>();
-    payload.put("case", toCaseSummary(c));
-    payload.put("registration", reg);
-    payload.put("supervisors", caseSupervisors.findByPublicationCase(c).stream().map(this::toAssignedSupervisor).toList());
-    payload.put("versions", versions);
-    payload.put("comments", caseComments);
-    payload.put("clearance", clearances.findByPublicationCase(c).orElse(null));
-    payload.put("timeline", timelineService.buildTimeline(c));
-    return ResponseEntity.ok(payload);
+    return ResponseEntity.ok(new StudentCaseDetailResponse(
+      toCaseSummary(c),
+      toRegistrationDetail(reg),
+      caseSupervisors.findByPublicationCase(c).stream().map(this::toAssignedSupervisor).toList(),
+      versions,
+      caseComments,
+      toClearanceResponse(clearances.findByPublicationCase(c).orElse(null)),
+      timelineService.buildTimeline(c)
+    ));
   }
 
   @PostMapping(value = "/cases/{caseId}/submissions", consumes = "multipart/form-data")
-  public ResponseEntity<?> uploadSubmission(
+  public ResponseEntity<SubmissionUploadResponse> uploadSubmission(
     @PathVariable Long caseId,
     @RequestPart("file") MultipartFile file,
-    @RequestPart(value = "meta", required = false) SubmissionMeta meta
+    @RequestPart(value = "meta", required = false) SubmissionUploadMetadataRequest meta
   ) {
     User me = currentUser.requireCurrentUser();
-    PublicationCase c = ownedCase(caseId);
-    workflowGates.ensureStudentCanUploadSubmission(c);
-    CaseStatus previousStatus = c.getStatus();
-
-    int nextVersion = workflowGates.nextSubmissionVersion(c);
-    ChecklistTemplate checklistTemplate = submissionVersions.findTopByPublicationCaseOrderByVersionNumberDesc(c)
-      .map(SubmissionVersion::getChecklistTemplate)
-      .orElseGet(() -> workflowGates.requireActiveTemplateForCaseType(c.getType()));
-
-    String safeOriginalFilename;
-    String storedPath;
-    try {
-      safeOriginalFilename = storage.sanitizeOriginalFilename(file.getOriginalFilename());
-      storedPath = storage.saveDocument(file);
-    } catch (Exception ex) {
-      throw new ResponseStatusException(BAD_REQUEST, ex.getMessage(), ex);
-    }
-
-    SubmissionVersion version = submissionVersions.save(SubmissionVersion.builder()
-      .publicationCase(c)
-      .versionNumber(nextVersion)
-      .filePath(storedPath)
-      .originalFilename(safeOriginalFilename)
-      .contentType(Optional.ofNullable(file.getContentType()).orElse("application/octet-stream"))
-      .fileSize(file.getSize())
-      .metadataTitle(meta != null ? meta.getMetadataTitle() : null)
-      .metadataAuthors(meta != null ? meta.getMetadataAuthors() : null)
-      .metadataKeywords(meta != null ? meta.getMetadataKeywords() : null)
-      .metadataFaculty(meta != null ? meta.getMetadataFaculty() : null)
-      .metadataStudyProgram(meta != null ? meta.getMetadataStudyProgram() : null)
-      .metadataYear(meta != null ? meta.getMetadataYear() : null)
-      .abstractText(meta != null ? meta.getAbstractText() : null)
-      .checklistTemplate(checklistTemplate)
-      .status(SubmissionStatus.SUBMITTED)
-      .build());
-
-    c.setStatus(workflowGates.nextStatusAfterStudentUpload(previousStatus));
-    cases.save(c);
-
-    auditEvents.log(
-      c.getId(),
-      version.getId(),
-      me,
-      Role.STUDENT,
-      AuditEventType.SUBMISSION_UPLOADED,
-      "Uploaded submission v" + version.getVersionNumber() + " (" + safeOriginalFilename + ")"
-    );
-
-    return ResponseEntity.ok(Map.of("submissionId", version.getId(), "version", version.getVersionNumber()));
+    SubmissionUploadResponse response = submissionService.uploadStudentSubmission(me, caseId, file, meta);
+    return ResponseEntity.ok(response);
   }
 
   @GetMapping("/cases/{caseId}/submissions")
-  public List<SubmissionVersion> submissions(@PathVariable Long caseId) {
-    PublicationCase c = ownedCase(caseId);
-    return submissionVersions.findByPublicationCaseOrderByVersionNumberDesc(c);
+  public List<SubmissionDetailResponse> submissions(@PathVariable Long caseId) {
+    User me = currentUser.requireCurrentUser();
+    return submissionService.listStudentSubmissions(me, caseId);
   }
 
   @GetMapping("/cases/{caseId}/checklist-results")
-  public ResponseEntity<?> checklistResults(@PathVariable Long caseId) {
+  public ResponseEntity<List<ChecklistResultResponse>> checklistResults(@PathVariable Long caseId) {
     PublicationCase c = ownedCase(caseId);
     SubmissionVersion latest = submissionVersions.findTopByPublicationCaseOrderByVersionNumberDesc(c)
       .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "No submissions"));
 
-    return ResponseEntity.ok(checklistResults.findBySubmissionVersion(latest));
+    return ResponseEntity.ok(checklistResults.findBySubmissionVersion(latest).stream()
+      .map(this::toChecklistResultResponse)
+      .toList());
   }
 
   @PostMapping("/cases/{caseId}/clearance")
-  public ResponseEntity<?> submitClearance(@PathVariable Long caseId, @RequestBody ClearanceRequest req) {
+  public ResponseEntity<CaseStatusResponse> submitClearance(@PathVariable Long caseId, @RequestBody ClearanceRequest req) {
     User me = currentUser.requireCurrentUser();
     PublicationCase c = ownedCase(caseId);
     workflowGates.ensureClearanceSubmittable(c);
@@ -319,7 +230,7 @@ public class StudentController {
       "Student submitted clearance form"
     );
 
-    return ResponseEntity.ok(Map.of("caseId", c.getId(), "status", c.getStatus()));
+    return ResponseEntity.ok(new CaseStatusResponse(c.getId(), c.getStatus()));
   }
 
   private PublicationCase ownedCase(Long caseId) {
@@ -327,15 +238,22 @@ public class StudentController {
     return workflowGates.requireOwnedCase(me, caseId);
   }
 
-  private Map<String, Object> toCaseSummary(PublicationCase c) {
+  private int normalizePageSize(int requestedSize) {
+    if (requestedSize < 1) {
+      return DEFAULT_PAGE_SIZE;
+    }
+    return Math.min(requestedSize, MAX_PAGE_SIZE);
+  }
+
+  private StudentCaseSummaryResponse toCaseSummary(PublicationCase c) {
     PublicationRegistration registration = registrations.findByPublicationCase(c).orElse(null);
-    return Map.of(
-      "id", c.getId(),
-      "type", c.getType(),
-      "status", c.getStatus(),
-      "title", registration != null ? registration.getTitle() : null,
-      "updatedAt", c.getUpdatedAt(),
-      "createdAt", c.getCreatedAt()
+    return new StudentCaseSummaryResponse(
+      c.getId(),
+      c.getType(),
+      c.getStatus(),
+      registration != null ? registration.getTitle() : null,
+      c.getUpdatedAt(),
+      c.getCreatedAt()
     );
   }
 
@@ -352,129 +270,17 @@ public class StudentController {
     );
   }
 
-  private AssignedSupervisorDto toAssignedSupervisor(CaseSupervisor supervisor) {
+  private AssignedSupervisorResponse toAssignedSupervisor(CaseSupervisor supervisor) {
     User lecturer = supervisor.getLecturer();
     LecturerProfile profile = lecturerProfiles.findByUserId(lecturer.getId()).orElse(null);
     String name = profile != null && profile.getName() != null && !profile.getName().isBlank()
       ? profile.getName()
       : lecturer.getEmail();
-    return new AssignedSupervisorDto(
+    return new AssignedSupervisorResponse(
       lecturer.getId(),
       lecturer.getEmail(),
       name
     );
-  }
-
-  private void ensureStudentCanCreateRegistration(User student, PublicationType type) {
-    if (type != PublicationType.THESIS) {
-      return;
-    }
-
-    List<PublicationCase> thesisCases = cases.findByStudentAndTypeOrderByUpdatedAtDesc(student, PublicationType.THESIS);
-    if (thesisCases.isEmpty()) {
-      return;
-    }
-
-    PublicationCase canonical = pickCanonicalThesisCase(thesisCases);
-    if (canonical != null) {
-      throw new ResponseStatusException(
-        CONFLICT,
-        "You already have a THESIS registration case (case #" + canonical.getId() + "). Edit the existing case instead of creating a new one."
-      );
-    }
-
-    throw new ResponseStatusException(
-      CONFLICT,
-      "You already have THESIS registration cases. Use an existing case instead of creating a new one."
-    );
-  }
-
-  private PublicationCase pickCanonicalThesisCase(List<PublicationCase> thesisCases) {
-    return thesisCases.stream()
-      .min(Comparator.comparingInt((PublicationCase c) -> thesisCasePriority(c.getStatus()))
-        .thenComparing(PublicationCase::getUpdatedAt, Comparator.nullsLast(Comparator.reverseOrder()))
-        .thenComparing(PublicationCase::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
-      .orElse(null);
-  }
-
-  private static int thesisCasePriority(CaseStatus status) {
-    if (status == CaseStatus.REGISTRATION_VERIFIED) {
-      return 0;
-    }
-    if (status == CaseStatus.REGISTRATION_APPROVED) {
-      return 1;
-    }
-    if (status == CaseStatus.REGISTRATION_PENDING) {
-      return 2;
-    }
-    if (status == CaseStatus.REGISTRATION_DRAFT) {
-      return 3;
-    }
-    if (status == CaseStatus.REJECTED) {
-      return 4;
-    }
-    return 5;
-  }
-
-  private void validateSupervisorForStudent(User supervisor, String studentProgram) {
-    if (supervisor.getRole() != Role.LECTURER) {
-      throw new ResponseStatusException(BAD_REQUEST, "Supervisor must be a lecturer.");
-    }
-
-    StaffRegistry staffEntry = staffRegistry.findByEmailIgnoreCase(supervisor.getEmail()).orElse(null);
-    LecturerProfile lecturerProfile = lecturerProfiles.findByUserId(supervisor.getId()).orElse(null);
-
-    String supervisorProgram = "";
-    if (staffEntry != null && staffEntry.getStudyProgram() != null) {
-      supervisorProgram = normalize(staffEntry.getStudyProgram());
-    } else if (lecturerProfile != null && lecturerProfile.getDepartment() != null) {
-      supervisorProgram = normalize(lecturerProfile.getDepartment());
-    }
-
-    if (supervisorProgram.isBlank()) {
-      throw new ResponseStatusException(BAD_REQUEST, "Supervisor study program is not configured.");
-    }
-
-    if (!normalizeStudyProgram(supervisorProgram).equals(normalizeStudyProgram(studentProgram))) {
-      throw new ResponseStatusException(BAD_REQUEST, "Supervisor must be from the same study program.");
-    }
-  }
-
-  private void replaceSupervisorAssignment(PublicationCase publicationCase, User supervisor) {
-    List<CaseSupervisor> existing = caseSupervisors.findByPublicationCase(publicationCase);
-    if (existing.size() == 1 && existing.get(0).getLecturer().getId().equals(supervisor.getId())) {
-      return;
-    }
-
-    if (!existing.isEmpty()) {
-      caseSupervisors.deleteByPublicationCase(publicationCase);
-    }
-
-    caseSupervisors.save(CaseSupervisor.builder()
-      .publicationCase(publicationCase)
-      .lecturer(supervisor)
-      .build());
-  }
-
-  private void clearRegistrationSubmissionState(PublicationRegistration registration) {
-    registration.setSubmittedAt(null);
-    registration.setPermissionAcceptedAt(null);
-    registration.setSupervisorDecisionAt(null);
-    registration.setSupervisorDecisionNote(null);
-  }
-
-  private void resetSupervisorDecisions(PublicationCase publicationCase) {
-    List<CaseSupervisor> supervisors = caseSupervisors.findByPublicationCase(publicationCase);
-    if (supervisors.isEmpty()) {
-      return;
-    }
-
-    supervisors.forEach(supervisor -> {
-      supervisor.setApprovedAt(null);
-      supervisor.setRejectedAt(null);
-      supervisor.setDecisionNote(null);
-    });
-    caseSupervisors.saveAll(supervisors);
   }
 
   private static String normalize(String value) {
@@ -490,105 +296,65 @@ public class StudentController {
     return normalized;
   }
 
-  /**
-   * Resolve the supervisor User. If the email exists in staff_registry but the
-   * user hasn't logged in yet, auto-provision a User account for them.
-   */
-  private User resolveRequestedSupervisor(CreateRegistrationRequest req) {
-    return resolveRequestedSupervisor(
-      req.getSupervisorEmail(),
-      req.getSupervisorUserId(),
-      req.getSupervisorUserIds(),
-      req.getSupervisorEmails()
+
+  private RegistrationDetailResponse toRegistrationDetail(PublicationRegistration registration) {
+    if (registration == null) {
+      return null;
+    }
+    return new RegistrationDetailResponse(
+      registration.getId(),
+      registration.getTitle(),
+      registration.getYear(),
+      registration.getArticlePublishIn(),
+      registration.getFaculty(),
+      registration.getStudentIdNumber(),
+      registration.getAuthorName(),
+      registration.getPermissionAcceptedAt(),
+      registration.getSubmittedAt(),
+      registration.getSupervisorDecisionAt(),
+      registration.getSupervisorDecisionNote()
     );
   }
 
-  private User resolveRequestedSupervisor(UpdateRegistrationRequest req) {
-    return resolveRequestedSupervisor(
-      req.getSupervisorEmail(),
-      req.getSupervisorUserId(),
-      req.getSupervisorUserIds(),
-      req.getSupervisorEmails()
+  private WorkflowCommentResponse toWorkflowCommentResponse(WorkflowComment comment) {
+    String authorEmail = comment.getAuthorEmail() != null && !comment.getAuthorEmail().isBlank()
+      ? comment.getAuthorEmail()
+      : (comment.getAuthor() != null ? comment.getAuthor().getEmail() : null);
+    return new WorkflowCommentResponse(
+      comment.getId(),
+      comment.getSubmissionVersion() != null ? comment.getSubmissionVersion().getId() : null,
+      comment.getAuthorRole(),
+      authorEmail,
+      comment.getBody(),
+      comment.getCreatedAt()
     );
   }
 
-  private User resolveRequestedSupervisor(
-    String requestedSupervisorEmail,
-    Long requestedSupervisorUserId,
-    List<Long> requestedSupervisorUserIds,
-    List<String> requestedSupervisorEmails
-  ) {
-    String supervisorEmail = normalize(requestedSupervisorEmail);
-    if (!supervisorEmail.isBlank()) {
-      return findOrProvisionLecturer(supervisorEmail);
-    }
-
-    if (requestedSupervisorUserId != null) {
-      return users.findById(requestedSupervisorUserId)
-        .orElseThrow(() -> new ResponseStatusException(BAD_REQUEST, "Supervisor not found."));
-    }
-
-    if (requestedSupervisorEmails != null) {
-      List<String> supervisorEmails = requestedSupervisorEmails.stream()
-        .map(StudentController::normalize)
-        .filter(email -> !email.isBlank())
-        .distinct()
-        .toList();
-      if (supervisorEmails.isEmpty()) {
-        throw new ResponseStatusException(BAD_REQUEST, "Supervisor is required.");
-      }
-      if (supervisorEmails.size() > 1) {
-        throw new ResponseStatusException(BAD_REQUEST, "Only one supervisor is allowed.");
-      }
-      return findOrProvisionLecturer(supervisorEmails.get(0));
-    }
-
-    if (requestedSupervisorUserIds != null) {
-      List<Long> supervisorUserIds = requestedSupervisorUserIds.stream()
-        .filter(Objects::nonNull)
-        .distinct()
-        .toList();
-      if (supervisorUserIds.isEmpty()) {
-        throw new ResponseStatusException(BAD_REQUEST, "Supervisor is required.");
-      }
-      if (supervisorUserIds.size() > 1) {
-        throw new ResponseStatusException(BAD_REQUEST, "Only one supervisor is allowed.");
-      }
-      return users.findById(supervisorUserIds.get(0))
-        .orElseThrow(() -> new ResponseStatusException(BAD_REQUEST, "Supervisor not found."));
-    }
-
-    throw new ResponseStatusException(BAD_REQUEST, "Supervisor is required.");
+  private ChecklistResultResponse toChecklistResultResponse(ChecklistResult result) {
+    ChecklistItemV2 item = result.getChecklistItem();
+    return new ChecklistResultResponse(
+      result.getId(),
+      new ChecklistResultResponse.ChecklistItemResponse(
+        item.getId(),
+        item.getSection(),
+        item.getItemText()
+      ),
+      result.getPassFail(),
+      result.getNote()
+    );
   }
 
-  /**
-   * Find user by email, or auto-provision from staff_registry if not yet in users table.
-   */
-  private User findOrProvisionLecturer(String email) {
-    return users.findByEmail(email).orElseGet(() -> {
-      // Check staff_registry to verify this is a valid lecturer
-      StaffRegistry staff = staffRegistry.findByEmailIgnoreCase(email)
-        .orElseThrow(() -> new ResponseStatusException(BAD_REQUEST, "Supervisor not found in staff registry."));
-      if (staff.getRole() != Role.LECTURER) {
-        throw new ResponseStatusException(BAD_REQUEST, "Selected staff is not a lecturer.");
-      }
-      // Auto-create User so CaseSupervisor FK works
-      User newUser = users.save(User.builder()
-        .email(email)
-        .role(Role.LECTURER)
-        .roles(Set.of(Role.LECTURER))
-        .passwordHash(passwordEncoder.encode(java.util.UUID.randomUUID().toString()))
-        .authProvider(AuthProvider.AAD)
-        .emailVerified(true)
-        .build());
-      // Also auto-create LecturerProfile
-      lecturerProfiles.save(LecturerProfile.builder()
-        .user(newUser)
-        .name(staff.getFullName())
-        .department(staff.getStudyProgram())
-        .build());
-      return newUser;
-    });
+  private ClearanceResponse toClearanceResponse(ClearanceForm clearance) {
+    if (clearance == null) {
+      return null;
+    }
+    return new ClearanceResponse(
+      clearance.getId(),
+      clearance.getStatus(),
+      clearance.getNote(),
+      clearance.getSubmittedAt(),
+      clearance.getApprovedAt()
+    );
   }
 
   public record SupervisorDto(
@@ -598,62 +364,6 @@ public class StudentController {
     String faculty,
     String department
   ) {}
-
-  public record AssignedSupervisorDto(
-    Long id,
-    String email,
-    String name
-  ) {}
-
-  @Data
-  public static class CreateRegistrationRequest {
-    private PublicationType type = PublicationType.THESIS;
-    @NotBlank
-    private String title;
-    private Integer year;
-    private String articlePublishIn;
-    private String faculty;
-    private String studentIdNumber;
-    private String authorName;
-
-    private String supervisorEmail;
-    private Long supervisorUserId;
-
-    private List<Long> supervisorUserIds;
-    private List<String> supervisorEmails;
-  }
-
-  @Data
-  public static class UpdateRegistrationRequest {
-    @NotBlank
-    private String title;
-    private Integer year;
-    private String articlePublishIn;
-    private String faculty;
-    private String studentIdNumber;
-    private String authorName;
-
-    private String supervisorEmail;
-    private Long supervisorUserId;
-    private List<Long> supervisorUserIds;
-    private List<String> supervisorEmails;
-  }
-
-  @Data
-  public static class SubmitRegistrationRequest {
-    private boolean permissionAccepted;
-  }
-
-  @Data
-  public static class SubmissionMeta {
-    private String metadataTitle;
-    private String metadataAuthors;
-    private String metadataKeywords;
-    private String metadataFaculty;
-    private String metadataStudyProgram;
-    private Integer metadataYear;
-    private String abstractText;
-  }
 
   @Data
   public static class ClearanceRequest {

@@ -22,9 +22,9 @@ export default function AdminDashboardPage() {
           adminApi.clearanceQueue(),
           adminApi.publishQueue(),
         ]);
-        setRegistrationCount(registrations.length);
+        setRegistrationCount(registrations.totalElements);
         setReviewCount(review.length);
-        setClearanceCount(clearance.length);
+        setClearanceCount(clearance.totalElements);
         setPublishCount(publish.length);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load admin dashboard data.');

@@ -16,6 +16,7 @@ import com.example.thesisrepo.service.UserRoleService;
 import com.example.thesisrepo.user.Role;
 import com.example.thesisrepo.user.User;
 import com.example.thesisrepo.user.UserRepository;
+import com.example.thesisrepo.web.dto.OperationResultResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
@@ -33,7 +34,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Locale;
-import java.util.Map;
 
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.CONFLICT;
@@ -60,12 +60,12 @@ public class AuthController {
   private final ProgramRepository programs;
 
   @PostMapping(value = "/login", consumes = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<?> loginJson(@RequestBody LoginRequest request, HttpServletRequest httpRequest) {
+  public ResponseEntity<MeResponse> loginJson(@RequestBody LoginRequest request, HttpServletRequest httpRequest) {
     return authenticate(request.email(), request.password(), httpRequest);
   }
 
   @PostMapping(value = "/login", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-  public ResponseEntity<?> loginForm(
+  public ResponseEntity<MeResponse> loginForm(
     @RequestParam(name = "username", required = false) String username,
     @RequestParam(name = "email", required = false) String email,
     @RequestParam(name = "password") String password,
@@ -107,10 +107,10 @@ public class AuthController {
   }
 
   @PostMapping("/register")
-  public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
-    return ResponseEntity.status(FORBIDDEN).body(Map.of(
-      "error", "Self-registration is disabled. Use Sign up with Sampoerna University email."
-    ));
+  public ResponseEntity<ErrorMessageResponse> register(@RequestBody RegisterRequest request) {
+    return ResponseEntity.status(FORBIDDEN).body(
+      new ErrorMessageResponse("Self-registration is disabled. Use Sign up with Sampoerna University email.")
+    );
   }
 
   @PostMapping("/onboarding")
@@ -175,10 +175,10 @@ public class AuthController {
   }
 
   @PostMapping("/logout")
-  public ResponseEntity<?> logout(HttpServletRequest request) throws Exception {
+  public ResponseEntity<OperationResultResponse> logout(HttpServletRequest request) throws Exception {
     request.logout();
     SecurityContextHolder.clearContext();
-    return ResponseEntity.ok(Map.of("ok", true));
+    return ResponseEntity.ok(new OperationResultResponse(true));
   }
 
   @GetMapping("/config")
@@ -193,8 +193,8 @@ public class AuthController {
   }
 
   @GetMapping("/csrf")
-  public ResponseEntity<Map<String, String>> csrf(CsrfToken csrfToken) {
-    return ResponseEntity.ok(Map.of("token", csrfToken.getToken()));
+  public ResponseEntity<CsrfTokenResponse> csrf(CsrfToken csrfToken) {
+    return ResponseEntity.ok(new CsrfTokenResponse(csrfToken.getToken()));
   }
 
   @GetMapping("/me")
@@ -427,4 +427,8 @@ public class AuthController {
     boolean ssoEnabled,
     String ssoUrl
   ) {}
+
+  public record ErrorMessageResponse(String error) {}
+
+  public record CsrfTokenResponse(String token) {}
 }

@@ -1,4 +1,4 @@
-import type { CaseStatus, PublicationType, TimelineItem } from '../types/workflow';
+import type { CaseStatus, PagedResponse, PublicationType, TimelineItem } from '../types/workflow';
 import { getJson, postJson } from './http';
 
 export interface LecturerApprovalQueueRow {
@@ -49,6 +49,18 @@ export interface LecturerSubmissionVersion {
   createdAt?: string | null;
 }
 
+function buildPageQuery(page?: number, size?: number): string {
+  const query = new URLSearchParams();
+  if (page !== undefined) {
+    query.set('page', String(page));
+  }
+  if (size !== undefined) {
+    query.set('size', String(size));
+  }
+  const raw = query.toString();
+  return raw.length > 0 ? `?${raw}` : '';
+}
+
 export const lecturerApi = {
   approvals(): Promise<{ id: number; status: CaseStatus; type: PublicationType }[]> {
     return getJson('/api/lecturer/approvals');
@@ -94,8 +106,8 @@ export const lecturerApi = {
     return getJson(`/api/lecturer/cases/${caseId}/submissions`);
   },
 
-  approvalQueue(): Promise<LecturerApprovalQueueRow[]> {
-    return getJson('/api/lecturer/approval-queue');
+  approvalQueue(params?: { page?: number; size?: number }): Promise<PagedResponse<LecturerApprovalQueueRow>> {
+    return getJson(`/api/lecturer/approval-queue${buildPageQuery(params?.page, params?.size)}`);
   },
 
   pendingSupervisor(year?: number): Promise<LecturerStudentGroup[]> {

@@ -1,36 +1,54 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import ShellLayout from '../../layout/ShellLayout';
 import { adminApi } from '../../lib/api/admin';
-import type { AdminRegistrationApproval } from '../../lib/types/workflow';
+import type { AdminRegistrationApproval, PagedResponse } from '../../lib/types/workflow';
 import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 
+const PAGE_SIZE = 10;
+
+const EMPTY_PAGE: PagedResponse<AdminRegistrationApproval> = {
+  items: [],
+  page: 0,
+  size: PAGE_SIZE,
+  totalElements: 0,
+  totalPages: 0,
+  hasNext: false,
+  hasPrevious: false,
+};
+
 export default function AdminRegistrationApprovalsPage() {
-  const [rows, setRows] = useState<AdminRegistrationApproval[]>([]);
+  const [pageData, setPageData] = useState<PagedResponse<AdminRegistrationApproval>>(EMPTY_PAGE);
+  const [page, setPage] = useState(0);
   const [rejectNotes, setRejectNotes] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const load = async () => {
+  const load = async (requestedPage: number) => {
     setLoading(true);
     setError('');
     try {
-      setRows(await adminApi.registrationApprovals());
+      const response = await adminApi.registrationApprovals({ page: requestedPage, size: PAGE_SIZE });
+      if (response.totalPages > 0 && requestedPage >= response.totalPages) {
+        setPage(response.totalPages - 1);
+        return;
+      }
+      setPageData(response);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load registration approval queue.');
-      setRows([]);
+      setPageData(EMPTY_PAGE);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    void load();
-  }, []);
+    void load(page);
+  }, [page]);
 
   const approve = async (caseId: number) => {
     try {
       await adminApi.approveRegistration(caseId);
-      await load();
+      await load(page);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Approve action failed.');
     }
@@ -44,21 +62,15 @@ export default function AdminRegistrationApprovalsPage() {
     }
     try {
       await adminApi.rejectRegistration(caseId, note);
-      await load();
+      await load(page);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Reject action failed.');
     }
   };
 
-  const sortedRows = useMemo(
-    () =>
-      [...rows].sort((a, b) => {
-        const aTime = a.submittedAt ? new Date(a.submittedAt).getTime() : 0;
-        const bTime = b.submittedAt ? new Date(b.submittedAt).getTime() : 0;
-        return bTime - aTime;
-      }),
-    [rows]
-  );
+  const rows = pageData.items;
+  const pageStart = pageData.totalElements === 0 ? 0 : pageData.page * pageData.size + 1;
+  const pageEnd = pageStart === 0 ? 0 : pageStart + rows.length - 1;
 
   return (
     <ShellLayout title="Registration Verification" subtitle="Verify registrations after supervisor approval">
@@ -71,7 +83,7 @@ export default function AdminRegistrationApprovalsPage() {
         </div>
       )}
 
-      {!loading && sortedRows.length === 0 && (
+      {!loading && rows.length === 0 && (
         <div className="su-empty-state">
           <div className="su-empty-icon">📋</div>
           <h5>All Clear!</h5>
@@ -80,7 +92,7 @@ export default function AdminRegistrationApprovalsPage() {
       )}
 
       <div className="vstack gap-3">
-        {sortedRows.map((row, index) => (
+        {rows.map((row, index) => (
           <div className="su-card fade-in" key={row.caseId} style={{ animationDelay: `${index * 0.05}s` }}>
             <div className="card-body p-4">
               <div className="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
@@ -127,6 +139,43 @@ export default function AdminRegistrationApprovalsPage() {
           </div>
         ))}
       </div>
+
+      {!loading && pageData.totalElements > 0 && (
+        <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-4">
+          <div className="text-muted small">
+            Showing {pageStart}-{pageEnd} of {pageData.totalElements}
+          </div>
+          <nav aria-label="Registration approval pagination">
+            <ul className="pagination pagination-sm mb-0">
+              <li className={`page-item ${!pageData.hasPrevious || loading ? 'disabled' : ''}`}>
+                <button
+                  className="page-link"
+                  type="button"
+                  onClick={() => setPage((current) => Math.max(current - 1, 0))}
+                  disabled={!pageData.hasPrevious || loading}
+                >
+                  Previous
+                </button>
+              </li>
+              <li className="page-item disabled">
+                <span className="page-link">
+                  Page {pageData.page + 1} of {Math.max(pageData.totalPages, 1)}
+                </span>
+              </li>
+              <li className={`page-item ${!pageData.hasNext || loading ? 'disabled' : ''}`}>
+                <button
+                  className="page-link"
+                  type="button"
+                  onClick={() => setPage((current) => current + 1)}
+                  disabled={!pageData.hasNext || loading}
+                >
+                  Next
+                </button>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      )}
     </ShellLayout>
   );
 }

@@ -1,23 +1,41 @@
 import { useEffect, useState } from 'react';
 import ShellLayout from '../../layout/ShellLayout';
 import { adminApi } from '../../lib/api/admin';
-import type { CaseSummary } from '../../lib/types/workflow';
+import type { CaseSummary, PagedResponse } from '../../lib/types/workflow';
 import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 
+const PAGE_SIZE = 10;
+
+const EMPTY_PAGE: PagedResponse<CaseSummary> = {
+  items: [],
+  page: 0,
+  size: PAGE_SIZE,
+  totalElements: 0,
+  totalPages: 0,
+  hasNext: false,
+  hasPrevious: false,
+};
+
 export default function AdminClearancePage() {
-  const [cases, setCases] = useState<CaseSummary[]>([]);
+  const [pageData, setPageData] = useState<PagedResponse<CaseSummary>>(EMPTY_PAGE);
+  const [page, setPage] = useState(0);
   const [reasons, setReasons] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(true);
   const [workingCaseId, setWorkingCaseId] = useState<number | null>(null);
   const [error, setError] = useState('');
 
-  const load = async () => {
+  const load = async (requestedPage: number) => {
     setLoading(true);
     setError('');
     try {
-      setCases(await adminApi.clearanceQueue());
+      const response = await adminApi.clearanceQueue({ page: requestedPage, size: PAGE_SIZE });
+      if (response.totalPages > 0 && requestedPage >= response.totalPages) {
+        setPage(response.totalPages - 1);
+        return;
+      }
+      setPageData(response);
     } catch (err) {
-      setCases([]);
+      setPageData(EMPTY_PAGE);
       setError(err instanceof Error ? err.message : 'Failed to load clearance queue.');
     } finally {
       setLoading(false);
@@ -25,21 +43,25 @@ export default function AdminClearancePage() {
   };
 
   useEffect(() => {
-    void load();
-  }, []);
+    void load(page);
+  }, [page]);
 
   const run = async (caseId: number, action: () => Promise<void>) => {
     setWorkingCaseId(caseId);
     setError('');
     try {
       await action();
-      await load();
+      await load(page);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Action failed.');
     } finally {
       setWorkingCaseId(null);
     }
   };
+
+  const cases = pageData.items;
+  const pageStart = pageData.totalElements === 0 ? 0 : pageData.page * pageData.size + 1;
+  const pageEnd = pageStart === 0 ? 0 : pageStart + cases.length - 1;
 
   return (
     <ShellLayout title="Clearance Queue" subtitle="Approve submitted clearances or request correction">
@@ -118,6 +140,43 @@ export default function AdminClearancePage() {
           );
         })}
       </div>
+
+      {!loading && pageData.totalElements > 0 && (
+        <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-4">
+          <div className="text-muted small">
+            Showing {pageStart}-{pageEnd} of {pageData.totalElements}
+          </div>
+          <nav aria-label="Clearance queue pagination">
+            <ul className="pagination pagination-sm mb-0">
+              <li className={`page-item ${!pageData.hasPrevious || loading ? 'disabled' : ''}`}>
+                <button
+                  className="page-link"
+                  type="button"
+                  onClick={() => setPage((current) => Math.max(current - 1, 0))}
+                  disabled={!pageData.hasPrevious || loading}
+                >
+                  Previous
+                </button>
+              </li>
+              <li className="page-item disabled">
+                <span className="page-link">
+                  Page {pageData.page + 1} of {Math.max(pageData.totalPages, 1)}
+                </span>
+              </li>
+              <li className={`page-item ${!pageData.hasNext || loading ? 'disabled' : ''}`}>
+                <button
+                  className="page-link"
+                  type="button"
+                  onClick={() => setPage((current) => current + 1)}
+                  disabled={!pageData.hasNext || loading}
+                >
+                  Next
+                </button>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      )}
     </ShellLayout>
   );
 }

@@ -7,6 +7,7 @@ import type {
   CaseStatus,
   CaseSummary,
   ChecklistTemplateResponse,
+  PagedResponse,
   PublicationType,
 } from '../types/workflow';
 import { getJson, postJson, putJson, request } from './http';
@@ -32,13 +33,25 @@ export interface ChecklistImportSummary {
   sections: string[];
 }
 
+function buildPageQuery(page?: number, size?: number): string {
+  const query = new URLSearchParams();
+  if (page !== undefined) {
+    query.set('page', String(page));
+  }
+  if (size !== undefined) {
+    query.set('size', String(size));
+  }
+  const raw = query.toString();
+  return raw.length > 0 ? `?${raw}` : '';
+}
+
 export const adminApi = {
   reviewQueue(): Promise<CaseSummary[]> {
     return getJson('/api/admin/review');
   },
 
-  registrationApprovals(): Promise<AdminRegistrationApproval[]> {
-    return getJson('/api/admin/registration-approvals');
+  registrationApprovals(params?: { page?: number; size?: number }): Promise<PagedResponse<AdminRegistrationApproval>> {
+    return getJson(`/api/admin/registration-approvals${buildPageQuery(params?.page, params?.size)}`);
   },
 
   approveRegistration(caseId: number): Promise<{ caseId: number; status: CaseStatus }> {
@@ -80,8 +93,8 @@ export const adminApi = {
     return postJson(`/api/admin/cases/${caseId}/reject`, { reason });
   },
 
-  clearanceQueue(): Promise<CaseSummary[]> {
-    return getJson('/api/admin/clearance');
+  clearanceQueue(params?: { page?: number; size?: number }): Promise<PagedResponse<CaseSummary>> {
+    return getJson(`/api/admin/clearance${buildPageQuery(params?.page, params?.size)}`);
   },
 
   approveClearance(caseId: number): Promise<{ caseId: number; status: CaseStatus }> {
