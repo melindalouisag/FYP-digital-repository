@@ -1,42 +1,32 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
 import { studentApi } from '../../lib/api/student';
-import type { CaseSummary, PagedResponse } from '../../lib/types/workflow';
+import type { CaseStatus, CaseSummary } from '../../lib/types/workflow';
 import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
-import { isNavigationActivationKey, resolveStudentCaseNavigation } from '../lib/caseNavigation';
+import {
+  isNavigationActivationKey,
+  isRegistrationWorkspaceCase,
+  resolveStudentCaseNavigation,
+  sortCasesByRecentActivity,
+} from '../lib/caseNavigation';
 
 const PAGE_SIZE = 10;
 
-const EMPTY_PAGE: PagedResponse<CaseSummary> = {
-  items: [],
-  page: 0,
-  size: PAGE_SIZE,
-  totalElements: 0,
-  totalPages: 0,
-  hasNext: false,
-  hasPrevious: false,
-};
-
 export default function StudentRegistrationsPage() {
   const navigate = useNavigate();
-  const [pageData, setPageData] = useState<PagedResponse<CaseSummary>>(EMPTY_PAGE);
+  const [cases, setCases] = useState<CaseSummary[]>([]);
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const load = async (requestedPage: number) => {
+  const load = async () => {
     setLoading(true);
     setError('');
     try {
-      const response = await studentApi.listCasesPage({ page: requestedPage, size: PAGE_SIZE });
-      if (response.totalPages > 0 && requestedPage >= response.totalPages) {
-        setPage(response.totalPages - 1);
-        return;
-      }
-      setPageData(response);
+      setCases(await studentApi.listCases());
     } catch (err) {
-      setPageData(EMPTY_PAGE);
+      setCases([]);
       setError(err instanceof Error ? err.message : 'Unable to load registrations.');
     } finally {
       setLoading(false);
@@ -44,24 +34,39 @@ export default function StudentRegistrationsPage() {
   };
 
   useEffect(() => {
-    void load(page);
-  }, [page]);
+    void load();
+  }, []);
 
-  const statusHint: Record<string, string> = {
+  const statusHint: Partial<Record<CaseStatus, string>> = {
+    REGISTRATION_DRAFT: '📝 Draft in progress — complete and submit when ready',
     REGISTRATION_PENDING: '⏳ Waiting supervisor approval',
-    REGISTRATION_APPROVED: '⏳ Waiting library verification',
-    REGISTRATION_VERIFIED: '✅ Verified — go to Submission to upload',
-    REJECTED: '❌ Rejected — edit and resubmit',
+    REGISTRATION_APPROVED: '⏳ Supervisor approved — waiting library verification',
+    REJECTED: '❌ Rejected — update the registration and resubmit',
   };
 
-  const cases = pageData.items;
-  const pageStart = pageData.totalElements === 0 ? 0 : pageData.page * pageData.size + 1;
-  const pageEnd = pageStart === 0 ? 0 : pageStart + cases.length - 1;
+  const registrationCases = useMemo(
+    () => sortCasesByRecentActivity(cases.filter((c) => isRegistrationWorkspaceCase(c.status))),
+    [cases]
+  );
+  const totalPages = Math.max(Math.ceil(registrationCases.length / PAGE_SIZE), 1);
+
+  useEffect(() => {
+    setPage((current) => Math.min(current, totalPages - 1));
+  }, [totalPages]);
+
+  const visibleCases = useMemo(() => {
+    const start = page * PAGE_SIZE;
+    return registrationCases.slice(start, start + PAGE_SIZE);
+  }, [page, registrationCases]);
+  const pageStart = registrationCases.length === 0 ? 0 : page * PAGE_SIZE + 1;
+  const pageEnd = pageStart === 0 ? 0 : pageStart + visibleCases.length - 1;
+  const hasPrevious = page > 0;
+  const hasNext = page + 1 < totalPages;
 
   return (
-    <ShellLayout title="Publication Registration" subtitle="Prepare registration metadata and submit for approvals">
+    <ShellLayout title="Publication Registration" subtitle="Work on registration-stage cases you are preparing, correcting, or waiting on">
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <button className="btn btn-outline-secondary btn-sm" style={{ borderRadius: '999px' }} onClick={() => void load(page)} disabled={loading}>
+        <button className="btn btn-outline-secondary btn-sm" style={{ borderRadius: '999px' }} onClick={() => void load()} disabled={loading}>
           {loading ? '⏳ Loading...' : '🔄 Refresh'}
         </button>
         <button className="btn btn-primary" style={{ borderRadius: '999px' }} onClick={() => navigate('/student/registrations/new')}>
@@ -71,18 +76,26 @@ export default function StudentRegistrationsPage() {
 
       {error && <div className="alert alert-danger">{error}</div>}
 
-      {!loading && cases.length === 0 && (
+      {!loading && registrationCases.length === 0 && (
         <div className="su-empty-state">
           <div className="su-empty-icon">📋</div>
-          <h5>No Registrations Yet</h5>
-          <p className="text-muted">Create your first publication registration to get started.</p>
+          <h5>No Registration Cases to Work On</h5>
+          <p className="text-muted">Draft, rejected, and registration-review cases will appear here.</p>
           <button className="btn btn-primary" onClick={() => navigate('/student/registrations/new')}>
             Create First Registration
           </button>
         </div>
       )}
 
-      {cases.length > 0 && (
+      {registrationCases.length > 0 && (
+        <div className="mb-3">
+          <p className="text-muted small mb-0">
+            This workspace only shows registration-stage cases so you can focus on metadata preparation, corrections, and approval progress.
+          </p>
+        </div>
+      )}
+
+      {registrationCases.length > 0 && (
         <div className="table-responsive su-card">
           <table className="table table-hover align-middle mb-0">
             <thead>
@@ -95,7 +108,7 @@ export default function StudentRegistrationsPage() {
               </tr>
             </thead>
             <tbody>
-              {cases.map((c) => {
+              {visibleCases.map((c) => {
                 const navigationTarget = resolveStudentCaseNavigation(c, 'registrations');
 
                 return (
@@ -133,34 +146,34 @@ export default function StudentRegistrationsPage() {
         </div>
       )}
 
-      {!loading && pageData.totalElements > 0 && (
+      {!loading && registrationCases.length > 0 && (
         <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-4">
           <div className="text-muted small">
-            Showing {pageStart}-{pageEnd} of {pageData.totalElements}
+            Showing {pageStart}-{pageEnd} of {registrationCases.length}
           </div>
           <nav aria-label="Registration list pagination">
             <ul className="pagination pagination-sm mb-0">
-              <li className={`page-item ${!pageData.hasPrevious || loading ? 'disabled' : ''}`}>
+              <li className={`page-item ${!hasPrevious || loading ? 'disabled' : ''}`}>
                 <button
                   className="page-link"
                   type="button"
                   onClick={() => setPage((current) => Math.max(current - 1, 0))}
-                  disabled={!pageData.hasPrevious || loading}
+                  disabled={!hasPrevious || loading}
                 >
                   Previous
                 </button>
               </li>
               <li className="page-item disabled">
                 <span className="page-link">
-                  Page {pageData.page + 1} of {Math.max(pageData.totalPages, 1)}
+                  Page {page + 1} of {totalPages}
                 </span>
               </li>
-              <li className={`page-item ${!pageData.hasNext || loading ? 'disabled' : ''}`}>
+              <li className={`page-item ${!hasNext || loading ? 'disabled' : ''}`}>
                 <button
                   className="page-link"
                   type="button"
                   onClick={() => setPage((current) => current + 1)}
-                  disabled={!pageData.hasNext || loading}
+                  disabled={!hasNext || loading}
                 >
                   Next
                 </button>

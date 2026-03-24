@@ -4,7 +4,9 @@ import ShellLayout from '../../layout/ShellLayout';
 import { studentApi } from '../../lib/api/student';
 import type { CaseSummary } from '../../lib/types/workflow';
 import { canEditRegistration, canSubmitClearance, canSubmitRegistration, canUploadSubmission, formatStatus, statusBadgeClass, getStageKey } from '../../lib/workflowUi';
-import { isNavigationActivationKey, resolveStudentCaseNavigation } from '../lib/caseNavigation';
+import { isNavigationActivationKey, resolveStudentCaseNavigation, selectDashboardCases } from '../lib/caseNavigation';
+
+const DASHBOARD_CASE_LIMIT = 5;
 
 export default function StudentDashboardPage() {
   const navigate = useNavigate();
@@ -39,8 +41,13 @@ export default function StudentDashboardPage() {
     return { total, inProgress, published, needsAction };
   }, [cases]);
 
+  const visibleCases = useMemo(
+    () => selectDashboardCases(cases, DASHBOARD_CASE_LIMIT),
+    [cases]
+  );
+
   return (
-    <ShellLayout title="Student Dashboard" subtitle="Track your publication progress and take next actions">
+    <ShellLayout title="Student Dashboard" subtitle="Overview of cases that need attention now or were updated most recently">
       {/* ===== STAT CARDS ===== */}
       <div className="row g-3 mb-4">
         <div className="col-6 col-md-3">
@@ -96,8 +103,28 @@ export default function StudentDashboardPage() {
         </div>
       )}
 
+      {!loading && cases.length > 0 && visibleCases.length === 0 && (
+        <div className="su-empty-state">
+          <div className="su-empty-icon">✅</div>
+          <h5>No Cases Need Attention Right Now</h5>
+          <p className="text-muted">Your dashboard only shows cases that need action first or were updated most recently.</p>
+        </div>
+      )}
+
+      {visibleCases.length > 0 && (
+        <div className="mb-3">
+          <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+            <h2 className="h6 mb-0 su-page-title">Attention & Recent Activity</h2>
+            <span className="text-muted small">Showing up to {DASHBOARD_CASE_LIMIT} active cases</span>
+          </div>
+          <p className="text-muted small mb-0">
+            Actionable cases appear first, followed by your most recently updated in-progress work.
+          </p>
+        </div>
+      )}
+
       <div className="vstack gap-3">
-        {cases.map((c, index) => {
+        {visibleCases.map((c, index) => {
           const navigationTarget = resolveStudentCaseNavigation(c, 'dashboard');
           const stage = getStageKey(c.status);
           const canEdit = canEditRegistration(c.status);
