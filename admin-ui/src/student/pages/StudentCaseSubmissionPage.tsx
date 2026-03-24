@@ -4,6 +4,7 @@ import ShellLayout from '../../layout/ShellLayout';
 import { studentApi, type SubmissionMetaPayload } from '../../lib/api/student';
 import { masterApi, type Faculty } from '../../lib/api/master';
 import { ApiError } from '../../lib/api/http';
+import DownloadFilenameLink from '../../lib/components/DownloadFilenameLink';
 import KeywordChipInput from '../../lib/components/KeywordChipInput';
 import { useAuth } from '../../lib/context/AuthContext';
 import { joinKeywordTokens, splitKeywordString } from '../../lib/keywords';
@@ -306,7 +307,12 @@ export default function StudentCaseSubmissionPage() {
                 {versions.map((version) => (
                   <tr key={version.id}>
                     <td>v{version.versionNumber}</td>
-                    <td>{version.originalFilename}</td>
+                    <td>
+                      <DownloadFilenameLink
+                        href={`/api/student/cases/${caseId}/submissions/${version.id}/download`}
+                        filename={version.originalFilename || `Submission v${version.versionNumber}`}
+                      />
+                    </td>
                     <td>{version.status}</td>
                     <td>{version.createdAt ? new Date(version.createdAt).toLocaleString() : 'N/A'}</td>
                   </tr>

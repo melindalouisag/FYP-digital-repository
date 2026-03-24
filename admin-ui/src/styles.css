@@ -466,81 +466,6 @@ body {
   font-size: 1.1rem;
 }
 
-/* ======================== WORKFLOW STEPPER ======================== */
-.su-stepper {
-  display: flex;
-  gap: 0;
-  overflow-x: auto;
-  padding: 0.25rem 0;
-}
-
-.su-stepper-step {
-  flex: 1;
-  text-align: center;
-  padding: 0.6rem 0.4rem;
-  font-size: 0.72rem;
-  font-weight: 600;
-  position: relative;
-  color: #a8b8c6;
-  min-width: 5rem;
-}
-
-.su-stepper-step::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  right: 0;
-  width: 100%;
-  height: 3px;
-  background: #e2e9f0;
-  z-index: 0;
-  transform: translateY(-50%);
-}
-
-.su-stepper-step:last-child::after {
-  display: none;
-}
-
-.su-stepper-dot {
-  width: 1.25rem;
-  height: 1.25rem;
-  border-radius: 50%;
-  background: #e2e9f0;
-  margin: 0 auto 0.35rem;
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.6rem;
-  color: transparent;
-  transition: all 0.3s ease;
-}
-
-.su-stepper-step.active .su-stepper-dot {
-  background: var(--su-teal);
-  color: #fff;
-  box-shadow: 0 0 0 4px rgba(11, 117, 132, 0.2);
-}
-
-.su-stepper-step.active {
-  color: var(--su-teal);
-}
-
-.su-stepper-step.completed .su-stepper-dot {
-  background: #198754;
-  color: #fff;
-}
-
-.su-stepper-step.completed {
-  color: #198754;
-}
-
-.su-stepper-step.completed::after,
-.su-stepper-step.active::after {
-  background: linear-gradient(90deg, #198754 0%, #e2e9f0 100%);
-}
-
 /* ======================== TIMELINE ======================== */
 .timeline-list {
   border-left: 3px solid #d7e1e9;
@@ -721,7 +646,7 @@ body {
 .su-stepper {
   display: flex;
   align-items: flex-start;
-  gap: 0;
+  gap: 0.75rem;
   overflow-x: auto;
   padding-bottom: 0.5rem;
 }
@@ -740,34 +665,12 @@ body {
   min-width: 80px;
 }
 
-.su-stepper-step::before {
-  content: '';
-  position: absolute;
-  top: 14px;
-  left: -50%;
-  right: 50%;
-  height: 2px;
-  background: #e2e9f0;
-  z-index: 0;
-}
-
-.su-stepper-step:first-child::before {
-  display: none;
-}
-
-.su-stepper-step.completed::before {
-  background: var(--su-teal);
-}
-
-.su-stepper-step.active::before {
-  background: linear-gradient(90deg, var(--su-teal), #e2e9f0);
-}
-
 .su-stepper-dot {
   width: 28px;
   height: 28px;
   border-radius: 50%;
   background: #e2e9f0;
+  background-image: none;
   color: #9cb0c1;
   font-size: 0.7rem;
   font-weight: 700;
@@ -782,12 +685,14 @@ body {
 
 .su-stepper-step.completed .su-stepper-dot {
   background: var(--su-teal);
+  background-image: none;
   color: #fff;
   border-color: var(--su-teal);
 }
 
 .su-stepper-step.active .su-stepper-dot {
   background: #fff;
+  background-image: none;
   color: var(--su-teal);
   border-color: var(--su-teal);
   box-shadow: 0 0 0 3px rgba(11, 117, 132, 0.2);

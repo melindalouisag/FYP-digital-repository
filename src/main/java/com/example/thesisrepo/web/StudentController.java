@@ -8,6 +8,7 @@ import com.example.thesisrepo.publication.*;
 import com.example.thesisrepo.publication.repo.*;
 import com.example.thesisrepo.service.CurrentUserService;
 import com.example.thesisrepo.service.RegistrationService;
+import com.example.thesisrepo.service.StorageService;
 import com.example.thesisrepo.service.SubmissionService;
 import com.example.thesisrepo.service.workflow.AuditEventService;
 import com.example.thesisrepo.service.workflow.CaseTimelineService;
@@ -34,15 +35,19 @@ import com.example.thesisrepo.web.dto.UpdateRegistrationRequest;
 import com.example.thesisrepo.web.dto.WorkflowCommentResponse;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.util.*;
 
@@ -69,6 +74,7 @@ public class StudentController {
   private final StaffRegistryRepository staffRegistry;
   private final CurrentUserService currentUser;
   private final RegistrationService registrationService;
+  private final StorageService storageService;
   private final SubmissionService submissionService;
   private final PublicationWorkflowGateService workflowGates;
   private final AuditEventService auditEvents;
@@ -192,6 +198,17 @@ public class StudentController {
     return submissionService.listStudentSubmissions(me, caseId);
   }
 
+  @GetMapping("/cases/{caseId}/submissions/{submissionId}/download")
+  public ResponseEntity<Resource> downloadSubmission(@PathVariable Long caseId, @PathVariable Long submissionId) {
+    PublicationCase c = ownedCase(caseId);
+    SubmissionVersion submission = submissionVersions.findById(submissionId)
+      .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Submission not found"));
+    if (!submission.getPublicationCase().getId().equals(c.getId())) {
+      throw new ResponseStatusException(BAD_REQUEST, "Submission does not belong to this case");
+    }
+    return downloadSubmissionInternal(submission);
+  }
+
   @GetMapping("/cases/{caseId}/checklist-results")
   public ResponseEntity<List<ChecklistResultResponse>> checklistResults(@PathVariable Long caseId) {
     PublicationCase c = ownedCase(caseId);
@@ -238,11 +255,51 @@ public class StudentController {
     return workflowGates.requireOwnedCase(me, caseId);
   }
 
+  private ResponseEntity<Resource> downloadSubmissionInternal(SubmissionVersion submission) {
+    try {
+      String storedKey = submission.getFilePath();
+      if (!hasText(storedKey) || !storageService.exists(storedKey)) {
+        throw new ResponseStatusException(NOT_FOUND, "Submission file is missing");
+      }
+
+      String contentType = submission.getContentType();
+      MediaType mediaType = hasText(contentType)
+        ? MediaType.parseMediaType(contentType)
+        : MediaType.APPLICATION_OCTET_STREAM;
+
+      String filename = sanitizeFilename(submission.getOriginalFilename(), "submission-" + submission.getId() + ".pdf");
+      Resource resource = storageService.openAsResource(storedKey);
+      ResponseEntity.BodyBuilder response = ResponseEntity.ok()
+        .contentType(mediaType)
+        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+        .header(HttpHeaders.CACHE_CONTROL, "no-store");
+
+      if (submission.getFileSize() != null && submission.getFileSize() > 0) {
+        response.contentLength(submission.getFileSize());
+      }
+
+      return response.body(resource);
+    } catch (ResponseStatusException ex) {
+      throw ex;
+    } catch (IOException ex) {
+      throw new ResponseStatusException(INTERNAL_SERVER_ERROR, "Failed to read submission file", ex);
+    }
+  }
+
   private int normalizePageSize(int requestedSize) {
     if (requestedSize < 1) {
       return DEFAULT_PAGE_SIZE;
     }
     return Math.min(requestedSize, MAX_PAGE_SIZE);
+  }
+
+  private static boolean hasText(String value) {
+    return value != null && !value.isBlank();
+  }
+
+  private static String sanitizeFilename(String candidate, String fallback) {
+    String value = hasText(candidate) ? candidate.trim() : fallback;
+    return value.replaceAll("[\\\\/\\r\\n\\t\"]", "_");
   }
 
   private StudentCaseSummaryResponse toCaseSummary(PublicationCase c) {

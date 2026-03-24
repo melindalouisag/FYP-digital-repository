@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
 import { studentApi } from '../../lib/api/student';
 import CaseTimeline from '../../lib/components/CaseTimeline';
+import DownloadFilenameLink from '../../lib/components/DownloadFilenameLink';
 import type { CaseDetailPayload, ChecklistResult } from '../../lib/types/workflow';
 import {
   canEditRegistration,
@@ -206,7 +207,10 @@ export default function StudentCaseDetailPage() {
                   <div>
                     <span className="fw-semibold">v{version.versionNumber}</span>
                     <span className="text-muted mx-1">—</span>
-                    <span>{version.originalFilename}</span>
+                    <DownloadFilenameLink
+                      href={`/api/student/cases/${detail.case.id}/submissions/${version.id}/download`}
+                      filename={version.originalFilename || `Submission v${version.versionNumber}`}
+                    />
                     <div className="text-muted small">
                       Uploaded: {version.createdAt ? new Date(version.createdAt).toLocaleString() : 'N/A'}
                     </div>
