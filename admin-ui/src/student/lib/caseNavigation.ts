@@ -1,6 +1,7 @@
 import type { KeyboardEvent } from 'react';
 import { canEditRegistration, canSubmitClearance, canUploadSubmission } from '../../lib/workflowUi';
 import type { CaseStatus, CaseSummary } from '../../lib/types/workflow';
+import { getStudentCaseNextText } from './casePresentation';
 
 export type StudentCaseNavigationContext = 'dashboard' | 'registrations' | 'submissions';
 
@@ -94,67 +95,47 @@ function resolveDashboardNavigation(
   caseSummary: Pick<CaseSummary, 'id' | 'status'>,
 ): StudentCaseNavigationTarget {
   if (canEditRegistration(caseSummary.status)) {
-    return buildTarget(
-      caseSummary.id,
-      'edit-registration',
-      caseSummary.status === 'REJECTED' ? 'Fix registration details' : 'Continue registration',
-    );
+    return buildTarget(caseSummary.id, 'edit-registration', getStudentCaseNextText(caseSummary.status));
   }
 
   if (canUploadSubmission(caseSummary.status)) {
-    return buildTarget(
-      caseSummary.id,
-      'open-submission',
-      caseSummary.status === 'REGISTRATION_VERIFIED'
-        ? 'Upload submission files'
-        : 'Revise submission files',
-    );
+    return buildTarget(caseSummary.id, 'open-submission', getStudentCaseNextText(caseSummary.status));
   }
 
   if (caseSummary.status === 'REGISTRATION_APPROVED') {
-    return buildTarget(caseSummary.id, 'open-case', 'Track registration verification');
+    return buildTarget(caseSummary.id, 'open-case', getStudentCaseNextText(caseSummary.status));
   }
 
   if (canSubmitClearance(caseSummary.status)) {
-    return buildTarget(caseSummary.id, 'open-case', 'Continue to clearance tracking');
+    return buildTarget(caseSummary.id, 'open-case', getStudentCaseNextText(caseSummary.status));
   }
 
   if (isSubmissionWorkspaceCase(caseSummary.status)) {
-    return buildTarget(caseSummary.id, 'open-case', 'Track submission progress');
+    return buildTarget(caseSummary.id, 'open-case', getStudentCaseNextText(caseSummary.status));
   }
 
-  return buildTarget(caseSummary.id, 'open-case', 'Review case progress');
+  return buildTarget(caseSummary.id, 'open-case', getStudentCaseNextText(caseSummary.status));
 }
 
 function resolveRegistrationNavigation(
   caseSummary: Pick<CaseSummary, 'id' | 'status'>,
 ): StudentCaseNavigationTarget {
   if (canEditRegistration(caseSummary.status)) {
-    return buildTarget(
-      caseSummary.id,
-      'edit-registration',
-      caseSummary.status === 'REJECTED' ? 'Fix registration details' : 'Continue registration',
-    );
+    return buildTarget(caseSummary.id, 'edit-registration', getStudentCaseNextText(caseSummary.status));
   }
 
   if (caseSummary.status === 'REGISTRATION_APPROVED') {
-    return buildTarget(caseSummary.id, 'open-case', 'Track registration verification');
+    return buildTarget(caseSummary.id, 'open-case', getStudentCaseNextText(caseSummary.status));
   }
 
-  return buildTarget(caseSummary.id, 'open-case', 'Review registration status');
+  return buildTarget(caseSummary.id, 'open-case', getStudentCaseNextText(caseSummary.status));
 }
 
 function resolveSubmissionNavigation(
   caseSummary: Pick<CaseSummary, 'id' | 'status'>,
 ): StudentCaseNavigationTarget {
   if (canUploadSubmission(caseSummary.status)) {
-    return buildTarget(
-      caseSummary.id,
-      'open-submission',
-      caseSummary.status === 'REGISTRATION_VERIFIED'
-        ? 'Upload submission files'
-        : 'Revise submission files',
-    );
+    return buildTarget(caseSummary.id, 'open-submission', getStudentCaseNextText(caseSummary.status));
   }
 
   if (
@@ -163,10 +144,10 @@ function resolveSubmissionNavigation(
     caseSummary.status === 'CLEARANCE_APPROVED' ||
     caseSummary.status === 'READY_TO_PUBLISH'
   ) {
-    return buildTarget(caseSummary.id, 'open-case', 'Track final submission progress');
+    return buildTarget(caseSummary.id, 'open-case', getStudentCaseNextText(caseSummary.status));
   }
 
-  return buildTarget(caseSummary.id, 'open-case', 'Track submission review');
+  return buildTarget(caseSummary.id, 'open-case', getStudentCaseNextText(caseSummary.status));
 }
 
 function isStudentActionCase(status: CaseStatus): boolean {

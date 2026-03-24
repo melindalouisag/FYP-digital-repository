@@ -4,6 +4,7 @@ import ShellLayout from '../../layout/ShellLayout';
 import { studentApi } from '../../lib/api/student';
 import type { CaseStatus, CaseSummary } from '../../lib/types/workflow';
 import { canUploadSubmission, formatStatus, statusBadgeClass } from '../../lib/workflowUi';
+import StudentCaseWorkflowProgress from '../components/StudentCaseWorkflowProgress';
 import {
   isNavigationActivationKey,
   isSubmissionWorkspaceCase,
@@ -125,7 +126,10 @@ export default function StudentSubmissionsPage() {
                       navigate(navigationTarget.path);
                     }}
                   >
-                    <td className="fw-semibold">{c.title || `Case #${c.id}`}</td>
+                    <td>
+                      <div className="fw-semibold">{c.title || `Case #${c.id}`}</div>
+                      <StudentCaseWorkflowProgress status={c.status} className="mt-2" />
+                    </td>
                     <td><span className="badge bg-dark-subtle text-dark-emphasis" style={{ borderRadius: '999px' }}>{c.type}</span></td>
                     <td>
                       <span className={`badge status-badge ${statusBadgeClass(c.status)}`}>
@@ -134,7 +138,7 @@ export default function StudentSubmissionsPage() {
                     </td>
                     <td className="text-muted small">{c.updatedAt ? new Date(c.updatedAt).toLocaleString() : 'N/A'}</td>
                     <td>
-                      <div className="fw-semibold small text-body-secondary">{navigationTarget.label}</div>
+                      <div className="fw-semibold small text-body-secondary">Next: {navigationTarget.label}</div>
                       {statusHint[c.status] && (
                         <div className="small text-muted mt-1">{statusHint[c.status]}</div>
                       )}
