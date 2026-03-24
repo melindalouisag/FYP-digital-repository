@@ -4,6 +4,7 @@ import ShellLayout from '../../layout/ShellLayout';
 import { studentApi } from '../../lib/api/student';
 import type { CaseSummary, PagedResponse } from '../../lib/types/workflow';
 import { canUploadSubmission, formatStatus, statusBadgeClass } from '../../lib/workflowUi';
+import { isNavigationActivationKey, resolveStudentCaseNavigation } from '../lib/caseNavigation';
 
 const PAGE_SIZE = 10;
 
@@ -77,14 +78,26 @@ export default function StudentSubmissionsPage() {
                 <th>Type</th>
                 <th>Status</th>
                 <th>Updated</th>
-                <th className="text-end">Actions</th>
+                <th>Next</th>
               </tr>
             </thead>
             <tbody>
               {cases.map((c) => {
                 const canUpload = canUploadSubmission(c.status);
+                const navigationTarget = resolveStudentCaseNavigation(c, 'submissions');
                 return (
-                  <tr key={c.id}>
+                  <tr
+                    key={c.id}
+                    className="su-table-row-clickable"
+                    tabIndex={0}
+                    aria-label={`${navigationTarget.label}: ${c.title || `Case #${c.id}`}`}
+                    onClick={() => navigate(navigationTarget.path)}
+                    onKeyDown={(event) => {
+                      if (!isNavigationActivationKey(event)) return;
+                      event.preventDefault();
+                      navigate(navigationTarget.path);
+                    }}
+                  >
                     <td className="fw-semibold">{c.title || `Case #${c.id}`}</td>
                     <td><span className="badge bg-dark-subtle text-dark-emphasis" style={{ borderRadius: '999px' }}>{c.type}</span></td>
                     <td>
@@ -93,20 +106,8 @@ export default function StudentSubmissionsPage() {
                       </span>
                     </td>
                     <td className="text-muted small">{c.updatedAt ? new Date(c.updatedAt).toLocaleString() : 'N/A'}</td>
-                    <td className="text-end">
-                      <div className="d-flex justify-content-end gap-2">
-                        <button className="btn btn-outline-primary btn-sm" style={{ borderRadius: '999px' }} onClick={() => navigate(`/student/cases/${c.id}`)}>
-                          Open Case
-                        </button>
-                        <button
-                          className="btn btn-primary btn-sm"
-                          style={{ borderRadius: '999px' }}
-                          onClick={() => navigate(`/student/cases/${c.id}/submission`)}
-                          disabled={!canUpload}
-                        >
-                          📄 Upload
-                        </button>
-                      </div>
+                    <td>
+                      <div className="fw-semibold small text-body-secondary">{navigationTarget.label}</div>
                       {!canUpload && (
                         <div className="small text-muted mt-1">Complete registration approvals first</div>
                       )}

@@ -133,6 +133,11 @@ body {
   cursor: pointer;
 }
 
+.su-card-clickable:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 0.2rem rgba(11, 117, 132, 0.2), 0 2px 6px rgba(15, 47, 74, 0.06), 0 12px 28px rgba(15, 47, 74, 0.1);
+}
+
 /* ======================== BADGES ======================== */
 .su-badge-role {
   background: rgba(255, 255, 255, 0.2);
@@ -338,6 +343,15 @@ body {
 
 .table-hover tbody tr:hover {
   background: rgba(11, 117, 132, 0.03);
+}
+
+.su-table-row-clickable {
+  cursor: pointer;
+}
+
+.su-table-row-clickable:focus-visible {
+  outline: 2px solid rgba(11, 117, 132, 0.35);
+  outline-offset: -2px;
 }
 
 /* ======================== AUTH PAGES ======================== */

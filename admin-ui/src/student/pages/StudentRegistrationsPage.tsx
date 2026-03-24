@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
 import { studentApi } from '../../lib/api/student';
 import type { CaseSummary, PagedResponse } from '../../lib/types/workflow';
-import { canEditRegistration, canSubmitRegistration, formatStatus, statusBadgeClass } from '../../lib/workflowUi';
+import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
+import { isNavigationActivationKey, resolveStudentCaseNavigation } from '../lib/caseNavigation';
 
 const PAGE_SIZE = 10;
 
@@ -45,15 +46,6 @@ export default function StudentRegistrationsPage() {
   useEffect(() => {
     void load(page);
   }, [page]);
-
-  const submitForApproval = async (caseId: number) => {
-    try {
-      await studentApi.submitRegistration(caseId, true);
-      await load(page);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to submit registration.');
-    }
-  };
 
   const statusHint: Record<string, string> = {
     REGISTRATION_PENDING: '⏳ Waiting supervisor approval',
@@ -99,16 +91,26 @@ export default function StudentRegistrationsPage() {
                 <th>Type</th>
                 <th>Status</th>
                 <th>Updated</th>
-                <th className="text-end">Actions</th>
+                <th>Next</th>
               </tr>
             </thead>
             <tbody>
               {cases.map((c) => {
-                const canSubmit = canSubmitRegistration(c.status);
-                const canEdit = canEditRegistration(c.status);
+                const navigationTarget = resolveStudentCaseNavigation(c, 'registrations');
 
                 return (
-                  <tr key={c.id}>
+                  <tr
+                    key={c.id}
+                    className="su-table-row-clickable"
+                    tabIndex={0}
+                    aria-label={`${navigationTarget.label}: ${c.title || `Case #${c.id}`}`}
+                    onClick={() => navigate(navigationTarget.path)}
+                    onKeyDown={(event) => {
+                      if (!isNavigationActivationKey(event)) return;
+                      event.preventDefault();
+                      navigate(navigationTarget.path);
+                    }}
+                  >
                     <td className="fw-semibold">{c.title || `Case #${c.id}`}</td>
                     <td><span className="badge bg-dark-subtle text-dark-emphasis" style={{ borderRadius: '999px' }}>{c.type}</span></td>
                     <td>
@@ -117,29 +119,8 @@ export default function StudentRegistrationsPage() {
                       </span>
                     </td>
                     <td className="text-muted small">{c.updatedAt ? new Date(c.updatedAt).toLocaleString() : 'N/A'}</td>
-                    <td className="text-end">
-                      <div className="d-flex justify-content-end gap-2">
-                        <button className="btn btn-outline-primary btn-sm" style={{ borderRadius: '999px' }} onClick={() => navigate(`/student/cases/${c.id}`)}>
-                          Open
-                        </button>
-                        {canEdit && (
-                          <button
-                            className="btn btn-outline-secondary btn-sm"
-                            style={{ borderRadius: '999px' }}
-                            onClick={() => navigate(`/student/registrations/${c.id}/edit`)}
-                          >
-                            Edit Registration
-                          </button>
-                        )}
-                        <button
-                          className="btn btn-primary btn-sm"
-                          style={{ borderRadius: '999px' }}
-                          onClick={() => void submitForApproval(c.id)}
-                          disabled={!canSubmit}
-                        >
-                          📨 Submit
-                        </button>
-                      </div>
+                    <td>
+                      <div className="fw-semibold small text-body-secondary">{navigationTarget.label}</div>
                       {statusHint[c.status] && (
                         <div className="small text-muted mt-1">{statusHint[c.status]}</div>
                       )}

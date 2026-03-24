@@ -4,6 +4,7 @@ import ShellLayout from '../../layout/ShellLayout';
 import { studentApi } from '../../lib/api/student';
 import type { CaseSummary } from '../../lib/types/workflow';
 import { canEditRegistration, canSubmitClearance, canSubmitRegistration, canUploadSubmission, formatStatus, statusBadgeClass, getStageKey } from '../../lib/workflowUi';
+import { isNavigationActivationKey, resolveStudentCaseNavigation } from '../lib/caseNavigation';
 
 export default function StudentDashboardPage() {
   const navigate = useNavigate();
@@ -97,25 +98,34 @@ export default function StudentDashboardPage() {
 
       <div className="vstack gap-3">
         {cases.map((c, index) => {
-          const nextAction = canSubmitRegistration(c.status)
-            ? 'Submit Registration'
-            : canUploadSubmission(c.status)
-              ? 'Upload Submission'
-              : canSubmitClearance(c.status)
-                ? 'Submit Clearance'
-                : 'Track Progress';
-          const nextIcon = canSubmitRegistration(c.status)
-            ? '📨'
-            : canUploadSubmission(c.status)
-              ? '📄'
-              : canSubmitClearance(c.status)
-                ? '🏛️'
-                : '👁️';
+          const navigationTarget = resolveStudentCaseNavigation(c, 'dashboard');
           const stage = getStageKey(c.status);
           const canEdit = canEditRegistration(c.status);
+          const hasUploadStep = canUploadSubmission(c.status);
+          const hasClearanceStep = canSubmitClearance(c.status);
+          const nextIcon = canEdit
+            ? '📝'
+            : hasUploadStep
+              ? '📄'
+              : hasClearanceStep
+                ? '🏛️'
+                : '👁️';
 
           return (
-            <div className="su-card fade-in" key={c.id} style={{ animationDelay: `${index * 0.05}s` }}>
+            <div
+              className="su-card su-card-clickable fade-in"
+              key={c.id}
+              role="link"
+              tabIndex={0}
+              aria-label={`${navigationTarget.label}: ${c.title || `Case #${c.id}`}`}
+              onClick={() => navigate(navigationTarget.path)}
+              onKeyDown={(event) => {
+                if (!isNavigationActivationKey(event)) return;
+                event.preventDefault();
+                navigate(navigationTarget.path);
+              }}
+              style={{ animationDelay: `${index * 0.05}s` }}
+            >
               <div className="card-body">
                 <div className="d-flex flex-wrap justify-content-between gap-2 align-items-start">
                   <div style={{ flex: 1 }}>
@@ -132,40 +142,9 @@ export default function StudentDashboardPage() {
                     <p className="text-muted small mb-0">
                       Last updated: {c.updatedAt ? new Date(c.updatedAt).toLocaleString() : 'N/A'}
                     </p>
-                  </div>
-
-                  <div className="d-flex flex-wrap gap-2">
-                    {canEdit && (
-                      <button
-                        className="btn btn-outline-secondary btn-sm"
-                        style={{ borderRadius: '999px' }}
-                        onClick={() => navigate(`/student/registrations/${c.id}/edit`)}
-                      >
-                        Edit Registration
-                      </button>
-                    )}
-                    <button
-                      className="btn btn-outline-primary btn-sm"
-                      style={{ borderRadius: '999px' }}
-                      onClick={() => navigate(`/student/cases/${c.id}`)}
-                    >
-                      Open Case
-                    </button>
-                    <button
-                      className="btn btn-primary btn-sm"
-                      style={{ borderRadius: '999px' }}
-                      onClick={() =>
-                        canSubmitRegistration(c.status)
-                          ? void studentApi.submitRegistration(c.id, true).then(load).catch((err) => setError(err.message))
-                          : canUploadSubmission(c.status)
-                            ? navigate(`/student/cases/${c.id}/submission`)
-                            : canSubmitClearance(c.status)
-                              ? navigate(`/student/cases/${c.id}`)
-                              : navigate(`/student/cases/${c.id}`)
-                      }
-                    >
-                      {nextIcon} {nextAction}
-                    </button>
+                    <p className="text-muted small mb-0 mt-2">
+                      {nextIcon} Next: {navigationTarget.label}
+                    </p>
                   </div>
                 </div>
               </div>
