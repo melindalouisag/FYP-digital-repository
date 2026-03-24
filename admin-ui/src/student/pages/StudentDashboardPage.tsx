@@ -4,7 +4,6 @@ import ShellLayout from '../../layout/ShellLayout';
 import { studentApi } from '../../lib/api/student';
 import type { CaseSummary } from '../../lib/types/workflow';
 import { canSubmitClearance, canSubmitRegistration, canUploadSubmission, formatStatus, statusBadgeClass } from '../../lib/workflowUi';
-import StudentCaseWorkflowProgress from '../components/StudentCaseWorkflowProgress';
 import { isNavigationActivationKey, resolveStudentCaseNavigation, selectDashboardCases } from '../lib/caseNavigation';
 
 const DASHBOARD_CASE_LIMIT = 5;
@@ -151,7 +150,6 @@ export default function StudentDashboardPage() {
                       <span className="badge bg-dark-subtle text-dark-emphasis" style={{ borderRadius: '999px' }}>{c.type}</span>
                       <span className={`badge status-badge ${statusBadgeClass(c.status)}`}>{formatStatus(c.status)}</span>
                     </div>
-                    <StudentCaseWorkflowProgress status={c.status} className="mb-2" />
                     <p className="text-muted small mb-0">
                       Last updated: {c.updatedAt ? new Date(c.updatedAt).toLocaleString() : 'N/A'}
                     </p>

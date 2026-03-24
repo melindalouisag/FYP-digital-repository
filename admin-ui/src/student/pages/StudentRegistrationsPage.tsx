@@ -4,7 +4,6 @@ import ShellLayout from '../../layout/ShellLayout';
 import { studentApi } from '../../lib/api/student';
 import type { CaseStatus, CaseSummary } from '../../lib/types/workflow';
 import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
-import StudentCaseWorkflowProgress from '../components/StudentCaseWorkflowProgress';
 import {
   isNavigationActivationKey,
   isRegistrationWorkspaceCase,
@@ -127,7 +126,6 @@ export default function StudentRegistrationsPage() {
                   >
                     <td>
                       <div className="fw-semibold">{c.title || `Case #${c.id}`}</div>
-                      <StudentCaseWorkflowProgress status={c.status} className="mt-2" />
                     </td>
                     <td><span className="badge bg-dark-subtle text-dark-emphasis" style={{ borderRadius: '999px' }}>{c.type}</span></td>
                     <td>
