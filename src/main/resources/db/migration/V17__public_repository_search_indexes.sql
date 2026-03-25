@@ -25,7 +25,9 @@ CREATE INDEX IF NOT EXISTS idx_repo_author_fts
 
 CREATE INDEX IF NOT EXISTS idx_repo_discovery_fts
   ON published_item USING GIN (
-    setweight(to_tsvector('simple', coalesce(title, '')), 'A') ||
-    setweight(to_tsvector('simple', coalesce(keywords, '')), 'A') ||
-    setweight(to_tsvector('simple', coalesce(abstract_text, '')), 'B')
+    (
+      setweight(to_tsvector('simple', coalesce(title, '')), 'A') ||
+      setweight(to_tsvector('simple', coalesce(keywords, '')), 'A') ||
+      setweight(to_tsvector('simple', coalesce(abstract_text, '')), 'B')
+    )
   );
