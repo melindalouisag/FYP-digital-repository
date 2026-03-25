@@ -10,6 +10,7 @@ import com.example.thesisrepo.publication.ChecklistTemplate;
 import com.example.thesisrepo.publication.PublicationCase;
 import com.example.thesisrepo.publication.PublicationRegistration;
 import com.example.thesisrepo.publication.PublicationType;
+import com.example.thesisrepo.publication.SubmissionStatus;
 import com.example.thesisrepo.publication.SubmissionVersion;
 import com.example.thesisrepo.publication.repo.AuditEventRepository;
 import com.example.thesisrepo.publication.repo.ChecklistItemV2Repository;
@@ -32,10 +33,14 @@ import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -64,6 +69,8 @@ class StudentSubmissionIntegrationTest {
   @Autowired private ChecklistTemplateRepository checklistTemplates;
   @Autowired private ChecklistItemV2Repository checklistItems;
   @Autowired private AuditEventRepository auditEvents;
+  @Autowired private PasswordEncoder passwordEncoder;
+  @Autowired private TransactionTemplate transactionTemplate;
 
   @SpyBean(reset = MockReset.BEFORE)
   private StorageService storageService;
@@ -155,6 +162,34 @@ class StudentSubmissionIntegrationTest {
   }
 
   @Test
+  void uploadRejectsNonPdfContentEvenWhenFilenameLooksValid() throws Exception {
+    PublicationCase publicationCase = cases.save(PublicationCase.builder()
+      .student(student)
+      .type(PublicationType.THESIS)
+      .status(CaseStatus.REGISTRATION_VERIFIED)
+      .build());
+
+    MockHttpSession session = loginAsRole(Role.STUDENT);
+
+    mockMvc.perform(multipart("/api/student/cases/{caseId}/submissions", publicationCase.getId())
+        .file(new MockMultipartFile(
+          "file",
+          "submission.pdf",
+          "application/pdf",
+          "plain text instead of pdf".getBytes(StandardCharsets.UTF_8)
+        ))
+        .session(session))
+      .andExpect(status().isBadRequest())
+      .andExpect(result -> assertThat(result.getResponse().getErrorMessage())
+        .contains("Only PDF files are accepted."));
+
+    assertThat(submissionVersions.findByPublicationCaseOrderByVersionNumberDesc(publicationCase)).isEmpty();
+    assertThat(cases.findById(publicationCase.getId()).orElseThrow().getStatus()).isEqualTo(CaseStatus.REGISTRATION_VERIFIED);
+    assertThat(auditEvents.findByCaseIdOrderByCreatedAtDesc(publicationCase.getId()))
+      .noneMatch(event -> event.getEventType() == AuditEventType.SUBMISSION_UPLOADED);
+  }
+
+  @Test
   void auditPersistenceFailureDeletesUploadedBlobAndRollsBackSubmission() throws Exception {
     PublicationCase publicationCase = cases.save(PublicationCase.builder()
       .student(student)
@@ -184,6 +219,101 @@ class StudentSubmissionIntegrationTest {
     assertThat(storageService.exists(storedKeyRef.get())).isFalse();
     assertThat(submissionVersions.findByPublicationCaseOrderByVersionNumberDesc(publicationCase)).isEmpty();
     assertThat(cases.findById(publicationCase.getId()).orElseThrow().getStatus()).isEqualTo(CaseStatus.REGISTRATION_VERIFIED);
+  }
+
+  @Test
+  void downloadReturnsNotFoundWhenStoredSubmissionFileIsMissing() throws Exception {
+    PublicationCase publicationCase = cases.save(PublicationCase.builder()
+      .student(student)
+      .type(PublicationType.THESIS)
+      .status(CaseStatus.UNDER_SUPERVISOR_REVIEW)
+      .build());
+    SubmissionVersion submission = submissionVersions.save(SubmissionVersion.builder()
+      .publicationCase(publicationCase)
+      .versionNumber(1)
+      .filePath("2026/missing-submission.pdf")
+      .originalFilename("submission.pdf")
+      .contentType("application/pdf")
+      .fileSize(128L)
+      .status(com.example.thesisrepo.publication.SubmissionStatus.SUBMITTED)
+      .build());
+
+    MockHttpSession session = loginAsRole(Role.STUDENT);
+
+    mockMvc.perform(get("/api/student/cases/{caseId}/submissions/{submissionId}/download", publicationCase.getId(), submission.getId())
+        .session(session))
+      .andExpect(status().isNotFound())
+      .andExpect(result -> assertThat(result.getResponse().getErrorMessage())
+        .contains("Submission file is missing"));
+  }
+
+  @Test
+  void studentCannotAccessAnotherStudentsSubmissionEndpoints() throws Exception {
+    StudentLogin ownerLogin = createStudentLogin("test-only-submission-owner-password");
+    StudentLogin otherLogin = createStudentLogin("test-only-submission-other-password");
+
+    PublicationCase ownerCase = cases.save(PublicationCase.builder()
+      .student(ownerLogin.user())
+      .type(PublicationType.THESIS)
+      .status(CaseStatus.UNDER_SUPERVISOR_REVIEW)
+      .build());
+    SubmissionVersion submission = submissionVersions.save(SubmissionVersion.builder()
+      .publicationCase(ownerCase)
+      .versionNumber(1)
+      .filePath("2026/owner-submission.pdf")
+      .originalFilename("owner-submission.pdf")
+      .contentType("application/pdf")
+      .fileSize(256L)
+      .status(SubmissionStatus.SUBMITTED)
+      .build());
+
+    mockMvc.perform(get("/api/student/cases/{caseId}/submissions", ownerCase.getId()).session(otherLogin.session()))
+      .andExpect(status().isForbidden());
+
+    mockMvc.perform(get("/api/student/cases/{caseId}/submissions/{submissionId}/download", ownerCase.getId(), submission.getId())
+        .session(otherLogin.session()))
+      .andExpect(status().isForbidden());
+
+    mockMvc.perform(get("/api/student/cases/{caseId}/checklist-results", ownerCase.getId()).session(otherLogin.session()))
+      .andExpect(status().isForbidden());
+
+    mockMvc.perform(multipart("/api/student/cases/{caseId}/submissions", ownerCase.getId())
+        .file(pdfFile("intrusion.pdf"))
+        .session(otherLogin.session()))
+      .andExpect(status().isForbidden());
+
+    assertThat(submissionVersions.findByPublicationCaseOrderByVersionNumberDesc(ownerCase)).hasSize(1);
+  }
+
+  @Test
+  void downloadRejectsSubmissionThatBelongsToDifferentOwnedCase() throws Exception {
+    PublicationCase requestedCase = cases.save(PublicationCase.builder()
+      .student(student)
+      .type(PublicationType.THESIS)
+      .status(CaseStatus.UNDER_SUPERVISOR_REVIEW)
+      .build());
+    PublicationCase otherCase = cases.save(PublicationCase.builder()
+      .student(student)
+      .type(PublicationType.THESIS)
+      .status(CaseStatus.UNDER_SUPERVISOR_REVIEW)
+      .build());
+    SubmissionVersion otherSubmission = submissionVersions.save(SubmissionVersion.builder()
+      .publicationCase(otherCase)
+      .versionNumber(1)
+      .filePath("2026/other-case.pdf")
+      .originalFilename("other-case.pdf")
+      .contentType("application/pdf")
+      .fileSize(512L)
+      .status(SubmissionStatus.SUBMITTED)
+      .build());
+
+    MockHttpSession session = loginAsRole(Role.STUDENT);
+
+    mockMvc.perform(get("/api/student/cases/{caseId}/submissions/{submissionId}/download", requestedCase.getId(), otherSubmission.getId())
+        .session(session))
+      .andExpect(status().isBadRequest())
+      .andExpect(result -> assertThat(result.getResponse().getErrorMessage())
+        .contains("Submission does not belong to this case"));
   }
 
   private MockMultipartFile metadataPart(StudentProfile profile) {
@@ -241,6 +371,34 @@ class StudentSubmissionIntegrationTest {
       .orElseThrow(() -> new IllegalStateException("No seeded user found for role " + role));
   }
 
+  private StudentLogin createStudentLogin(String rawPassword) throws Exception {
+    User user = createStudentUser(rawPassword);
+    return new StudentLogin(user, login(user.getEmail(), rawPassword));
+  }
+
+  private User createStudentUser(String rawPassword) {
+    StudentProfile seedProfile = studentProfiles.findByUserId(student.getId()).orElseThrow();
+    return transactionTemplate.execute(status -> {
+      User created = users.save(User.builder()
+        .email("student+" + UUID.randomUUID() + "@my.sampoernauniversity.ac.id")
+        .passwordHash(passwordEncoder.encode(rawPassword))
+        .role(Role.STUDENT)
+        .roles(Set.of(Role.STUDENT))
+        .emailVerified(true)
+        .build());
+
+      studentProfiles.save(StudentProfile.builder()
+        .user(created)
+        .name("Integration Student")
+        .studentId("S-" + UUID.randomUUID().toString().substring(0, 8))
+        .program(seedProfile.getProgram())
+        .faculty(seedProfile.getFaculty())
+        .build());
+
+      return created;
+    });
+  }
+
   private MockHttpSession loginAsRole(Role role) throws Exception {
     return login(requireUser(role).getEmail(), passwordForRole(role));
   }
@@ -262,5 +420,8 @@ class StudentSubmissionIntegrationTest {
       case LECTURER -> "test-only-lecturer-password";
       case ADMIN -> "test-only-admin-password";
     };
+  }
+
+  private record StudentLogin(User user, MockHttpSession session) {
   }
 }

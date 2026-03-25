@@ -21,9 +21,12 @@ import com.example.thesisrepo.user.User;
 import com.example.thesisrepo.web.dto.AdminPublishDetailDto;
 import com.example.thesisrepo.web.dto.AdminPublishQueueDto;
 import com.example.thesisrepo.web.dto.CaseStatusResponse;
+import com.example.thesisrepo.web.dto.PagedResponse;
 import com.example.thesisrepo.web.dto.PublishResultResponse;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -52,16 +55,14 @@ public class PublishingService {
   private final EntityManager entityManager;
 
   @Transactional(readOnly = true)
-  public List<AdminPublishQueueDto> publishQueue() {
-    List<PublicationCase> publishCases = cases.findByStatusInOrderByUpdatedAtDesc(List.of(CaseStatus.READY_TO_PUBLISH));
-    if (publishCases.isEmpty()) {
-      return List.of();
-    }
+  public PagedResponse<AdminPublishQueueDto> publishQueue(Pageable pageable) {
+    Page<PublicationCase> queuePage = cases.findByStatusIn(List.of(CaseStatus.READY_TO_PUBLISH), pageable);
+    List<PublicationCase> publishCases = queuePage.getContent();
 
     Map<Long, PublicationRegistration> registrationByCase = registrations.findByPublicationCaseIn(publishCases).stream()
       .collect(Collectors.toMap(r -> r.getPublicationCase().getId(), Function.identity()));
 
-    return publishCases.stream()
+    List<AdminPublishQueueDto> items = publishCases.stream()
       .map(publicationCase -> new AdminPublishQueueDto(
         publicationCase.getId(),
         resolvePublishTitle(publicationCase, registrationByCase.get(publicationCase.getId())),
@@ -70,6 +71,7 @@ public class PublishingService {
         publicationCase.getUpdatedAt()
       ))
       .toList();
+    return PagedResponse.from(queuePage, items);
   }
 
   @Transactional(readOnly = true)

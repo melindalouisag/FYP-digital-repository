@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import ShellLayout from '../../layout/ShellLayout';
+import PortalIcon from '../../lib/components/PortalIcon';
 import { adminApi } from '../../lib/api/admin';
+import { adminSidebarIcons } from '../../lib/portalIcons';
 import type { AdminRegistrationApproval, PagedResponse } from '../../lib/types/workflow';
 import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 
@@ -73,8 +75,8 @@ export default function AdminRegistrationApprovalsPage() {
   const pageEnd = pageStart === 0 ? 0 : pageStart + rows.length - 1;
 
   return (
-    <ShellLayout title="Registration Verification" subtitle="Verify registrations after supervisor approval">
-      {error && <div className="alert alert-danger d-flex align-items-center gap-2" style={{ borderRadius: '0.75rem' }}><span>⚠️</span> {error}</div>}
+    <ShellLayout title="Registration Verification" subtitle="Verify registrations after supervisor approval or return them with a reason">
+      {error && <div className="alert alert-danger" style={{ borderRadius: '0.75rem' }}>{error}</div>}
 
       {loading && (
         <div className="text-center py-5">
@@ -85,9 +87,19 @@ export default function AdminRegistrationApprovalsPage() {
 
       {!loading && rows.length === 0 && (
         <div className="su-empty-state">
-          <div className="su-empty-icon">📋</div>
-          <h5>All Clear!</h5>
-          <p className="text-muted">No pending registration verifications at this time.</p>
+          <div className="su-empty-icon">
+            <PortalIcon src={adminSidebarIcons.registration} size={40} />
+          </div>
+          <h5>No Registration Verifications Pending</h5>
+          <p className="text-muted">No supervisor-approved registrations are waiting for library verification.</p>
+        </div>
+      )}
+
+      {!loading && rows.length > 0 && (
+        <div className="mb-3">
+          <p className="text-muted small mb-0">
+            Use this queue to confirm registration readiness before submission opens, or return the case with a clear reason for correction.
+          </p>
         </div>
       )}
 
@@ -102,21 +114,25 @@ export default function AdminRegistrationApprovalsPage() {
                     <span className="badge bg-dark-subtle text-dark-emphasis" style={{ borderRadius: '999px' }}>{row.type}</span>
                     <span className={`badge status-badge ${statusBadgeClass(row.status)}`}>{formatStatus(row.status)}</span>
                   </div>
-                  <div className="d-flex flex-wrap gap-3 text-muted small">
-                    <span>👤 {row.studentName || row.studentEmail} {row.studentIdNumber ? `(${row.studentIdNumber})` : ''}</span>
-                    <span>🏛️ {row.faculty || 'N/A'} {row.program ? `• ${row.program}` : ''}</span>
+                  <div className="su-meta-row">
+                    <span className="su-meta-item">
+                      <strong>Student:</strong> {row.studentName || row.studentEmail} {row.studentIdNumber ? `(${row.studentIdNumber})` : ''}
+                    </span>
+                    <span className="su-meta-item">
+                      <strong>Faculty:</strong> {row.faculty || 'N/A'} {row.program ? ` / ${row.program}` : ''}
+                    </span>
                   </div>
                   <div className="text-muted small mt-1">
                     Submitted: {row.submittedAt ? new Date(row.submittedAt).toLocaleString() : 'N/A'}
                   </div>
                 </div>
                 <button className="btn btn-success btn-sm" style={{ borderRadius: '999px', padding: '0.4rem 1.2rem' }} onClick={() => void approve(row.caseId)}>
-                  ✅ Verify
+                  Verify Registration
                 </button>
               </div>
 
               <div className="p-3" style={{ background: '#fef3f2', borderRadius: '0.6rem', border: '1px solid #fecaca' }}>
-                <label className="form-label mb-1 small fw-semibold" style={{ color: '#dc3545' }}>❌ Reject with reason</label>
+                <label className="form-label mb-1 small fw-semibold" style={{ color: '#dc3545' }}>Reason for rejection</label>
                 <div className="d-flex gap-2">
                   <input
                     className="form-control form-control-sm"
@@ -127,11 +143,11 @@ export default function AdminRegistrationApprovalsPage() {
                         [row.caseId]: event.target.value,
                       }))
                     }
-                    placeholder="Provide rejection reason..."
+                    placeholder="Enter rejection reason"
                     style={{ borderRadius: '999px' }}
                   />
                   <button className="btn btn-outline-danger btn-sm" style={{ borderRadius: '999px', whiteSpace: 'nowrap' }} onClick={() => void reject(row.caseId)}>
-                    Reject
+                    Reject Registration
                   </button>
                 </div>
               </div>

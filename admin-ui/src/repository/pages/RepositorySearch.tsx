@@ -3,9 +3,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { publicRepositoryApi, type RepositoryItemSummary, type RepositorySearchParams } from '../../lib/api/publicRepository';
 import { masterApi, type Faculty, type Program } from '../../lib/api/master';
 import ThemeSwitch from '../../components/ThemeSwitch';
+import PortalIcon from '../../lib/components/PortalIcon';
 import KeywordChipInput from '../../lib/components/KeywordChipInput';
 import { useAuth } from '../../lib/context/AuthContext';
 import { joinKeywordTokens } from '../../lib/keywords';
+import { adminSidebarIcons } from '../../lib/portalIcons';
 import type { PagedResponse } from '../../lib/types/workflow';
 import { useTheme } from '../../theme/ThemeContext';
 
@@ -220,7 +222,10 @@ export default function RepositorySearchPage() {
                           : '/admin/dashboard'
                     )}
                   >
-                    📊 Dashboard
+                    <span className="su-label-with-icon">
+                      <PortalIcon src={adminSidebarIcons.dashboard} />
+                      <span>Dashboard</span>
+                    </span>
                   </button>
                   <button type="button" className="btn btn-light btn-sm" style={{ borderRadius: '999px' }} onClick={() => void logout()}>
                     Logout
@@ -271,7 +276,12 @@ export default function RepositorySearchPage() {
         {/* ===== SEARCH FILTERS ===== */}
         <div className="su-card mb-4">
           <div className="card-body p-4">
-            <h3 className="h6 su-page-title mb-3">🔍 Search Repository</h3>
+            <h3 className="h6 su-page-title mb-3">
+              <span className="su-title-with-icon">
+                <PortalIcon src={adminSidebarIcons.search} />
+                <span>Search Repository</span>
+              </span>
+            </h3>
             <form className="row g-3" onSubmit={onSearch}>
               <div className="col-md-6">
                 <label className="form-label">Title</label>
@@ -348,7 +358,12 @@ export default function RepositorySearchPage() {
                 <button className="btn btn-primary" type="submit" disabled={loading}>
                   {loading ? (
                     <><span className="su-spinner d-inline-block me-2" style={{ width: '1rem', height: '1rem', borderWidth: 2 }} /> Searching...</>
-                  ) : '🔎 Search Repository'}
+                  ) : (
+                    <span className="su-label-with-icon">
+                      <PortalIcon src={adminSidebarIcons.search} />
+                      <span>Search Repository</span>
+                    </span>
+                  )}
                 </button>
                 <button className="btn btn-outline-secondary" type="button" onClick={onReset} disabled={loading}>
                   Reset Filters
@@ -372,7 +387,12 @@ export default function RepositorySearchPage() {
 
         {/* ===== RESULTS ===== */}
         <div className="d-flex justify-content-between align-items-center mb-3">
-          <h3 className="h5 mb-0 su-page-title">📚 Search Results</h3>
+          <h3 className="h5 mb-0 su-page-title">
+            <span className="su-title-with-icon">
+              <PortalIcon src={adminSidebarIcons.search} />
+              <span>Search Results</span>
+            </span>
+          </h3>
           <span className="badge bg-secondary-subtle text-secondary-emphasis" style={{ borderRadius: '999px', fontSize: '0.8rem' }}>
             {pageData.totalElements} item{pageData.totalElements !== 1 ? 's' : ''}
           </span>
@@ -386,19 +406,19 @@ export default function RepositorySearchPage() {
                   <h4 className="h6 mb-1 su-page-title" style={{ fontSize: '1rem' }}>{item.title}</h4>
                   <div className="d-flex flex-wrap gap-2 mb-2">
                     <span className="badge bg-primary-subtle text-primary-emphasis" style={{ borderRadius: '999px', fontSize: '0.72rem' }}>
-                      👤 {item.authors || item.authorName || 'Unknown author'}
+                      Author: {item.authors || item.authorName || 'Unknown author'}
                     </span>
                     <span className="badge bg-secondary-subtle text-secondary-emphasis" style={{ borderRadius: '999px', fontSize: '0.72rem' }}>
-                      🏛️ {item.faculty || 'Unknown faculty'}
+                      Faculty: {item.faculty || 'Unknown faculty'}
                     </span>
                     {item.program && (
                       <span className="badge bg-secondary-subtle text-secondary-emphasis" style={{ borderRadius: '999px', fontSize: '0.72rem' }}>
-                        📖 {item.program}
+                        Program: {item.program}
                       </span>
                     )}
                     {item.year && (
                       <span className="badge bg-secondary-subtle text-secondary-emphasis" style={{ borderRadius: '999px', fontSize: '0.72rem' }}>
-                        📅 {item.year}
+                        Year: {item.year}
                       </span>
                     )}
                   </div>
@@ -416,7 +436,9 @@ export default function RepositorySearchPage() {
           ))}
           {!loading && results.length === 0 && (
             <div className="su-empty-state">
-              <div className="su-empty-icon">🔍</div>
+              <div className="su-empty-icon">
+                <PortalIcon src={adminSidebarIcons.search} size={40} />
+              </div>
               <h5>No Publications Found</h5>
               <p className="mb-0">Try adjusting your filters or search terms to discover more publications.</p>
             </div>

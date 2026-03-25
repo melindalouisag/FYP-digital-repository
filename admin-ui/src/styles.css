@@ -88,6 +88,14 @@ body {
   flex-shrink: 0;
 }
 
+.su-portal-icon {
+  width: 1rem;
+  height: 1rem;
+  object-fit: contain;
+  opacity: 0.75;
+  flex-shrink: 0;
+}
+
 .su-sidebar-icon-img {
   width: 20px;
   height: 20px;
@@ -107,6 +115,10 @@ body {
 }
 
 [data-theme="dark"] .su-sidebar-icon-img {
+  filter: invert(0.85);
+}
+
+[data-theme="dark"] .su-portal-icon {
   filter: invert(0.85);
 }
 
@@ -466,6 +478,12 @@ body {
   font-size: 1.1rem;
 }
 
+.su-stat-icon .su-portal-icon {
+  width: 1.35rem;
+  height: 1.35rem;
+  opacity: 0.85;
+}
+
 /* ======================== TIMELINE ======================== */
 .timeline-list {
   border-left: 3px solid #d7e1e9;
@@ -502,6 +520,15 @@ body {
   font-size: 3rem;
   margin-bottom: 1rem;
   opacity: 0.5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.su-empty-icon .su-portal-icon {
+  width: 2.8rem;
+  height: 2.8rem;
+  opacity: 0.6;
 }
 
 /* ======================== SEARCH RESULT CARD ======================== */
@@ -624,6 +651,12 @@ body {
   margin: 0 auto 0.5rem;
 }
 
+.su-stat-icon .su-portal-icon {
+  width: 1.35rem;
+  height: 1.35rem;
+  opacity: 0.85;
+}
+
 .su-stat-value {
   font-size: 1.75rem;
   font-weight: 800;
@@ -726,6 +759,49 @@ body {
   margin-bottom: 0.75rem;
   display: block;
   opacity: 0.7;
+  min-height: 2.5rem;
+}
+
+.su-empty-icon .su-portal-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  opacity: 0.7;
+}
+
+.su-title-with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.su-title-with-icon .su-portal-icon {
+  opacity: 0.8;
+}
+
+.su-label-with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.su-label-with-icon .su-portal-icon {
+  opacity: 0.8;
+}
+
+.su-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+}
+
+.su-meta-item {
+  color: #6c757d;
+  font-size: 0.875rem;
+}
+
+.su-meta-item strong {
+  color: #355066;
+  font-weight: 600;
 }
 
 .su-empty-state h5 {

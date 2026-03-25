@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import ShellLayout from '../../layout/ShellLayout';
 import { lecturerApi, type LecturerApprovalQueueRow } from '../../lib/api/lecturer';
+import PortalIcon from '../../lib/components/PortalIcon';
+import { lecturerSidebarIcons } from '../../lib/portalIcons';
 import type { PagedResponse } from '../../lib/types/workflow';
 import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 
@@ -75,9 +77,9 @@ export default function LecturerApprovalsPage() {
   return (
     <ShellLayout
       title="Registration Approval"
-      subtitle="Approve or reject student publication registration (metadata + permission)"
+      subtitle="Review registration submissions and either approve them or return them with a reason"
     >
-      {error && <div className="alert alert-danger d-flex align-items-center gap-2" style={{ borderRadius: '0.75rem' }}><span>⚠️</span> {error}</div>}
+      {error && <div className="alert alert-danger" style={{ borderRadius: '0.75rem' }}>{error}</div>}
 
       {loading && (
         <div className="text-center py-5">
@@ -88,9 +90,19 @@ export default function LecturerApprovalsPage() {
 
       {!loading && rows.length === 0 && (
         <div className="su-empty-state">
-          <div className="su-empty-icon">✅</div>
-          <h5>All Caught Up!</h5>
-          <p className="text-muted">No pending registration approvals at this time.</p>
+          <div className="su-empty-icon">
+            <PortalIcon src={lecturerSidebarIcons.approvals} size={40} />
+          </div>
+          <h5>No Registration Approvals Pending</h5>
+          <p className="text-muted">No student registrations are waiting for supervisor approval at this time.</p>
+        </div>
+      )}
+
+      {!loading && rows.length > 0 && (
+        <div className="mb-3">
+          <p className="text-muted small mb-0">
+            Review the submitted registration details first, then either approve the case or return it with a clear reason for the student.
+          </p>
         </div>
       )}
 
@@ -105,22 +117,28 @@ export default function LecturerApprovalsPage() {
                     <span className="badge bg-dark-subtle text-dark-emphasis" style={{ borderRadius: '999px' }}>{row.type}</span>
                     <span className={`badge status-badge ${statusBadgeClass(row.status)}`}>{formatStatus(row.status)}</span>
                   </div>
-                  <div className="d-flex flex-wrap gap-3 text-muted small">
-                    <span>👤 {row.studentName || row.studentEmail} {row.studentIdNumber ? `(${row.studentIdNumber})` : ''}</span>
-                    <span>🏛️ {row.faculty || 'N/A'} {row.program ? `• ${row.program}` : ''}</span>
-                    <span>📅 {row.registrationYear || 'N/A'}</span>
+                  <div className="su-meta-row">
+                    <span className="su-meta-item">
+                      <strong>Student:</strong> {row.studentName || row.studentEmail} {row.studentIdNumber ? `(${row.studentIdNumber})` : ''}
+                    </span>
+                    <span className="su-meta-item">
+                      <strong>Faculty:</strong> {row.faculty || 'N/A'} {row.program ? ` / ${row.program}` : ''}
+                    </span>
+                    <span className="su-meta-item">
+                      <strong>Year:</strong> {row.registrationYear || 'N/A'}
+                    </span>
                   </div>
                   <div className="text-muted small mt-1">
                     Submitted: {row.registrationSubmittedAt ? new Date(row.registrationSubmittedAt).toLocaleString() : 'N/A'}
                   </div>
                 </div>
                 <button className="btn btn-success btn-sm" style={{ borderRadius: '999px', padding: '0.4rem 1.2rem' }} onClick={() => void approve(row.caseId)}>
-                  ✅ Approve
+                  Approve Registration
                 </button>
               </div>
 
               <div className="p-3" style={{ background: '#fef3f2', borderRadius: '0.6rem', border: '1px solid #fecaca' }}>
-                <label className="form-label mb-1 small fw-semibold" style={{ color: '#dc3545' }}>❌ Reject with reason</label>
+                <label className="form-label mb-1 small fw-semibold" style={{ color: '#dc3545' }}>Reason for rejection</label>
                 <div className="d-flex gap-2">
                   <input
                     className="form-control form-control-sm"
@@ -131,11 +149,11 @@ export default function LecturerApprovalsPage() {
                         [row.caseId]: event.target.value,
                       }))
                     }
-                    placeholder="Provide rejection reason..."
+                    placeholder="Enter rejection reason"
                     style={{ borderRadius: '999px' }}
                   />
                   <button className="btn btn-outline-danger btn-sm" style={{ borderRadius: '999px', whiteSpace: 'nowrap' }} onClick={() => void reject(row.caseId)}>
-                    Reject
+                    Reject Registration
                   </button>
                 </div>
               </div>

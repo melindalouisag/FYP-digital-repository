@@ -4,6 +4,8 @@ import ShellLayout from '../../layout/ShellLayout';
 import { adminApi } from '../../lib/api/admin';
 import CaseTimeline from '../../lib/components/CaseTimeline';
 import DownloadFilenameLink from '../../lib/components/DownloadFilenameLink';
+import PortalIcon from '../../lib/components/PortalIcon';
+import { adminSidebarIcons } from '../../lib/portalIcons';
 import type {
   CaseDetailPayload,
   ChecklistItem,
@@ -177,21 +179,21 @@ export default function AdminReviewDetailPage() {
   };
 
   return (
-    <ShellLayout title={`Review Detail — Case #${caseId}`} subtitle="Checklist review, timeline, and decision actions">
+    <ShellLayout title={`Submission Review Detail - Case #${caseId}`} subtitle="Review the selected submission, save checklist results, and record the final library decision">
       {loading && (
         <div className="text-center py-5">
           <div className="su-spinner mx-auto mb-3" />
           <div className="text-muted">Loading case review detail...</div>
         </div>
       )}
-      {error && <div className="alert alert-danger d-flex align-items-center gap-2" style={{ borderRadius: '0.75rem' }}><span>⚠️</span> {error}</div>}
-      {message && <div className="alert alert-success d-flex align-items-center gap-2" style={{ borderRadius: '0.75rem' }}><span>✅</span> {message}</div>}
+      {error && <div className="alert alert-danger" style={{ borderRadius: '0.75rem' }}>{error}</div>}
+      {message && <div className="alert alert-success" style={{ borderRadius: '0.75rem' }}>{message}</div>}
 
       {detail && (
         <>
           {!reviewStage && !finalized && (
             <div className="alert alert-info">
-              This case is not yet in Library Review stage. Waiting for lecturer to forward.
+              This case is not yet in library review. Wait for lecturer forwarding before continuing checklist review.
             </div>
           )}
           {finalized && status === 'REJECTED' && (
@@ -220,7 +222,15 @@ export default function AdminReviewDetailPage() {
 
           <div className="su-card mb-3 fade-in" style={{ animationDelay: '0.05s' }}>
             <div className="card-body p-4">
-              <h3 className="h6 su-page-title">📄 Submission Version</h3>
+              <h3 className="h6 su-page-title">
+                <span className="su-title-with-icon">
+                  <PortalIcon src={adminSidebarIcons.submission} />
+                  <span>Selected Submission</span>
+                </span>
+              </h3>
+              <div className="text-muted small mb-3">
+                Confirm the submission version and template assignment before saving checklist results or recording a decision.
+              </div>
               <div className="row g-2">
                 <div className="col-md-6">
                   <select
@@ -262,7 +272,15 @@ export default function AdminReviewDetailPage() {
 
           <div className="su-card mb-3 fade-in" style={{ animationDelay: '0.1s' }}>
             <div className="card-body p-4">
-              <h3 className="h6 mb-3 su-page-title">✅ Checklist Review</h3>
+              <h3 className="h6 mb-3 su-page-title">
+                <span className="su-title-with-icon">
+                  <PortalIcon src={adminSidebarIcons.template} />
+                  <span>Checklist Review</span>
+                </span>
+              </h3>
+              <div className="text-muted small mb-3">
+                Use the active template for this publication type and save checklist results before recording the final library decision.
+              </div>
               {!hasActiveTemplate && (
                 <div className="alert alert-warning d-flex flex-wrap justify-content-between align-items-center gap-2">
                   <span>No active submission template exists for this publication type.</span>
@@ -271,13 +289,13 @@ export default function AdminReviewDetailPage() {
                     type="button"
                     onClick={() => navigate('/admin/checklists')}
                   >
-                    Go to Submission Template
+                    Open Template Setup
                   </button>
                 </div>
               )}
               {!reviewStage && (
                 <div className="alert alert-info mb-3">
-                  Checklist review is disabled until the case enters Library Review.
+                  Checklist review becomes available when the case enters library review.
                 </div>
               )}
               {checklistItems.length === 0 && (
@@ -354,34 +372,40 @@ export default function AdminReviewDetailPage() {
                 disabled={!checklistAllowed || !hasActiveTemplate || checklistItems.length === 0 || working}
                 onClick={() => void saveChecklist()}
               >
-                💾 Save Checklist Results
+                Save Checklist Results
               </button>
             </div>
           </div>
 
           <div className="su-card mb-3 fade-in" style={{ animationDelay: '0.15s' }}>
             <div className="card-body p-4">
-              <h3 className="h6 su-page-title">📜 Timeline</h3>
+              <h3 className="h6 su-page-title">Timeline</h3>
+              <div className="text-muted small mb-3">
+                Review the timeline to confirm handoff order, feedback history, and recent workflow changes before making a decision.
+              </div>
               <CaseTimeline items={detail.timeline ?? []} />
             </div>
           </div>
 
           <div className="su-card mb-3 fade-in" style={{ animationDelay: '0.2s' }}>
             <div className="card-body p-4">
-              <h3 className="h6 su-page-title">⚖️ Review Decision</h3>
+              <h3 className="h6 su-page-title">Review Decision</h3>
+              <div className="text-muted small mb-3">
+                Record the library decision here after reviewing the submission file, checklist results, and any existing comments.
+              </div>
               {!decisionAllowed && (
                 <div className="alert alert-info">
-                  Review decisions are available only during Library Review stage.
+                  Review decisions are available only while the case is in library review.
                 </div>
               )}
               {decisionAllowed && !checklistSaved && (
                 <div className="alert alert-warning">
-                  Checklist not saved yet. You can still approve, but consider saving checklist results first.
+                  Checklist results have not been saved yet. You can still approve the case, but saving the checklist first is recommended.
                 </div>
               )}
               <div className="row g-2 mb-3">
                 <div className="col-md-8">
-                  <label className="form-label">Revision request reason (optional if failed items exist)</label>
+                  <label className="form-label">Reason for revision request</label>
                   <input
                     className="form-control"
                     value={revisionReason}
@@ -410,12 +434,12 @@ export default function AdminReviewDetailPage() {
 
               <div className="row g-2">
                 <div className="col-md-8">
-                  <label className="form-label">Reject reason (required for reject)</label>
+                  <label className="form-label">Reason for rejection</label>
                   <input
                     className="form-control"
                     value={rejectReason}
                     onChange={(event) => setRejectReason(event.target.value)}
-                    placeholder="Provide reject reason"
+                    placeholder="Enter rejection reason"
                     disabled={!decisionAllowed || working}
                   />
                 </div>
@@ -426,7 +450,7 @@ export default function AdminReviewDetailPage() {
                     disabled={working || !decisionAllowed}
                     onClick={() => void approveCase()}
                   >
-                    ✅ Approve
+                    Approve for Clearance
                   </button>
                 </div>
                 <div className="col-md-2 d-flex align-items-end">
@@ -442,7 +466,7 @@ export default function AdminReviewDetailPage() {
                           : undefined
                     }
                   >
-                    Reject
+                    Reject Case
                   </button>
                 </div>
               </div>
@@ -451,9 +475,12 @@ export default function AdminReviewDetailPage() {
 
           <div className="su-card fade-in" style={{ animationDelay: '0.25s' }}>
             <div className="card-body p-4">
-              <h3 className="h6 su-page-title">💬 Comments</h3>
+              <h3 className="h6 su-page-title">Comments</h3>
+              <div className="text-muted small mb-3">
+                Review comments here for supporting context from the workflow history and earlier review actions.
+              </div>
               {(detail.comments || []).length === 0 ? (
-                <div className="text-muted small text-center py-3">No comments yet.</div>
+                <div className="text-muted small text-center py-3">No comments have been recorded for this case.</div>
               ) : (
                 <div className="vstack gap-2">
                   {(detail.comments || []).map((comment) => (

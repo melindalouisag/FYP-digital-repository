@@ -107,15 +107,23 @@ export default function AdminChecklistPage() {
   };
 
   return (
-    <ShellLayout title="Templates" subtitle="Create draft versions, edit items safely, then activate">
+    <ShellLayout title="Templates" subtitle="Create draft checklist versions, edit them safely, and activate one version for future reviews">
       {isLoading && (
         <div className="text-center py-5">
           <div className="su-spinner mx-auto mb-3" />
           <div className="text-muted">Loading checklist templates...</div>
         </div>
       )}
-      {error && <div className="alert alert-danger d-flex align-items-center gap-2" style={{ borderRadius: '0.75rem' }}><span>⚠️</span> {error}</div>}
-      {message && <div className="alert alert-success d-flex align-items-center gap-2" style={{ borderRadius: '0.75rem' }}><span>✅</span> {message}</div>}
+      {error && <div className="alert alert-danger" style={{ borderRadius: '0.75rem' }}>{error}</div>}
+      {message && <div className="alert alert-success" style={{ borderRadius: '0.75rem' }}>{message}</div>}
+
+      {!isLoading && (
+        <div className="mb-3">
+          <p className="text-muted small mb-0">
+            Each publication type keeps one active template for future reviews, while draft versions remain available for editing and activation.
+          </p>
+        </div>
+      )}
 
       {TYPES.map((type) => (
         <div className="su-card mb-3" key={type}>
@@ -134,7 +142,7 @@ export default function AdminChecklistPage() {
                   disabled={isMutating}
                   onClick={() => void createTemplate(type)}
                 >
-                  ➕ Create Template
+                  Create Draft
                 </button>
               </div>
             </div>
@@ -154,7 +162,7 @@ export default function AdminChecklistPage() {
                   {templatesByType[type].map((template) => (
                     <tr key={template.id}>
                       <td>V{template.version}</td>
-                      <td><span className={`badge ${template.active ? 'bg-success' : 'bg-secondary'}`} style={{ borderRadius: '999px' }}>{template.active ? '✅ ACTIVE' : 'DRAFT'}</span></td>
+                      <td><span className={`badge ${template.active ? 'bg-success' : 'bg-secondary'}`} style={{ borderRadius: '999px' }}>{template.active ? 'ACTIVE' : 'DRAFT'}</span></td>
                       <td>{template.itemCount}</td>
                       <td>{template.createdAt ? new Date(template.createdAt).toLocaleString() : 'N/A'}</td>
                       <td className="text-end">
@@ -179,7 +187,7 @@ export default function AdminChecklistPage() {
                   ))}
                   {templatesByType[type].length === 0 && (
                     <tr>
-                      <td colSpan={5} className="text-muted">No template yet. Use "Create Template" above.</td>
+                      <td colSpan={5} className="text-muted">No template versions yet. Create a draft template above to begin.</td>
                     </tr>
                   )}
                 </tbody>

@@ -18,11 +18,14 @@ import com.example.thesisrepo.user.User;
 import com.example.thesisrepo.web.dto.CaseStatusResponse;
 import com.example.thesisrepo.web.dto.LecturerStudentCaseResponse;
 import com.example.thesisrepo.web.dto.OperationResultResponse;
+import com.example.thesisrepo.web.dto.PagedResponse;
 import com.example.thesisrepo.web.dto.StudentCaseSummaryResponse;
 import com.example.thesisrepo.web.dto.SubmissionSummaryResponse;
 import com.example.thesisrepo.web.dto.TimelineItemDto;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -57,15 +60,6 @@ public class LecturerReviewService {
   }
 
   @Transactional(readOnly = true)
-  public List<StudentCaseSummaryResponse> reviewQueue(User lecturer) {
-    List<PublicationCase> reviewCases = caseSupervisors.findByLecturer(lecturer).stream()
-      .map(CaseSupervisor::getPublicationCase)
-      .filter(c -> c.getStatus() == CaseStatus.UNDER_SUPERVISOR_REVIEW || c.getStatus() == CaseStatus.NEEDS_REVISION_SUPERVISOR)
-      .toList();
-    return mapCaseSummaries(reviewCases);
-  }
-
-  @Transactional(readOnly = true)
   public List<LecturerStudentCaseResponse> students(User lecturer) {
     return caseSupervisors.findByLecturer(lecturer).stream()
       .map(CaseSupervisor::getPublicationCase)
@@ -88,6 +82,19 @@ public class LecturerReviewService {
         c.getType()
       ))
       .toList();
+  }
+
+  @Transactional(readOnly = true)
+  public PagedResponse<StudentCaseSummaryResponse> reviewQueue(User lecturer, Pageable pageable) {
+    List<CaseStatus> statuses = List.of(
+      CaseStatus.UNDER_SUPERVISOR_REVIEW,
+      CaseStatus.NEEDS_REVISION_SUPERVISOR
+    );
+    Page<PublicationCase> reviewCases = cases.findLecturerReviewQueue(lecturer.getId(), statuses, pageable);
+    if (reviewCases.isEmpty()) {
+      return PagedResponse.from(reviewCases, List.of());
+    }
+    return PagedResponse.from(reviewCases, mapCaseSummaries(reviewCases.getContent()));
   }
 
   @Transactional(readOnly = true)

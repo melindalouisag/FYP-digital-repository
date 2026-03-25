@@ -2,8 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
 import { studentApi } from '../../lib/api/student';
-import type { CaseStatus, CaseSummary } from '../../lib/types/workflow';
-import { canUploadSubmission, formatStatus, statusBadgeClass } from '../../lib/workflowUi';
+import PortalIcon from '../../lib/components/PortalIcon';
+import { studentSidebarIcons } from '../../lib/portalIcons';
+import type { CaseSummary } from '../../lib/types/workflow';
+import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
+import { getStudentCaseGuidance } from '../lib/casePresentation';
 import {
   isNavigationActivationKey,
   isSubmissionWorkspaceCase,
@@ -37,20 +40,6 @@ export default function StudentSubmissionsPage() {
     void load();
   }, []);
 
-  const statusHint: Partial<Record<CaseStatus, string>> = {
-    REGISTRATION_VERIFIED: '📄 Registration verified — ready for first upload',
-    UNDER_SUPERVISOR_REVIEW: '⏳ Uploaded files are under supervisor review',
-    NEEDS_REVISION_SUPERVISOR: '🛠️ Supervisor requested revisions — upload an updated file',
-    READY_TO_FORWARD: '✅ Supervisor approved — waiting library handoff',
-    FORWARDED_TO_LIBRARY: '🏛️ Forwarded to library review',
-    UNDER_LIBRARY_REVIEW: '⏳ Uploaded files are under library review',
-    NEEDS_REVISION_LIBRARY: '🛠️ Library requested revisions — upload an updated file',
-    APPROVED_FOR_CLEARANCE: '🏛️ Submission accepted — continue to clearance tracking',
-    CLEARANCE_SUBMITTED: '⏳ Clearance submitted — waiting final approval',
-    CLEARANCE_APPROVED: '✅ Clearance approved — tracking final release',
-    READY_TO_PUBLISH: '🚀 Ready for repository publication',
-  };
-
   const submissionCases = useMemo(
     () => sortCasesByRecentActivity(cases.filter((c) => isSubmissionWorkspaceCase(c.status))),
     [cases]
@@ -71,10 +60,10 @@ export default function StudentSubmissionsPage() {
   const hasNext = page + 1 < totalPages;
 
   return (
-    <ShellLayout title="Submission" subtitle="Work on submission-stage cases you can upload, revise, or track">
+    <ShellLayout title="Submission" subtitle="Upload approved files, respond to revision requests, and track review progress">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <button className="btn btn-outline-secondary btn-sm" style={{ borderRadius: '999px' }} onClick={() => void load()} disabled={loading}>
-          {loading ? '⏳ Loading...' : '🔄 Refresh'}
+          {loading ? 'Loading...' : 'Refresh'}
         </button>
       </div>
 
@@ -82,16 +71,18 @@ export default function StudentSubmissionsPage() {
 
       {!loading && submissionCases.length === 0 && (
         <div className="su-empty-state">
-          <div className="su-empty-icon">📄</div>
+          <div className="su-empty-icon">
+            <PortalIcon src={studentSidebarIcons.submission} size={40} />
+          </div>
           <h5>No Submission-Stage Cases Yet</h5>
-          <p className="text-muted">Cases will appear here after registration verification or while submissions are under review.</p>
+          <p className="text-muted">Cases will appear here after registration verification and remain here while submission review is still in progress.</p>
         </div>
       )}
 
       {submissionCases.length > 0 && (
         <div className="mb-3">
           <p className="text-muted small mb-0">
-            This workspace only shows cases that are ready for upload, need revision, or are being tracked through submission review.
+            Use this page to upload the first PDF, respond to revision requests, and follow submission progress until clearance and publishing take over.
           </p>
         </div>
       )}
@@ -105,12 +96,11 @@ export default function StudentSubmissionsPage() {
                 <th>Type</th>
                 <th>Status</th>
                 <th>Updated</th>
-                <th>Next</th>
+                <th>Next Step</th>
               </tr>
             </thead>
             <tbody>
               {visibleCases.map((c) => {
-                const canUpload = canUploadSubmission(c.status);
                 const navigationTarget = resolveStudentCaseNavigation(c, 'submissions');
                 return (
                   <tr
@@ -136,13 +126,8 @@ export default function StudentSubmissionsPage() {
                     </td>
                     <td className="text-muted small">{c.updatedAt ? new Date(c.updatedAt).toLocaleString() : 'N/A'}</td>
                     <td>
-                      <div className="fw-semibold small text-body-secondary">Next: {navigationTarget.label}</div>
-                      {statusHint[c.status] && (
-                        <div className="small text-muted mt-1">{statusHint[c.status]}</div>
-                      )}
-                      {!statusHint[c.status] && !canUpload && (
-                        <div className="small text-muted mt-1">Track the current submission-stage progress from case detail.</div>
-                      )}
+                      <div className="fw-semibold small text-body-secondary">{navigationTarget.label}</div>
+                      <div className="small text-muted mt-1">{getStudentCaseGuidance(c.status)}</div>
                     </td>
                   </tr>
                 );

@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
 import { lecturerApi, type LecturerStudentGroup } from '../../lib/api/lecturer';
+import PortalIcon from '../../lib/components/PortalIcon';
+import { lecturerSidebarIcons } from '../../lib/portalIcons';
 
 type LibraryStatusSummary = {
   needRevisions: number;
@@ -65,11 +67,11 @@ export default function LecturerLibraryTrackingPage() {
   const summaries = useMemo(() => summarizeLibraryStatuses(groups), [groups]);
 
   return (
-    <ShellLayout title="Library Tracking Hub" subtitle="Track cases forwarded to library for review">
+    <ShellLayout title="Library Tracking" subtitle="Review cases that have been forwarded to library review">
       {error && <div className="alert alert-danger">{error}</div>}
 
       <div className="d-flex flex-wrap align-items-center gap-2 mb-4">
-        <label className="form-label mb-0 fw-semibold small">📅 Year:</label>
+        <label className="form-label mb-0 fw-semibold small">Year:</label>
         <select
           className="form-select form-select-sm"
           style={{ width: 120, borderRadius: '999px' }}
@@ -91,9 +93,19 @@ export default function LecturerLibraryTrackingPage() {
 
       {!loading && groups.length === 0 && (
         <div className="su-empty-state">
-          <div className="su-empty-icon">🏛️</div>
-          <h5>No Library Cases</h5>
-          <p className="text-muted">No cases in library review for {year}.</p>
+          <div className="su-empty-icon">
+            <PortalIcon src={lecturerSidebarIcons.library} size={40} />
+          </div>
+          <h5>No Cases in Library Review</h5>
+          <p className="text-muted">No cases are currently in library review for {year}.</p>
+        </div>
+      )}
+
+      {!loading && groups.length > 0 && (
+        <div className="mb-3">
+          <p className="text-muted small mb-0">
+            Select a student record to review library-stage progress, feedback, and any follow-up required before clearance.
+          </p>
         </div>
       )}
 
@@ -112,8 +124,8 @@ export default function LecturerLibraryTrackingPage() {
                   <div className="d-flex justify-content-between align-items-start mb-2">
                     <div>
                       <h3 className="h6 mb-1 fw-bold">{group.studentName || group.studentEmail}</h3>
-                      <div className="text-muted small">
-                        🆔 {group.studentIdNumber ?? 'N/A'} • 🏛️ {group.faculty ?? 'N/A'}
+                      <div className="su-meta-item">
+                        <strong>Student ID:</strong> {group.studentIdNumber ?? 'N/A'} / {group.faculty ?? 'N/A'}
                       </div>
                     </div>
                     <span className="badge bg-primary-subtle text-primary-emphasis" style={{ borderRadius: '999px' }}>
@@ -123,17 +135,17 @@ export default function LecturerLibraryTrackingPage() {
                   <div className="d-flex gap-2 flex-wrap mt-2">
                     {summary.needRevisions > 0 && (
                       <span className="badge bg-danger-subtle text-danger-emphasis" style={{ borderRadius: '999px' }}>
-                        🔄 {summary.needRevisions} Need Revision
+                        {summary.needRevisions} Correction Required
                       </span>
                     )}
                     {summary.inReview > 0 && (
                       <span className="badge bg-warning-subtle text-warning-emphasis" style={{ borderRadius: '999px' }}>
-                        ⏳ {summary.inReview} In Review
+                        {summary.inReview} In Review
                       </span>
                     )}
                     {summary.approved > 0 && (
                       <span className="badge bg-success-subtle text-success-emphasis" style={{ borderRadius: '999px' }}>
-                        ✅ {summary.approved} Approved
+                        {summary.approved} Approved
                       </span>
                     )}
                   </div>

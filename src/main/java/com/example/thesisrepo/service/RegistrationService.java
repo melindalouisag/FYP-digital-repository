@@ -23,9 +23,13 @@ import com.example.thesisrepo.user.StaffRegistry;
 import com.example.thesisrepo.user.StaffRegistryRepository;
 import com.example.thesisrepo.user.User;
 import com.example.thesisrepo.user.UserRepository;
+import com.example.thesisrepo.web.dto.AdminRegistrationApprovalDto;
 import com.example.thesisrepo.web.dto.CaseStatusResponse;
+import com.example.thesisrepo.web.dto.PagedResponse;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,9 +39,12 @@ import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.CONFLICT;
@@ -316,8 +323,61 @@ public class RegistrationService {
     return toStatusResponse(publicationCase);
   }
 
+  @Transactional(readOnly = true)
+  public PagedResponse<AdminRegistrationApprovalDto> adminApprovalQueue(Pageable pageable) {
+    Page<PublicationRegistration> registrationsPage = registrations.findAdminApprovalQueue(
+      CaseStatus.REGISTRATION_APPROVED,
+      pageable
+    );
+
+    List<PublicationRegistration> approvalRegistrations = registrationsPage.getContent();
+    List<PublicationCase> approvalCases = approvalRegistrations.stream()
+      .map(PublicationRegistration::getPublicationCase)
+      .toList();
+    Map<Long, StudentProfile> profileByUser = loadStudentProfiles(approvalCases);
+
+    List<AdminRegistrationApprovalDto> items = approvalRegistrations.stream()
+      .map(registration -> toAdminRegistrationApprovalDto(registration, profileByUser))
+      .toList();
+    return PagedResponse.from(registrationsPage, items);
+  }
+
   private CaseStatusResponse toStatusResponse(PublicationCase publicationCase) {
     return new CaseStatusResponse(publicationCase.getId(), publicationCase.getStatus());
+  }
+
+  private Map<Long, StudentProfile> loadStudentProfiles(List<PublicationCase> publicationCases) {
+    List<Long> studentIds = publicationCases.stream()
+      .map(c -> c.getStudent().getId())
+      .distinct()
+      .toList();
+    return studentProfiles.findByUserIdIn(studentIds).stream()
+      .collect(Collectors.toMap(StudentProfile::getUserId, Function.identity()));
+  }
+
+  private AdminRegistrationApprovalDto toAdminRegistrationApprovalDto(
+    PublicationRegistration registration,
+    Map<Long, StudentProfile> profileByUser
+  ) {
+    PublicationCase publicationCase = registration.getPublicationCase();
+    StudentProfile profile = profileByUser.get(publicationCase.getStudent().getId());
+    String studentName = profile != null && hasText(profile.getName())
+      ? profile.getName()
+      : publicationCase.getStudent().getEmail();
+    return new AdminRegistrationApprovalDto(
+      publicationCase.getId(),
+      registration.getTitle(),
+      publicationCase.getType(),
+      publicationCase.getStatus(),
+      publicationCase.getUpdatedAt(),
+      registration.getSubmittedAt(),
+      publicationCase.getStudent().getId(),
+      studentName,
+      profile != null ? profile.getStudentId() : null,
+      profile != null ? profile.getFaculty() : null,
+      profile != null ? profile.getProgram() : null,
+      publicationCase.getStudent().getEmail()
+    );
   }
 
   private String requireStudentProgram(User student) {

@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { publicRepositoryApi, type RepositoryItemDetail } from '../../lib/api/publicRepository';
 import ThemeSwitch from '../../components/ThemeSwitch';
+import PortalIcon from '../../lib/components/PortalIcon';
 import { useAuth } from '../../lib/context/AuthContext';
+import { adminSidebarIcons } from '../../lib/portalIcons';
 import { useTheme } from '../../theme/ThemeContext';
 
 export default function RepositoryDetail() {
@@ -111,7 +113,10 @@ export default function RepositoryDetail() {
                           : '/admin/dashboard'
                     )}
                   >
-                    📊 Dashboard
+                    <span className="su-label-with-icon">
+                      <PortalIcon src={adminSidebarIcons.dashboard} />
+                      <span>Dashboard</span>
+                    </span>
                   </button>
                   <button type="button" className="btn btn-light btn-sm" style={{ borderRadius: '999px' }} onClick={() => void logout()}>
                     Logout
@@ -138,7 +143,10 @@ export default function RepositoryDetail() {
             ← Back
           </button>
           <Link to="/" className="btn btn-outline-primary btn-sm" style={{ borderRadius: '999px' }}>
-            🔍 Back to Repository
+            <span className="su-label-with-icon">
+              <PortalIcon src={adminSidebarIcons.search} />
+              <span>Back to Repository</span>
+            </span>
           </Link>
         </div>
 
@@ -148,16 +156,16 @@ export default function RepositoryDetail() {
 
             <div className="d-flex flex-wrap gap-2 mb-3">
               <span className="badge bg-primary-subtle text-primary-emphasis" style={{ borderRadius: '999px', fontSize: '0.78rem', padding: '0.35rem 0.8rem' }}>
-                👤 {item.authors || item.authorName || 'Unknown'}
+                Author: {item.authors || item.authorName || 'Unknown'}
               </span>
               <span className="badge bg-secondary-subtle text-secondary-emphasis" style={{ borderRadius: '999px', fontSize: '0.78rem', padding: '0.35rem 0.8rem' }}>
-                🏛️ {item.faculty || 'N/A'}
+                Faculty: {item.faculty || 'N/A'}
               </span>
               <span className="badge bg-secondary-subtle text-secondary-emphasis" style={{ borderRadius: '999px', fontSize: '0.78rem', padding: '0.35rem 0.8rem' }}>
-                📖 {item.program || 'N/A'}
+                Program: {item.program || 'N/A'}
               </span>
               <span className="badge bg-secondary-subtle text-secondary-emphasis" style={{ borderRadius: '999px', fontSize: '0.78rem', padding: '0.35rem 0.8rem' }}>
-                📅 {item.year || 'N/A'}
+                Year: {item.year || 'N/A'}
               </span>
             </div>
 
@@ -170,7 +178,7 @@ export default function RepositoryDetail() {
 
             <hr />
 
-            <h3 className="h6 su-page-title mb-2">📄 Abstract</h3>
+            <h3 className="h6 su-page-title mb-2">Abstract</h3>
             <p className="mb-4" style={{ lineHeight: 1.7, color: '#3d5a73' }}>{item.abstractText || 'No abstract available.'}</p>
 
             <div className="d-flex flex-wrap align-items-center gap-3">
@@ -182,11 +190,11 @@ export default function RepositoryDetail() {
                 disabled={!user || downloadLoading}
                 title={!user ? 'Login is required to download files.' : undefined}
               >
-                {downloadLoading ? '⏳ Downloading...' : '⬇️ Download PDF'}
+                {downloadLoading ? 'Downloading...' : 'Download PDF'}
               </button>
               {!user && (
                 <div className="d-flex align-items-center gap-2">
-                  <span className="badge bg-warning-subtle text-warning-emphasis" style={{ borderRadius: '999px' }}>🔒 Login required</span>
+                  <span className="badge bg-warning-subtle text-warning-emphasis" style={{ borderRadius: '999px' }}>Login required</span>
                   <button className="btn btn-link btn-sm p-0" onClick={() => navigate('/login')}>Sign in to download</button>
                 </div>
               )}

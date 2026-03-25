@@ -2,8 +2,6 @@ package com.example.thesisrepo.web;
 
 import com.example.thesisrepo.publication.*;
 import com.example.thesisrepo.publication.repo.*;
-import com.example.thesisrepo.profile.StudentProfile;
-import com.example.thesisrepo.profile.StudentProfileRepository;
 import com.example.thesisrepo.service.ChecklistTemplateService;
 import com.example.thesisrepo.service.ClearanceService;
 import com.example.thesisrepo.service.checklist.ChecklistImportService;
@@ -16,13 +14,13 @@ import com.example.thesisrepo.service.workflow.PublicationWorkflowGateService;
 import com.example.thesisrepo.user.User;
 import com.example.thesisrepo.web.dto.AdminClearanceCaseSummaryResponse;
 import com.example.thesisrepo.web.dto.AdminCaseDetailResponse;
-import com.example.thesisrepo.web.dto.AdminCaseQueueDto;
 import com.example.thesisrepo.web.dto.AdminPublishDetailDto;
 import com.example.thesisrepo.web.dto.AdminPublishQueueDto;
 import com.example.thesisrepo.web.dto.AdminRegistrationApprovalDto;
 import com.example.thesisrepo.web.dto.AdminStudentGroupDto;
 import com.example.thesisrepo.web.dto.CaseStatusResponse;
 import com.example.thesisrepo.web.dto.ChecklistImportSummaryResponse;
+import com.example.thesisrepo.web.dto.ChecklistTemplateActionResponse;
 import com.example.thesisrepo.web.dto.ChecklistTemplateDetailResponse;
 import com.example.thesisrepo.web.dto.ChecklistTemplateReleaseResponse;
 import com.example.thesisrepo.web.dto.ChecklistTemplateSummaryResponse;
@@ -49,7 +47,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static org.springframework.http.HttpStatus.*;
 
@@ -62,10 +59,7 @@ public class AdminWorkflowController {
   private static final int DEFAULT_PAGE_SIZE = 10;
   private static final int MAX_PAGE_SIZE = 100;
 
-  private final PublicationCaseRepository cases;
   private final SubmissionVersionRepository submissionVersions;
-  private final PublicationRegistrationRepository registrations;
-  private final StudentProfileRepository studentProfiles;
   private final ChecklistImportService checklistImportService;
   private final CurrentUserService currentUser;
   private final RegistrationService registrationService;
@@ -77,11 +71,17 @@ public class AdminWorkflowController {
   private final StorageService storageService;
 
   @GetMapping("/review")
-  public List<StudentCaseSummaryResponse> reviewQueue(
+  public PagedResponse<StudentCaseSummaryResponse> reviewQueue(
+    @RequestParam(defaultValue = "0") int page,
+    @RequestParam(defaultValue = "" + DEFAULT_PAGE_SIZE) int size,
     @RequestParam(required = false) CaseStatus status,
     @RequestParam(required = false) PublicationType type
   ) {
-    return libraryReviewService.reviewQueue(status, type);
+    return libraryReviewService.reviewQueue(
+      PageRequest.of(Math.max(page, 0), normalizePageSize(size)),
+      status,
+      type
+    );
   }
 
   @GetMapping("/registration-approvals")
@@ -89,21 +89,9 @@ public class AdminWorkflowController {
     @RequestParam(defaultValue = "0") int page,
     @RequestParam(defaultValue = "" + DEFAULT_PAGE_SIZE) int size
   ) {
-    Page<PublicationRegistration> registrationsPage = registrations.findAdminApprovalQueue(
-      CaseStatus.REGISTRATION_APPROVED,
+    return registrationService.adminApprovalQueue(
       PageRequest.of(Math.max(page, 0), normalizePageSize(size))
     );
-
-    List<PublicationRegistration> approvalRegistrations = registrationsPage.getContent();
-    List<PublicationCase> approvalCases = approvalRegistrations.stream()
-      .map(PublicationRegistration::getPublicationCase)
-      .toList();
-    Map<Long, StudentProfile> profileByUser = loadStudentProfiles(approvalCases);
-
-    List<AdminRegistrationApprovalDto> items = approvalRegistrations.stream()
-      .map(registration -> toAdminRegistrationApprovalDto(registration, profileByUser))
-      .toList();
-    return PagedResponse.from(registrationsPage, items);
   }
 
   @PostMapping("/registration-approvals/{caseId}/approve")
@@ -120,47 +108,7 @@ public class AdminWorkflowController {
 
   @GetMapping("/review-queue-grouped")
   public List<AdminStudentGroupDto> reviewQueueGrouped() {
-    List<CaseStatus> statuses = List.of(
-      CaseStatus.FORWARDED_TO_LIBRARY,
-      CaseStatus.UNDER_LIBRARY_REVIEW,
-      CaseStatus.NEEDS_REVISION_LIBRARY
-    );
-    List<PublicationCase> reviewCases = cases.findByStatusInOrderByUpdatedAtDesc(statuses);
-    if (reviewCases.isEmpty()) {
-      return List.of();
-    }
-
-    Map<Long, PublicationRegistration> registrationByCase = registrations.findByPublicationCaseIn(reviewCases).stream()
-      .collect(Collectors.toMap(r -> r.getPublicationCase().getId(), r -> r));
-
-    Map<Long, StudentProfile> profileByUser = loadStudentProfiles(reviewCases);
-    Map<Long, List<AdminCaseQueueDto>> groupedCases = new HashMap<>();
-    for (PublicationCase c : reviewCases) {
-      PublicationRegistration registration = registrationByCase.get(c.getId());
-      groupedCases.computeIfAbsent(c.getStudent().getId(), key -> new ArrayList<>())
-        .add(toAdminCaseQueueDto(c, registration));
-    }
-
-    return groupedCases.entrySet().stream()
-      .map(entry -> {
-        Long studentUserId = entry.getKey();
-        StudentProfile profile = profileByUser.get(studentUserId);
-        User student = reviewCases.stream()
-          .map(PublicationCase::getStudent)
-          .filter(user -> user.getId().equals(studentUserId))
-          .findFirst()
-          .orElseThrow();
-        return new AdminStudentGroupDto(
-          studentUserId,
-          profile != null ? profile.getName() : student.getEmail(),
-          profile != null ? profile.getStudentId() : null,
-          profile != null ? profile.getFaculty() : null,
-          profile != null ? profile.getProgram() : null,
-          entry.getValue()
-        );
-      })
-      .sorted(Comparator.comparing(AdminStudentGroupDto::studentName, Comparator.nullsLast(String::compareToIgnoreCase)))
-      .toList();
+    return libraryReviewService.reviewQueueGrouped();
   }
 
   @GetMapping("/cases/{caseId}")
@@ -226,8 +174,17 @@ public class AdminWorkflowController {
   }
 
   @GetMapping("/publish")
-  public List<AdminPublishQueueDto> publishQueue() {
-    return publishingService.publishQueue();
+  public PagedResponse<AdminPublishQueueDto> publishQueue(
+    @RequestParam(defaultValue = "0") int page,
+    @RequestParam(defaultValue = "" + DEFAULT_PAGE_SIZE) int size
+  ) {
+    return publishingService.publishQueue(
+      PageRequest.of(
+        Math.max(page, 0),
+        normalizePageSize(size),
+        Sort.by(Sort.Order.desc("updatedAt"), Sort.Order.desc("id"))
+      )
+    );
   }
 
   @GetMapping("/publish/{caseId}")
@@ -346,7 +303,7 @@ public class AdminWorkflowController {
 
   @PostMapping("/checklists/templates/{templateId}/lock")
   @Transactional
-  public ResponseEntity<?> acquireTemplateLock(@PathVariable Long templateId) {
+  public ResponseEntity<ChecklistTemplateActionResponse> acquireTemplateLock(@PathVariable Long templateId) {
     User admin = currentUser.requireCurrentUser();
     return checklistTemplateService.acquireLock(admin, templateId).toResponseEntity();
   }
@@ -360,21 +317,21 @@ public class AdminWorkflowController {
 
   @DeleteMapping("/checklists/templates/{templateId}")
   @Transactional
-  public ResponseEntity<?> deleteTemplate(@PathVariable Long templateId) {
+  public ResponseEntity<ChecklistTemplateActionResponse> deleteTemplate(@PathVariable Long templateId) {
     User admin = currentUser.requireCurrentUser();
     return checklistTemplateService.deleteTemplate(admin, templateId).toResponseEntity();
   }
 
   @PutMapping("/checklists/templates/{templateId}/items")
   @Transactional
-  public ResponseEntity<?> replaceTemplateItems(@PathVariable Long templateId, @RequestBody JsonNode payload) {
+  public ResponseEntity<ChecklistTemplateActionResponse> replaceTemplateItems(@PathVariable Long templateId, @RequestBody JsonNode payload) {
     User admin = currentUser.requireCurrentUser();
     return checklistTemplateService.replaceTemplateItems(admin, templateId, payload).toResponseEntity();
   }
 
   @PostMapping("/checklists/templates/{templateId}/activate")
   @Transactional
-  public ResponseEntity<?> activateTemplate(@PathVariable Long templateId) {
+  public ResponseEntity<ChecklistTemplateActionResponse> activateTemplate(@PathVariable Long templateId) {
     User admin = currentUser.requireCurrentUser();
     return checklistTemplateService.activateTemplate(admin, templateId).toResponseEntity();
   }
@@ -392,54 +349,6 @@ public class AdminWorkflowController {
       return DEFAULT_PAGE_SIZE;
     }
     return Math.min(requestedSize, MAX_PAGE_SIZE);
-  }
-
-  private Map<Long, StudentProfile> loadStudentProfiles(List<PublicationCase> casesToMap) {
-    List<Long> userIds = casesToMap.stream()
-      .map(c -> c.getStudent().getId())
-      .distinct()
-      .toList();
-    return studentProfiles.findByUserIdIn(userIds).stream()
-      .collect(Collectors.toMap(StudentProfile::getUserId, profile -> profile));
-  }
-
-  private AdminRegistrationApprovalDto toAdminRegistrationApprovalDto(
-    PublicationRegistration registration,
-    Map<Long, StudentProfile> profileByUser
-  ) {
-    PublicationCase publicationCase = registration.getPublicationCase();
-    StudentProfile profile = profileByUser.get(publicationCase.getStudent().getId());
-    String studentName = profile != null && hasText(profile.getName())
-      ? profile.getName()
-      : publicationCase.getStudent().getEmail();
-    return new AdminRegistrationApprovalDto(
-      publicationCase.getId(),
-      registration.getTitle(),
-      publicationCase.getType(),
-      publicationCase.getStatus(),
-      publicationCase.getUpdatedAt(),
-      registration.getSubmittedAt(),
-      publicationCase.getStudent().getId(),
-      studentName,
-      profile != null ? profile.getStudentId() : null,
-      profile != null ? profile.getFaculty() : null,
-      profile != null ? profile.getProgram() : null,
-      publicationCase.getStudent().getEmail()
-    );
-  }
-
-  private AdminCaseQueueDto toAdminCaseQueueDto(PublicationCase c, PublicationRegistration registration) {
-    Instant latestSubmissionAt = submissionVersions.findTopByPublicationCaseOrderByVersionNumberDesc(c)
-      .map(SubmissionVersion::getCreatedAt)
-      .orElse(null);
-    return new AdminCaseQueueDto(
-      c.getId(),
-      registration != null ? registration.getTitle() : null,
-      c.getType(),
-      c.getStatus(),
-      c.getUpdatedAt(),
-      latestSubmissionAt
-    );
   }
   @Data
   public static class ChecklistResultRequest {

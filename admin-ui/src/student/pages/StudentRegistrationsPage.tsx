@@ -2,8 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
 import { studentApi } from '../../lib/api/student';
-import type { CaseStatus, CaseSummary } from '../../lib/types/workflow';
+import PortalIcon from '../../lib/components/PortalIcon';
+import { studentSidebarIcons } from '../../lib/portalIcons';
+import type { CaseSummary } from '../../lib/types/workflow';
 import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
+import { getStudentCaseGuidance } from '../lib/casePresentation';
 import {
   isNavigationActivationKey,
   isRegistrationWorkspaceCase,
@@ -37,13 +40,6 @@ export default function StudentRegistrationsPage() {
     void load();
   }, []);
 
-  const statusHint: Partial<Record<CaseStatus, string>> = {
-    REGISTRATION_DRAFT: '📝 Draft in progress — complete and submit when ready',
-    REGISTRATION_PENDING: '⏳ Waiting supervisor approval',
-    REGISTRATION_APPROVED: '⏳ Supervisor approved — waiting library verification',
-    REJECTED: '❌ Rejected — update the registration and resubmit',
-  };
-
   const registrationCases = useMemo(
     () => sortCasesByRecentActivity(cases.filter((c) => isRegistrationWorkspaceCase(c.status))),
     [cases]
@@ -64,13 +60,13 @@ export default function StudentRegistrationsPage() {
   const hasNext = page + 1 < totalPages;
 
   return (
-    <ShellLayout title="Publication Registration" subtitle="Work on registration-stage cases you are preparing, correcting, or waiting on">
+    <ShellLayout title="Publication Registration" subtitle="Prepare registration details, correct returned cases, and track approval progress">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <button className="btn btn-outline-secondary btn-sm" style={{ borderRadius: '999px' }} onClick={() => void load()} disabled={loading}>
-          {loading ? '⏳ Loading...' : '🔄 Refresh'}
+          {loading ? 'Loading...' : 'Refresh'}
         </button>
         <button className="btn btn-primary" style={{ borderRadius: '999px' }} onClick={() => navigate('/student/registrations/new')}>
-          ➕ Create New Registration
+          Create New Registration
         </button>
       </div>
 
@@ -78,9 +74,11 @@ export default function StudentRegistrationsPage() {
 
       {!loading && registrationCases.length === 0 && (
         <div className="su-empty-state">
-          <div className="su-empty-icon">📋</div>
+          <div className="su-empty-icon">
+            <PortalIcon src={studentSidebarIcons.registration} size={40} />
+          </div>
           <h5>No Registration Cases to Work On</h5>
-          <p className="text-muted">Draft, rejected, and registration-review cases will appear here.</p>
+          <p className="text-muted">Draft registrations, returned cases, and registrations still in approval will appear here.</p>
           <button className="btn btn-primary" onClick={() => navigate('/student/registrations/new')}>
             Create First Registration
           </button>
@@ -90,7 +88,7 @@ export default function StudentRegistrationsPage() {
       {registrationCases.length > 0 && (
         <div className="mb-3">
           <p className="text-muted small mb-0">
-            This workspace only shows registration-stage cases so you can focus on metadata preparation, corrections, and approval progress.
+            Use this page to finish draft registrations, reopen returned cases, and monitor approval progress before submission begins.
           </p>
         </div>
       )}
@@ -104,7 +102,7 @@ export default function StudentRegistrationsPage() {
                 <th>Type</th>
                 <th>Status</th>
                 <th>Updated</th>
-                <th>Next</th>
+                <th>Next Step</th>
               </tr>
             </thead>
             <tbody>
@@ -135,10 +133,8 @@ export default function StudentRegistrationsPage() {
                     </td>
                     <td className="text-muted small">{c.updatedAt ? new Date(c.updatedAt).toLocaleString() : 'N/A'}</td>
                     <td>
-                      <div className="fw-semibold small text-body-secondary">Next: {navigationTarget.label}</div>
-                      {statusHint[c.status] && (
-                        <div className="small text-muted mt-1">{statusHint[c.status]}</div>
-                      )}
+                      <div className="fw-semibold small text-body-secondary">{navigationTarget.label}</div>
+                      <div className="small text-muted mt-1">{getStudentCaseGuidance(c.status)}</div>
                     </td>
                   </tr>
                 );

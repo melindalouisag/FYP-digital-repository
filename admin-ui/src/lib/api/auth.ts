@@ -25,35 +25,9 @@ export interface OnboardingPayload {
   studentId?: string;
 }
 
-export type AuthMode = 'LOCAL' | 'SSO' | 'AAD' | 'HYBRID';
-
-export type AuthConfig = {
-  mode: AuthMode;
-  localEnabled: boolean;
-  ssoEnabled: boolean;
-};
-
-const DEFAULT_AUTH_CONFIG: AuthConfig = {
-  mode: 'SSO',
-  localEnabled: false,
-  ssoEnabled: true,
-};
-
-export async function getAuthConfig(): Promise<AuthConfig> {
-  try {
-    return await getJson<AuthConfig>('/api/auth/config');
-  } catch {
-    return DEFAULT_AUTH_CONFIG;
-  }
-}
-
 export const authApi = {
   me(): Promise<AuthUser> {
     return getJson<AuthUser>('/api/auth/me');
-  },
-
-  login(email: string, password: string): Promise<AuthUser> {
-    return postJson<AuthUser>('/api/auth/login', { email, password });
   },
 
   logout(): Promise<{ message?: string }> {
@@ -67,5 +41,4 @@ export const authApi = {
   selectRole(role: Role): Promise<AuthUser> {
     return postJson<AuthUser>('/api/auth/select-role', { role });
   },
-
 };

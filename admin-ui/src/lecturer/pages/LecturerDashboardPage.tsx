@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
 import { lecturerApi } from '../../lib/api/lecturer';
+import PortalIcon from '../../lib/components/PortalIcon';
+import { lecturerSidebarIcons } from '../../lib/portalIcons';
 
 export default function LecturerDashboardPage() {
   const navigate = useNavigate();
@@ -43,18 +45,18 @@ export default function LecturerDashboardPage() {
   }, []);
 
   const cards = [
-    { label: 'Pending Approvals', value: approvals, icon: '✅', color: '#e0f2fe', path: '/lecturer/approvals', desc: 'Registration requests awaiting your approval' },
-    { label: 'Submission Review', value: pendingSupervisor, icon: '📝', color: '#fff3cd', path: '/lecturer/review', desc: 'Student submissions needing your review' },
-    { label: 'Library Tracking', value: libraryTracking, icon: '🏛️', color: '#ede9fe', path: '/lecturer/library', desc: 'Cases forwarded to library for processing' },
-    { label: 'My Students', value: students, icon: '🎓', color: '#d1e7dd', path: '/lecturer/students', desc: 'Students under your supervision' },
+    { label: 'Registration Approvals', value: approvals, icon: lecturerSidebarIcons.approvals, color: '#e0f2fe', path: '/lecturer/approvals', desc: 'Registration requests awaiting your approval' },
+    { label: 'Submission Review', value: pendingSupervisor, icon: lecturerSidebarIcons.review, color: '#fff3cd', path: '/lecturer/review', desc: 'Student submissions needing your review' },
+    { label: 'Library Tracking', value: libraryTracking, icon: lecturerSidebarIcons.library, color: '#ede9fe', path: '/lecturer/library', desc: 'Cases forwarded to library for processing' },
+    { label: 'My Students', value: students, icon: lecturerSidebarIcons.students, color: '#d1e7dd', path: '/lecturer/students', desc: 'Students under your supervision' },
   ];
 
   return (
-    <ShellLayout title="Lecturer Dashboard" subtitle="Monitor approval and supervisor review workload">
+    <ShellLayout title="Lecturer Dashboard" subtitle="Monitor registration approvals, submission review, and supervised case activity">
       {error && <div className="alert alert-danger">{error}</div>}
 
       <div className="d-flex flex-wrap align-items-center gap-2 mb-4">
-        <label className="form-label mb-0 fw-semibold small">📅 Academic Year:</label>
+        <label className="form-label mb-0 fw-semibold small">Academic Year:</label>
         <select
           className="form-select form-select-sm"
           style={{ width: 120, borderRadius: '999px' }}
@@ -76,7 +78,9 @@ export default function LecturerDashboardPage() {
               onClick={() => navigate(card.path)}
               style={{ animationDelay: `${index * 0.08}s` }}
             >
-              <div className="su-stat-icon" style={{ background: card.color }}>{card.icon}</div>
+              <div className="su-stat-icon" style={{ background: card.color }}>
+                <PortalIcon src={card.icon} size={22} />
+              </div>
               <div className="su-stat-value">{loading ? '—' : card.value}</div>
               <div className="su-stat-label">{card.label}</div>
               <div className="text-muted small mt-2" style={{ fontSize: '0.75rem' }}>{card.desc}</div>

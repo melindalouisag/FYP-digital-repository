@@ -10,6 +10,7 @@ import { useAuth } from '../../lib/context/AuthContext';
 import { joinKeywordTokens, splitKeywordString } from '../../lib/keywords';
 import type { CaseDetailPayload, SubmissionVersion } from '../../lib/types/workflow';
 import { canUploadSubmission, formatStatus, statusBadgeClass } from '../../lib/workflowUi';
+import { getStudentCaseGuidance } from '../lib/casePresentation';
 
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 
@@ -139,7 +140,7 @@ export default function StudentCaseSubmissionPage() {
       return;
     }
     if (!uploadAllowed) {
-      setError('Upload is currently gated by workflow status.');
+      setError('You can upload only after registration verification or when a revision has been requested.');
       return;
     }
 
@@ -148,12 +149,12 @@ export default function StudentCaseSubmissionPage() {
     setMessage('');
     try {
       await studentApi.uploadSubmission(Number(caseId), file as File, meta);
-      setMessage(hasPreviousUploads ? 'Resubmission submitted successfully.' : 'Submission submitted successfully.');
+      setMessage(hasPreviousUploads ? 'Revised file uploaded successfully.' : 'First file uploaded successfully.');
       setFile(null);
       await load();
     } catch (err) {
       if (err instanceof ApiError && (err.status === 400 || err.status === 409)) {
-        setError(err.message || 'Upload is only allowed after library approval or when revisions are requested.');
+        setError(err.message || 'You can upload only after registration verification or when a revision has been requested.');
       } else {
         setError(err instanceof Error ? err.message : 'Upload failed.');
       }
@@ -164,8 +165,8 @@ export default function StudentCaseSubmissionPage() {
 
   return (
     <ShellLayout
-      title={`Case #${caseId} Submissions`}
-      subtitle="Upload first version or revisions with metadata"
+      title={detail?.case.title || `Case #${caseId} Submission`}
+      subtitle={`Case #${caseId} | Upload the first approved PDF or a revised version with repository metadata`}
     >
       {loading && <div className="alert alert-info">Loading submission page...</div>}
       {error && <div className="alert alert-danger">{error}</div>}
@@ -173,13 +174,20 @@ export default function StudentCaseSubmissionPage() {
 
       {detail && (
         <div className="card shadow-sm mb-3">
-          <div className="card-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+          <div className="card-body d-flex flex-wrap justify-content-between align-items-start gap-3">
             <div>
-              <div className="fw-semibold">Current Status</div>
+              <div className="small text-uppercase text-muted mb-1">Current status</div>
               <span className={`badge status-badge ${statusBadgeClass(detail.case.status)}`}>{formatStatus(detail.case.status)}</span>
+              <div className="text-muted small mt-2">
+                {uploadAllowed
+                  ? (hasPreviousUploads
+                    ? 'Upload the revised PDF and confirm that the metadata below matches the latest version.'
+                    : 'Upload the first approved PDF and complete the repository metadata below.')
+                  : getStudentCaseGuidance(detail.case.status)}
+              </div>
             </div>
             {!uploadAllowed && (
-              <div className="text-muted small">Upload disabled: waiting registration verification or revision stage.</div>
+              <div className="text-muted small">Uploads open after registration verification or when a supervisor or library revision is requested.</div>
             )}
           </div>
         </div>
@@ -187,7 +195,10 @@ export default function StudentCaseSubmissionPage() {
 
       <div className="card shadow-sm mb-3">
         <div className="card-body">
-          <h3 className="h6 mb-3">Upload Submission</h3>
+          <h3 className="h6 mb-2">Upload File and Metadata</h3>
+          <p className="text-muted small mb-3">
+            The title, author, keywords, and abstract entered here are used for the repository record if this case is published.
+          </p>
           <div className="row g-3">
             <div className="col-md-6">
               <label className="form-label">Document file</label>
@@ -282,8 +293,8 @@ export default function StudentCaseSubmissionPage() {
             <div className="col-12">
               <button className="btn btn-primary" onClick={() => void onUpload()} disabled={!uploadAllowed || uploading}>
                 {uploading
-                  ? (hasPreviousUploads ? 'Resubmitting...' : 'Submitting...')
-                  : (hasPreviousUploads ? 'Resubmit' : 'Submit')}
+                  ? (hasPreviousUploads ? 'Uploading Revised File...' : 'Uploading First File...')
+                  : (hasPreviousUploads ? 'Upload Revised File' : 'Upload First File')}
               </button>
             </div>
           </div>
@@ -320,7 +331,7 @@ export default function StudentCaseSubmissionPage() {
                 {versions.length === 0 && (
                   <tr>
                     <td colSpan={4} className="text-muted">
-                      No versions uploaded yet.
+                      No files have been uploaded for this case yet.
                     </td>
                   </tr>
                 )}

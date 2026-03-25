@@ -5,17 +5,15 @@ import com.example.thesisrepo.publication.PublishedItem;
 import com.example.thesisrepo.publication.repo.DownloadEventRepository;
 import com.example.thesisrepo.publication.repo.PublishedItemRepository;
 import com.example.thesisrepo.service.CurrentUserService;
+import com.example.thesisrepo.service.PublicRepositorySearchCriteria;
+import com.example.thesisrepo.service.PublicRepositorySearchService;
 import com.example.thesisrepo.service.StorageService;
 import com.example.thesisrepo.web.dto.PagedResponse;
 import com.example.thesisrepo.web.dto.PublicRepositoryItemDetailDto;
 import com.example.thesisrepo.web.dto.PublicRepositoryItemDto;
-import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -31,9 +29,6 @@ import org.springframework.web.server.ResponseStatusException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 
 @RestController
@@ -48,6 +43,7 @@ public class PublicController {
   private final DownloadEventRepository downloadEvents;
   private final StorageService storageService;
   private final CurrentUserService currentUserService;
+  private final PublicRepositorySearchService publicRepositorySearchService;
 
   @GetMapping("/repository/search")
   public ResponseEntity<PagedResponse<PublicRepositoryItemDto>> searchRepository(
@@ -60,49 +56,10 @@ public class PublicController {
     @RequestParam(defaultValue = "0") int page,
     @RequestParam(defaultValue = "" + DEFAULT_PAGE_SIZE) int size
   ) {
-    Specification<PublishedItem> spec = (root, query, cb) -> {
-      List<Predicate> predicates = new ArrayList<>();
-
-      if (hasText(title)) {
-        predicates.add(cb.like(cb.lower(root.get("title")), like(title)));
-      }
-      if (hasText(author)) {
-        predicates.add(cb.or(
-          cb.like(cb.lower(root.get("authors")), like(author)),
-          cb.like(cb.lower(root.get("authorName")), like(author))
-        ));
-      }
-      if (hasText(faculty)) {
-        predicates.add(cb.equal(cb.lower(root.get("faculty")), normalize(faculty)));
-      }
-      if (hasText(program)) {
-        predicates.add(cb.equal(cb.lower(root.get("program")), normalize(program)));
-      }
-      if (year != null) {
-        predicates.add(cb.equal(root.get("year"), year));
-      }
-      if (hasText(keyword)) {
-        splitKeywords(keyword).forEach(token ->
-          predicates.add(cb.like(cb.lower(root.get("keywords")), like(token)))
-        );
-      }
-
-      return cb.and(predicates.toArray(Predicate[]::new));
-    };
-
-    Page<PublishedItem> resultPage = publishedItems.findAll(
-      spec,
-      PageRequest.of(
-        Math.max(page, 0),
-        normalizePageSize(size),
-        Sort.by(Sort.Order.desc("publishedAt"), Sort.Order.desc("id"))
-      )
-    );
-    List<PublicRepositoryItemDto> results = resultPage.getContent().stream()
-      .map(this::toPublicSummary)
-      .toList();
-
-    return ResponseEntity.ok(PagedResponse.from(resultPage, results));
+    return ResponseEntity.ok(publicRepositorySearchService.search(
+      new PublicRepositorySearchCriteria(title, author, faculty, program, year, keyword),
+      PageRequest.of(Math.max(page, 0), normalizePageSize(size))
+    ));
   }
 
   @GetMapping("/repository/{id}")
@@ -153,20 +110,6 @@ public class PublicController {
     }
   }
 
-  private PublicRepositoryItemDto toPublicSummary(PublishedItem item) {
-    return new PublicRepositoryItemDto(
-      item.getId(),
-      item.getTitle(),
-      item.getAuthors(),
-      item.getAuthorName(),
-      item.getFaculty(),
-      item.getProgram(),
-      item.getYear(),
-      item.getKeywords(),
-      item.getPublishedAt()
-    );
-  }
-
   private PublicRepositoryItemDetailDto toPublicDetail(PublishedItem item) {
     return new PublicRepositoryItemDetailDto(
       item.getId(),
@@ -195,21 +138,6 @@ public class PublicController {
     return value != null && !value.isBlank();
   }
 
-  private static String like(String value) {
-    return "%" + normalize(value) + "%";
-  }
-
-  private static List<String> splitKeywords(String value) {
-    if (!hasText(value)) {
-      return List.of();
-    }
-    return java.util.Arrays.stream(value.split("[,\\n]"))
-      .map(PublicController::normalize)
-      .filter(token -> !token.isBlank())
-      .distinct()
-      .toList();
-  }
-
   private static String defaultFilename(String storedKey, String fallback) {
     if (!hasText(storedKey)) {
       return fallback;
@@ -222,10 +150,6 @@ public class PublicController {
   private static String sanitizeFilename(String candidate, String fallback) {
     String value = hasText(candidate) ? candidate.trim() : fallback;
     return value.replaceAll("[\\\\/\\r\\n\\t\"]", "_");
-  }
-
-  private static String normalize(String value) {
-    return value == null ? "" : value.toLowerCase(Locale.ROOT).trim();
   }
 
   private int normalizePageSize(int requestedSize) {

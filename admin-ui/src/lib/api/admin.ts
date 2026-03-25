@@ -46,8 +46,8 @@ function buildPageQuery(page?: number, size?: number): string {
 }
 
 export const adminApi = {
-  reviewQueue(): Promise<CaseSummary[]> {
-    return getJson('/api/admin/review');
+  reviewQueue(params?: { page?: number; size?: number }): Promise<PagedResponse<CaseSummary>> {
+    return getJson(`/api/admin/review${buildPageQuery(params?.page, params?.size)}`);
   },
 
   registrationApprovals(params?: { page?: number; size?: number }): Promise<PagedResponse<AdminRegistrationApproval>> {
@@ -105,8 +105,8 @@ export const adminApi = {
     return postJson(`/api/admin/clearance/${caseId}/request-correction`, { reason });
   },
 
-  publishQueue(): Promise<AdminPublishQueueItem[]> {
-    return getJson('/api/admin/publish');
+  publishQueue(params?: { page?: number; size?: number }): Promise<PagedResponse<AdminPublishQueueItem>> {
+    return getJson(`/api/admin/publish${buildPageQuery(params?.page, params?.size)}`);
   },
 
   publishDetail(caseId: number): Promise<AdminPublishDetail> {

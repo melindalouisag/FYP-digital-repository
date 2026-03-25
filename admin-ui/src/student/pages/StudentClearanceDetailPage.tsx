@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
 import { studentApi } from '../../lib/api/student';
+import PortalIcon from '../../lib/components/PortalIcon';
+import { adminSidebarIcons } from '../../lib/portalIcons';
 import type { CaseDetailPayload } from '../../lib/types/workflow';
 import { canSubmitClearance, formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 
@@ -56,15 +58,15 @@ export default function StudentClearanceDetailPage() {
   };
 
   return (
-    <ShellLayout title={`🏛️ Clearance Form — Case #${caseId}`} subtitle="Library clearance declaration for publication">
+    <ShellLayout title={`Clearance Form - Case #${caseId}`} subtitle="Library clearance declaration for publication">
       {loading && (
         <div className="text-center py-5">
           <div className="su-spinner mx-auto mb-3" />
           <div className="text-muted">Loading clearance form...</div>
         </div>
       )}
-      {error && <div className="alert alert-danger d-flex align-items-center gap-2" style={{ borderRadius: '0.75rem' }}><span>⚠️</span> {error}</div>}
-      {message && <div className="alert alert-success d-flex align-items-center gap-2" style={{ borderRadius: '0.75rem' }}><span>✅</span> {message}</div>}
+      {error && <div className="alert alert-danger" style={{ borderRadius: '0.75rem' }}>{error}</div>}
+      {message && <div className="alert alert-success" style={{ borderRadius: '0.75rem' }}>{message}</div>}
 
       {detail && (
         <div className="su-card fade-in">
@@ -77,7 +79,12 @@ export default function StudentClearanceDetailPage() {
             </div>
 
             <div className="p-3 mb-4" style={{ background: '#f0f6fa', borderRadius: '0.75rem', border: '1px solid #d5e3ed' }}>
-              <h6 className="fw-bold mb-2">📋 Declaration</h6>
+              <h6 className="fw-bold mb-2">
+                <span className="su-title-with-icon">
+                  <PortalIcon src={adminSidebarIcons.clearance} />
+                  <span>Declaration</span>
+                </span>
+              </h6>
               <p className="small text-muted mb-0">
                 By submitting this clearance form, I hereby declare that I have no outstanding library obligations,
                 including but not limited to borrowed books, equipment, or any other library assets. I understand
@@ -87,7 +94,7 @@ export default function StudentClearanceDetailPage() {
             </div>
 
             <div className="mb-4">
-              <label className="form-label">📝 Additional Notes (optional)</label>
+              <label className="form-label">Additional Notes (optional)</label>
               <textarea
                 className="form-control"
                 rows={5}
@@ -105,7 +112,7 @@ export default function StudentClearanceDetailPage() {
                 onClick={() => void onSubmit()}
                 disabled={submitting || !canSubmitClearance(detail.case.status)}
               >
-                {submitting ? '⏳ Submitting...' : '📨 Submit Clearance'}
+                {submitting ? 'Submitting...' : 'Submit Clearance'}
               </button>
               <button
                 className="btn btn-outline-secondary"

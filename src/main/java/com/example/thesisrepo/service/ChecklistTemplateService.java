@@ -11,6 +11,7 @@ import com.example.thesisrepo.user.User;
 import com.example.thesisrepo.web.dto.ChecklistActivationResponse;
 import com.example.thesisrepo.web.dto.ChecklistConflictResponse;
 import com.example.thesisrepo.web.dto.ChecklistItemsSaveResponse;
+import com.example.thesisrepo.web.dto.ChecklistTemplateActionResponse;
 import com.example.thesisrepo.web.dto.ChecklistTemplateDeleteResponse;
 import com.example.thesisrepo.web.dto.ChecklistTemplateDetailResponse;
 import com.example.thesisrepo.web.dto.ChecklistTemplateLockResponse;
@@ -91,7 +92,7 @@ public class ChecklistTemplateService {
   }
 
   @Transactional
-  public ServiceResponse<?> acquireLock(User admin, Long templateId) {
+  public ServiceResponse<ChecklistTemplateActionResponse> acquireLock(User admin, Long templateId) {
     ChecklistTemplate template = requireTemplate(templateId);
     if (template.isActive()) {
       throw new ResponseStatusException(BAD_REQUEST, "Active templates are read-only.");
@@ -117,7 +118,7 @@ public class ChecklistTemplateService {
   }
 
   @Transactional
-  public ServiceResponse<?> deleteTemplate(User admin, Long templateId) {
+  public ServiceResponse<ChecklistTemplateActionResponse> deleteTemplate(User admin, Long templateId) {
     ChecklistTemplate template = requireTemplate(templateId);
     ChecklistTemplateLockService.LockInfo lock = checklistLocks.current(template, admin);
     if (lock != null && !lock.ownedByCurrentUser()) {
@@ -134,7 +135,7 @@ public class ChecklistTemplateService {
   }
 
   @Transactional
-  public ServiceResponse<?> replaceTemplateItems(User admin, Long templateId, JsonNode payload) {
+  public ServiceResponse<ChecklistTemplateActionResponse> replaceTemplateItems(User admin, Long templateId, JsonNode payload) {
     ChecklistTemplate template = requireTemplate(templateId);
     if (template.isActive()) {
       throw new ResponseStatusException(BAD_REQUEST, "Cannot edit active template; create a new draft first.");
@@ -174,7 +175,7 @@ public class ChecklistTemplateService {
   }
 
   @Transactional
-  public ServiceResponse<?> activateTemplate(User admin, Long templateId) {
+  public ServiceResponse<ChecklistTemplateActionResponse> activateTemplate(User admin, Long templateId) {
     ChecklistTemplate toActivate = requireTemplate(templateId);
     ChecklistTemplateLockService.LockInfo lock = checklistLocks.current(toActivate, admin);
     if (lock != null && !lock.ownedByCurrentUser()) {

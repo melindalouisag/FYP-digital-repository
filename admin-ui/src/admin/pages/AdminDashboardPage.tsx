@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
+import PortalIcon from '../../lib/components/PortalIcon';
 import { adminApi } from '../../lib/api/admin';
+import { adminSidebarIcons } from '../../lib/portalIcons';
 
 export default function AdminDashboardPage() {
   const navigate = useNavigate();
@@ -18,14 +20,14 @@ export default function AdminDashboardPage() {
       try {
         const [registrations, review, clearance, publish] = await Promise.all([
           adminApi.registrationApprovals(),
-          adminApi.reviewQueue(),
+          adminApi.reviewQueue({ page: 0, size: 1 }),
           adminApi.clearanceQueue(),
-          adminApi.publishQueue(),
+          adminApi.publishQueue({ page: 0, size: 1 }),
         ]);
         setRegistrationCount(registrations.totalElements);
-        setReviewCount(review.length);
+        setReviewCount(review.totalElements);
         setClearanceCount(clearance.totalElements);
-        setPublishCount(publish.length);
+        setPublishCount(publish.totalElements);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load admin dashboard data.');
       } finally {
@@ -37,23 +39,23 @@ export default function AdminDashboardPage() {
   }, []);
 
   const cards = [
-    { label: 'Registration', value: registrationCount, icon: '📋', color: '#e0f2fe', path: '/admin/registration-approvals', desc: 'Pending registration verifications' },
-    { label: 'Review Queue', value: reviewCount, icon: '📝', color: '#fff3cd', path: '/admin/review', desc: 'Submissions awaiting checklist review' },
-    { label: 'Clearance Queue', value: clearanceCount, icon: '🏛️', color: '#ede9fe', path: '/admin/clearance', desc: 'Clearance forms pending approval' },
-    { label: 'Publish Queue', value: publishCount, icon: '🚀', color: '#d1e7dd', path: '/admin/publish', desc: 'Ready to publish to repository' },
+    { label: 'Registration', value: registrationCount, icon: adminSidebarIcons.registration, color: '#e0f2fe', path: '/admin/registration-approvals', desc: 'Pending registration verifications' },
+    { label: 'Submission Review', value: reviewCount, icon: adminSidebarIcons.submission, color: '#fff3cd', path: '/admin/review', desc: 'Submissions awaiting checklist review' },
+    { label: 'Clearance', value: clearanceCount, icon: adminSidebarIcons.clearance, color: '#ede9fe', path: '/admin/clearance', desc: 'Clearance forms pending approval' },
+    { label: 'Publishing', value: publishCount, icon: adminSidebarIcons.publishing, color: '#d1e7dd', path: '/admin/publish', desc: 'Ready to publish to repository' },
   ];
 
   const totalPending = registrationCount + reviewCount + clearanceCount + publishCount;
 
   return (
-    <ShellLayout title="Admin Dashboard" subtitle="Library administration overview — registration, review, clearance, and publishing">
+    <ShellLayout title="Admin Dashboard" subtitle="Library administration overview for registration, review, clearance, and publishing">
       {error && <div className="alert alert-danger">{error}</div>}
 
       {/* Total summary banner */}
       {!loading && totalPending > 0 && (
         <div className="alert d-flex align-items-center gap-2 mb-4 fade-in"
           style={{ background: '#e0f7fa', border: '1px solid #b2ebf2', borderRadius: '0.75rem', color: '#00695c' }}>
-          <span style={{ fontSize: '1.3rem' }}>📌</span>
+          <PortalIcon src={adminSidebarIcons.dashboard} size={20} />
           <div>
             <strong>{totalPending} total item{totalPending > 1 ? 's' : ''}</strong> across all queues require your attention.
           </div>
@@ -69,7 +71,9 @@ export default function AdminDashboardPage() {
               onClick={() => navigate(card.path)}
               style={{ animationDelay: `${index * 0.08}s` }}
             >
-              <div className="su-stat-icon" style={{ background: card.color }}>{card.icon}</div>
+              <div className="su-stat-icon" style={{ background: card.color }}>
+                <PortalIcon src={card.icon} size={22} />
+              </div>
               <div className="su-stat-value">{loading ? '—' : card.value}</div>
               <div className="su-stat-label">{card.label}</div>
               <div className="text-muted small mt-2" style={{ fontSize: '0.75rem' }}>{card.desc}</div>

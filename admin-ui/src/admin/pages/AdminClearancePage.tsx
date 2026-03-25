@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import ShellLayout from '../../layout/ShellLayout';
+import PortalIcon from '../../lib/components/PortalIcon';
 import { adminApi } from '../../lib/api/admin';
+import { adminSidebarIcons } from '../../lib/portalIcons';
 import type { CaseSummary, PagedResponse } from '../../lib/types/workflow';
 import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 
@@ -64,8 +66,8 @@ export default function AdminClearancePage() {
   const pageEnd = pageStart === 0 ? 0 : pageStart + cases.length - 1;
 
   return (
-    <ShellLayout title="Clearance Queue" subtitle="Approve submitted clearances or request correction">
-      {error && <div className="alert alert-danger d-flex align-items-center gap-2" style={{ borderRadius: '0.75rem' }}><span>⚠️</span> {error}</div>}
+    <ShellLayout title="Clearance" subtitle="Review submitted clearance forms and either approve them or return them for correction">
+      {error && <div className="alert alert-danger" style={{ borderRadius: '0.75rem' }}>{error}</div>}
 
       {loading && (
         <div className="text-center py-5">
@@ -76,9 +78,19 @@ export default function AdminClearancePage() {
 
       {!loading && cases.length === 0 && (
         <div className="su-empty-state">
-          <div className="su-empty-icon">🏛️</div>
-          <h5>No Clearance Requests</h5>
-          <p className="text-muted">Clearance queue is empty.</p>
+          <div className="su-empty-icon">
+            <PortalIcon src={adminSidebarIcons.clearance} size={40} />
+          </div>
+          <h5>No Clearance Reviews Pending</h5>
+          <p className="text-muted">No submitted clearance forms are waiting for library review.</p>
+        </div>
+      )}
+
+      {!loading && cases.length > 0 && (
+        <div className="mb-3">
+          <p className="text-muted small mb-0">
+            Use this queue to confirm final student clearance before publishing, or return the case with a clear correction reason.
+          </p>
         </div>
       )}
 
@@ -102,12 +114,12 @@ export default function AdminClearancePage() {
                     disabled={busy}
                     onClick={() => void run(c.id, () => adminApi.approveClearance(c.id).then(() => undefined))}
                   >
-                    ✅ Approve Clearance
+                    Approve Clearance
                   </button>
                 </div>
 
                 <div className="p-3" style={{ background: '#fffbeb', borderRadius: '0.6rem', border: '1px solid #fde68a' }}>
-                  <label className="form-label mb-1 small fw-semibold" style={{ color: '#d97706' }}>⚠️ Request correction</label>
+                  <label className="form-label mb-1 small fw-semibold" style={{ color: '#d97706' }}>Reason for correction</label>
                   <div className="d-flex gap-2">
                     <input
                       className="form-control form-control-sm"
@@ -115,7 +127,7 @@ export default function AdminClearancePage() {
                       onChange={(event) =>
                         setReasons((prev) => ({ ...prev, [c.id]: event.target.value }))
                       }
-                      placeholder="Reason for correction..."
+                      placeholder="Enter correction reason"
                       disabled={busy}
                       style={{ borderRadius: '999px' }}
                     />
@@ -131,7 +143,7 @@ export default function AdminClearancePage() {
                         })
                       }
                     >
-                      Correction
+                      Request Correction
                     </button>
                   </div>
                 </div>

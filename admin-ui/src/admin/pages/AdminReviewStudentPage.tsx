@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
+import PortalIcon from '../../lib/components/PortalIcon';
 import { adminApi } from '../../lib/api/admin';
+import { adminSidebarIcons } from '../../lib/portalIcons';
 import type { AdminStudentReviewGroup } from '../../lib/types/workflow';
 import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 
@@ -42,12 +44,12 @@ export default function AdminReviewStudentPage() {
   }, [group]);
 
   return (
-    <ShellLayout title="Student Review Detail" subtitle="Cases in library review for the selected student">
+    <ShellLayout title="Student Cases in Review" subtitle="Library review cases for the selected student">
       <button className="btn btn-outline-secondary btn-sm mb-4" style={{ borderRadius: '999px' }} onClick={() => navigate('/admin/review')}>
-        ← Back to Review Queue
+        Return to Submission Review
       </button>
 
-      {error && <div className="alert alert-danger d-flex align-items-center gap-2" style={{ borderRadius: '0.75rem' }}><span>⚠️</span> {error}</div>}
+      {error && <div className="alert alert-danger" style={{ borderRadius: '0.75rem' }}>{error}</div>}
 
       {loading && (
         <div className="text-center py-5">
@@ -58,9 +60,11 @@ export default function AdminReviewStudentPage() {
 
       {!loading && !group && !error && (
         <div className="su-empty-state">
-          <div className="su-empty-icon">👤</div>
+          <div className="su-empty-icon">
+            <PortalIcon src={adminSidebarIcons.submission} size={40} />
+          </div>
           <h5>Student Not Found</h5>
-          <p className="text-muted">Student not found in review queue.</p>
+          <p className="text-muted">This student is not currently in the library review queue.</p>
         </div>
       )}
 
@@ -78,15 +82,18 @@ export default function AdminReviewStudentPage() {
                 </div>
                 <div>
                   <h3 className="h5 mb-0 fw-bold">{group.studentName}</h3>
-                  <div className="text-muted small">
-                    🆔 {group.studentIdNumber || 'N/A'} • 🏛️ {group.faculty || 'N/A'} {group.program ? `• 📖 ${group.program}` : ''}
+                  <div className="su-meta-item">
+                    <strong>Student ID:</strong> {group.studentIdNumber || 'N/A'} / {group.faculty || 'N/A'} {group.program ? ` / ${group.program}` : ''}
                   </div>
                   <div className="text-muted small mt-1">
-                    {group.cases.length} case{group.cases.length > 1 ? 's' : ''} in review •
-                    Latest: {latestActivity ? new Date(latestActivity).toLocaleString() : 'N/A'}
+                    {group.cases.length} case{group.cases.length > 1 ? 's' : ''} in review / Latest activity:{' '}
+                    {latestActivity ? new Date(latestActivity).toLocaleString() : 'N/A'}
                   </div>
                 </div>
               </div>
+              <p className="text-muted small mb-0 mt-3">
+                Open a case below to continue checklist review, inspect comments, and record the final library decision.
+              </p>
             </div>
           </div>
 
@@ -105,8 +112,8 @@ export default function AdminReviewStudentPage() {
                         <span className="text-muted small">Updated: {c.updatedAt ? new Date(c.updatedAt).toLocaleString() : 'N/A'}</span>
                       </div>
                     </div>
-                    <span className="btn btn-primary btn-sm" style={{ borderRadius: '999px' }}>
-                      📝 Open Review →
+                    <span className="btn btn-outline-primary btn-sm" style={{ borderRadius: '999px' }}>
+                      Open Review
                     </span>
                   </div>
                 </div>

@@ -1,14 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { getAuthConfig, type AuthConfig } from "../lib/api/auth";
-import { useAuth } from "../lib/context/AuthContext";
-
-function defaultPath(role: string) {
-  if (role === "STUDENT") return "/student/dashboard";
-  if (role === "LECTURER") return "/lecturer/dashboard";
-  if (role === "ADMIN") return "/admin/dashboard";
-  return "/";
-}
 
 const SSO_URL = "/oauth2/authorization/azure";
 
@@ -42,8 +33,8 @@ export default function LoginPage() {
         <p className="text-muted small mb-3">Sign in to continue to the Digital Repository</p>
 
         {error && (
-          <div className="alert alert-danger py-2 d-flex align-items-center gap-2" style={{ borderRadius: "0.6rem" }}>
-            <span>⚠️</span> {error}
+          <div className="alert alert-danger py-2" style={{ borderRadius: "0.6rem" }}>
+            {error}
           </div>
         )}
 

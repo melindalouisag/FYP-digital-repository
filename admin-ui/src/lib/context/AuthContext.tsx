@@ -5,7 +5,6 @@ import { ApiError } from '../api/http';
 interface AuthContextValue {
   user: AuthUser | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; user?: AuthUser; error?: string }>;
   selectRole: (role: AuthUser['role']) => Promise<AuthUser>;
   logout: () => Promise<void>;
   refetch: () => Promise<AuthUser | null>;
@@ -37,19 +36,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void refetch();
   }, [refetch]);
 
-  const login = useCallback(async (email: string, password: string) => {
-    try {
-      const loggedInUser = await authApi.login(email, password);
-      setUser(loggedInUser);
-      return { success: true, user: loggedInUser };
-    } catch (error) {
-      if (error instanceof ApiError) {
-        return { success: false, error: error.message };
-      }
-      return { success: false, error: 'Unable to sign in right now.' };
-    }
-  }, []);
-
   const selectRole = useCallback(async (role: AuthUser['role']) => {
     const nextUser = await authApi.selectRole(role);
     setUser(nextUser);
@@ -73,12 +59,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       user,
       loading,
-      login,
       selectRole,
       logout,
       refetch,
     }),
-    [login, logout, loading, refetch, selectRole, user]
+    [logout, loading, refetch, selectRole, user]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

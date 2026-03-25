@@ -57,7 +57,7 @@ export interface SupervisorRow {
   department?: string | null;
 }
 
-const STUDENT_CASES_COMPAT_SIZE = 200;
+const STUDENT_CASES_PAGE_SIZE = 50;
 
 function buildPageQuery(page?: number, size?: number): string {
   const query = new URLSearchParams();
@@ -73,10 +73,21 @@ function buildPageQuery(page?: number, size?: number): string {
 
 export const studentApi = {
   async listCases(): Promise<CaseSummary[]> {
-    const response = await getJson<PagedResponse<CaseSummary>>(
-      `/api/student/cases${buildPageQuery(0, STUDENT_CASES_COMPAT_SIZE)}`
-    );
-    return response.items;
+    const allItems: CaseSummary[] = [];
+    let page = 0;
+
+    while (true) {
+      const response = await getJson<PagedResponse<CaseSummary>>(
+        `/api/student/cases${buildPageQuery(page, STUDENT_CASES_PAGE_SIZE)}`
+      );
+      allItems.push(...response.items);
+
+      if (!response.hasNext) {
+        return allItems;
+      }
+
+      page += 1;
+    }
   },
 
   listCasesPage(params?: { page?: number; size?: number }): Promise<PagedResponse<CaseSummary>> {

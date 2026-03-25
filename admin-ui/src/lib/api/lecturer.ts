@@ -1,4 +1,4 @@
-import type { CaseStatus, PagedResponse, PublicationType, TimelineItem } from '../types/workflow';
+import type { CaseStatus, CaseSummary, PagedResponse, PublicationType, TimelineItem } from '../types/workflow';
 import { getJson, postJson } from './http';
 
 export interface LecturerApprovalQueueRow {
@@ -74,8 +74,8 @@ export const lecturerApi = {
     return postJson(`/api/lecturer/approvals/${caseId}/reject`, { note });
   },
 
-  review(): Promise<{ id: number; status: CaseStatus; type: PublicationType }[]> {
-    return getJson('/api/lecturer/review');
+  review(params?: { page?: number; size?: number }): Promise<PagedResponse<CaseSummary>> {
+    return getJson(`/api/lecturer/review${buildPageQuery(params?.page, params?.size)}`);
   },
 
   comment(caseId: number, body: string): Promise<{ ok: boolean }> {

@@ -4,12 +4,12 @@ import ShellLayout from '../../layout/ShellLayout';
 import { studentApi } from '../../lib/api/student';
 import CaseTimeline from '../../lib/components/CaseTimeline';
 import DownloadFilenameLink from '../../lib/components/DownloadFilenameLink';
-import type { CaseDetailPayload, ChecklistResult } from '../../lib/types/workflow';
+import PortalIcon from '../../lib/components/PortalIcon';
+import { adminSidebarIcons, studentSidebarIcons } from '../../lib/portalIcons';
+import type { CaseDetailPayload, CaseStatus, ChecklistResult } from '../../lib/types/workflow';
+import { getStudentCaseGuidance, getStudentCaseNextText } from '../lib/casePresentation';
 import {
-  canEditRegistration,
   canSubmitClearance,
-  canSubmitRegistration,
-  canUploadSubmission,
   getStageIndex,
   getStageKey,
   formatStatus,
@@ -18,6 +18,78 @@ import {
 } from '../../lib/workflowUi';
 
 const STAGES = ['registration', 'supervisor', 'library', 'clearance', 'publish'] as const;
+
+const EDIT_REGISTRATION_STATUSES = new Set<CaseStatus>([
+  'REGISTRATION_DRAFT',
+  'REGISTRATION_PENDING',
+  'REJECTED',
+]);
+
+const SUBMIT_REGISTRATION_STATUSES = new Set<CaseStatus>([
+  'REGISTRATION_DRAFT',
+  'REJECTED',
+]);
+
+const SUBMISSION_PAGE_STATUSES = new Set<CaseStatus>([
+  'REGISTRATION_VERIFIED',
+  'NEEDS_REVISION_SUPERVISOR',
+  'NEEDS_REVISION_LIBRARY',
+]);
+
+const CLEARANCE_ACTION_STATUSES = new Set<CaseStatus>([
+  'APPROVED_FOR_CLEARANCE',
+  'CLEARANCE_SUBMITTED',
+]);
+
+function getStudentCaseActionVisibility(status: CaseStatus) {
+  return {
+    showEditRegistration: EDIT_REGISTRATION_STATUSES.has(status),
+    showSubmitRegistration: SUBMIT_REGISTRATION_STATUSES.has(status),
+    showSubmissionPage: SUBMISSION_PAGE_STATUSES.has(status),
+    showClearanceAction: CLEARANCE_ACTION_STATUSES.has(status),
+  };
+}
+
+function getRegistrationSectionCopy(status: CaseStatus): string {
+  switch (status) {
+    case 'REGISTRATION_DRAFT':
+      return 'Complete the registration details here, then submit the same case when you are ready.';
+    case 'REGISTRATION_PENDING':
+      return 'Your registration is waiting for supervisor approval. Update the details here only if a correction is needed before approval.';
+    case 'REJECTED':
+      return 'Review the feedback below, update the registration details, and submit the same case again.';
+    default:
+      return 'Registration details are shown here for reference. No registration action is required at this stage.';
+  }
+}
+
+function getSubmissionSectionCopy(status: CaseStatus): string {
+  switch (status) {
+    case 'REGISTRATION_VERIFIED':
+      return 'Open the submission page to upload the first PDF and confirm the repository metadata.';
+    case 'NEEDS_REVISION_SUPERVISOR':
+    case 'NEEDS_REVISION_LIBRARY':
+      return 'Open the submission page to upload a revised PDF after reviewing the latest feedback below.';
+    case 'REGISTRATION_DRAFT':
+    case 'REGISTRATION_PENDING':
+    case 'REGISTRATION_APPROVED':
+    case 'REJECTED':
+      return 'Submission opens after registration is verified.';
+    case 'UNDER_SUPERVISOR_REVIEW':
+      return 'Wait for supervisor review.';
+    case 'READY_TO_FORWARD':
+      return 'Supervisor review is complete. Wait for library handoff.';
+    case 'FORWARDED_TO_LIBRARY':
+    case 'UNDER_LIBRARY_REVIEW':
+      return 'Wait for library review.';
+    case 'APPROVED_FOR_CLEARANCE':
+    case 'CLEARANCE_SUBMITTED':
+    case 'CLEARANCE_APPROVED':
+    case 'READY_TO_PUBLISH':
+    case 'PUBLISHED':
+      return 'Submission review is complete. Uploaded files remain available below for reference.';
+  }
+}
 
 export default function StudentCaseDetailPage() {
   const { caseId } = useParams();
@@ -56,17 +128,18 @@ export default function StudentCaseDetailPage() {
   const stageKey = useMemo(() => (status ? getStageKey(status) : null), [status]);
   const currentStage = useMemo(() => (status ? getStageIndex(status) : 0), [status]);
   const isRejected = stageKey === 'rejected';
-  const clearanceActionEnabled = status
-    ? [
-      'APPROVED_FOR_CLEARANCE',
-      'CLEARANCE_SUBMITTED',
-      'CLEARANCE_APPROVED',
-      'READY_TO_PUBLISH',
-      'PUBLISHED',
-    ].includes(status)
-    : false;
-  const showClearance = clearanceActionEnabled;
+  const actionVisibility = status ? getStudentCaseActionVisibility(status) : null;
+  const showClearance = actionVisibility?.showClearanceAction ?? false;
   const clearanceButtonLabel = status && canSubmitClearance(status) ? 'Submit Clearance' : 'Open Clearance';
+  const studentActionAvailable = actionVisibility
+    ? actionVisibility.showEditRegistration
+      || actionVisibility.showSubmitRegistration
+      || actionVisibility.showSubmissionPage
+      || actionVisibility.showClearanceAction
+    : false;
+  const currentStepLabel = isRejected ? 'Registration revision' : (stageKey ? formatStageName(stageKey) : 'Registration');
+  const nextStepLabel = status ? getStudentCaseNextText(status) : '';
+  const nextStepGuidance = status ? getStudentCaseGuidance(status) : '';
 
   const submitRegistration = async () => {
     if (!caseId) return;
@@ -99,8 +172,8 @@ export default function StudentCaseDetailPage() {
 
   return (
     <ShellLayout
-      title={`Case #${detail.case.id}`}
-      subtitle={`${detail.case.title || 'Untitled'} | ${detail.case.type}`}
+      title={detail.case.title || `Case #${detail.case.id}`}
+      subtitle={`Case #${detail.case.id} | ${detail.case.type}`}
     >
       {/* Status & Stage */}
       <div className="d-flex flex-wrap align-items-center gap-2 mb-4">
@@ -115,16 +188,56 @@ export default function StudentCaseDetailPage() {
       </div>
 
       {isRejected && (
-        <div className="alert alert-danger d-flex align-items-center gap-2" style={{ borderRadius: '0.75rem' }}>
-          <span style={{ fontSize: '1.2rem' }}>❌</span>
+        <div className="alert alert-danger" style={{ borderRadius: '0.75rem' }}>
           <div><strong>Rejected.</strong> Review the feedback and update your registration before resubmitting.</div>
         </div>
       )}
 
+      <div className="su-card mb-4 fade-in">
+        <div className="card-body">
+          <div className="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+            <div>
+              <h3 className="h6 mb-1 su-page-title">
+                <span className="su-title-with-icon">
+                  <PortalIcon src={studentSidebarIcons.dashboard} />
+                  <span>Current Step Summary</span>
+                </span>
+              </h3>
+              <p className="small text-muted mb-0">Use this summary first, then review the sections below for details and supporting history.</p>
+            </div>
+            <span
+              className={`badge ${studentActionAvailable ? 'bg-primary-subtle text-primary-emphasis' : 'bg-light text-muted'}`}
+              style={{ borderRadius: '999px' }}
+            >
+              {studentActionAvailable ? 'Student action available now' : 'No student action required now'}
+            </span>
+          </div>
+          <div className="row g-3">
+            <div className="col-md-4">
+              <div className="small text-uppercase text-muted mb-1">Current step</div>
+              <div className="fw-semibold">{currentStepLabel}</div>
+            </div>
+            <div className="col-md-4">
+              <div className="small text-uppercase text-muted mb-1">Recommended next step</div>
+              <div className="fw-semibold">{nextStepLabel}</div>
+            </div>
+            <div className="col-md-4">
+              <div className="small text-uppercase text-muted mb-1">What this means</div>
+              <div className="small text-muted">{nextStepGuidance}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* ===== WORKFLOW STEPPER ===== */}
       <div className="su-card mb-4 fade-in">
         <div className="card-body">
-          <h3 className="h6 mb-3 su-page-title">📊 Workflow Progress</h3>
+          <h3 className="h6 mb-3 su-page-title">
+            <span className="su-title-with-icon">
+              <PortalIcon src={studentSidebarIcons.dashboard} />
+              <span>Workflow Progress</span>
+            </span>
+          </h3>
           <div className="su-stepper">
             {STAGES.map((stage, index) => {
               const isCompleted = currentStage > index;
@@ -134,9 +247,7 @@ export default function StudentCaseDetailPage() {
                   key={stage}
                   className={`su-stepper-step ${isCompleted ? 'completed' : ''} ${isActive ? 'active' : ''}`}
                 >
-                  <div className="su-stepper-dot">
-                    {isCompleted ? '✓' : index + 1}
-                  </div>
+                  <div className="su-stepper-dot">{index + 1}</div>
                   {formatStageName(stage)}
                 </div>
               );
@@ -145,60 +256,67 @@ export default function StudentCaseDetailPage() {
         </div>
       </div>
 
-      {/* Timeline */}
+      {/* Registration */}
       <div className="su-card mb-3 fade-in" style={{ animationDelay: '0.1s' }}>
         <div className="card-body">
-          <h3 className="h6 mb-3 su-page-title">📜 Activity Timeline</h3>
-          <CaseTimeline items={detail.timeline ?? []} />
-        </div>
-      </div>
-
-      {/* Registration */}
-      <div className="su-card mb-3 fade-in" style={{ animationDelay: '0.15s' }}>
-        <div className="card-body">
-          <h3 className="h6 su-page-title mb-2">📋 Registration</h3>
-          <div className="small text-muted mb-3">Edit draft and resubmit when required.</div>
+          <h3 className="h6 su-page-title mb-2">
+            <span className="su-title-with-icon">
+              <PortalIcon src={studentSidebarIcons.registration} />
+              <span>Registration</span>
+            </span>
+          </h3>
+          <div className="small text-muted mb-3">{getRegistrationSectionCopy(detail.case.status)}</div>
           <div className="d-flex flex-wrap justify-content-between align-items-center gap-2">
             <strong>{detail.registration?.title || 'Untitled'}</strong>
-            <div className="d-flex flex-wrap gap-2">
-              {canEditRegistration(detail.case.status) && (
-                <button
-                  className="btn btn-outline-secondary btn-sm"
-                  style={{ borderRadius: '999px' }}
-                  onClick={() => navigate(`/student/registrations/${detail.case.id}/edit`)}
-                >
-                  Edit Registration
-                </button>
-              )}
-              <button
-                className="btn btn-primary btn-sm"
-                style={{ borderRadius: '999px' }}
-                onClick={() => void submitRegistration()}
-                disabled={!canSubmitRegistration(detail.case.status)}
-              >
-                📨 Submit for Approval
-              </button>
-            </div>
+            {(actionVisibility?.showEditRegistration || actionVisibility?.showSubmitRegistration) && (
+              <div className="d-flex flex-wrap gap-2">
+                {actionVisibility?.showEditRegistration && (
+                  <button
+                    className="btn btn-outline-secondary btn-sm"
+                    style={{ borderRadius: '999px' }}
+                    onClick={() => navigate(`/student/registrations/${detail.case.id}/edit`)}
+                  >
+                    Edit Registration
+                  </button>
+                )}
+                {actionVisibility?.showSubmitRegistration && (
+                  <button
+                    className="btn btn-primary btn-sm"
+                    style={{ borderRadius: '999px' }}
+                    onClick={() => void submitRegistration()}
+                  >
+                    Submit for Approval
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Submission Versions */}
-      <div className="su-card mb-3 fade-in" style={{ animationDelay: '0.2s' }}>
+      <div className="su-card mb-3 fade-in" style={{ animationDelay: '0.15s' }}>
         <div className="card-body">
           <div className="d-flex flex-wrap justify-content-between align-items-center mb-3">
-            <h3 className="h6 mb-0 su-page-title">📄 Submission Versions</h3>
-            <button
-              className="btn btn-outline-primary btn-sm"
-              style={{ borderRadius: '999px' }}
-              onClick={() => navigate(`/student/cases/${detail.case.id}/submission`)}
-              disabled={!canUploadSubmission(detail.case.status)}
-            >
-              Open Submission Page
-            </button>
+            <h3 className="h6 mb-0 su-page-title">
+              <span className="su-title-with-icon">
+                <PortalIcon src={studentSidebarIcons.submission} />
+                <span>Submission Versions</span>
+              </span>
+            </h3>
+            {actionVisibility?.showSubmissionPage && (
+                <button
+                  className="btn btn-outline-primary btn-sm"
+                  style={{ borderRadius: '999px' }}
+                  onClick={() => navigate(`/student/cases/${detail.case.id}/submission`)}
+                >
+                  Open Submission Page
+                </button>
+            )}
           </div>
+          <div className="small text-muted mb-3">{getSubmissionSectionCopy(detail.case.status)}</div>
           {(detail.versions || []).length === 0 ? (
-            <div className="text-muted small text-center py-3">No submission versions yet.</div>
+            <div className="text-muted small text-center py-3">No files have been uploaded for this case yet.</div>
           ) : (
             <div className="vstack gap-2">
               {(detail.versions || []).map((version) => (
@@ -226,11 +344,14 @@ export default function StudentCaseDetailPage() {
       </div>
 
       {/* Checklist */}
-      <div className="su-card mb-3 fade-in" style={{ animationDelay: '0.25s' }}>
+      <div className="su-card mb-3 fade-in" style={{ animationDelay: '0.2s' }}>
         <div className="card-body">
-          <h3 className="h6 su-page-title mb-3">✅ Checklist Results</h3>
+          <h3 className="h6 su-page-title mb-3">Checklist Results</h3>
+          <div className="small text-muted mb-3">
+            Review library checklist outcomes here. Failed items and notes usually explain why revisions were requested.
+          </div>
           {checklist.length === 0 ? (
-            <div className="text-muted small text-center py-3">Checklist has not been reviewed yet.</div>
+            <div className="text-muted small text-center py-3">Checklist review has not started yet.</div>
           ) : (
             <div className="vstack gap-2">
               {checklist.map((result) => (
@@ -252,20 +373,26 @@ export default function StudentCaseDetailPage() {
 
       {/* Clearance */}
       {showClearance && (
-        <div className="su-card mb-3 fade-in" style={{ animationDelay: '0.3s' }}>
+        <div className="su-card mb-3 fade-in" style={{ animationDelay: '0.25s' }}>
           <div className="card-body">
             <div className="d-flex flex-wrap justify-content-between align-items-center gap-2">
               <div>
-                <h3 className="h6 mb-1 su-page-title">🏛️ Library Clearance</h3>
+                <h3 className="h6 mb-1 su-page-title">
+                  <span className="su-title-with-icon">
+                    <PortalIcon src={adminSidebarIcons.clearance} />
+                    <span>Library Clearance</span>
+                  </span>
+                </h3>
                 <p className="small text-muted mb-0">
-                  Submit at APPROVED_FOR_CLEARANCE, then open to track status and updates.
+                  {canSubmitClearance(detail.case.status)
+                    ? 'Submit the clearance form now to move the case toward publication.'
+                    : 'Open the clearance form to review what you submitted and wait for clearance approval.'}
                 </p>
               </div>
               <button
                 className="btn btn-primary btn-sm"
                 style={{ borderRadius: '999px' }}
                 onClick={() => navigate(`/student/clearance/${detail.case.id}`)}
-                disabled={!clearanceActionEnabled}
               >
                 {clearanceButtonLabel}
               </button>
@@ -275,11 +402,14 @@ export default function StudentCaseDetailPage() {
       )}
 
       {/* Comments */}
-      <div className="su-card fade-in" style={{ animationDelay: '0.35s' }}>
+      <div className="su-card mb-3 fade-in" style={{ animationDelay: '0.3s' }}>
         <div className="card-body">
-          <h3 className="h6 su-page-title mb-3">💬 Comments</h3>
+          <h3 className="h6 su-page-title mb-3">Comments</h3>
+          <div className="small text-muted mb-3">
+            Use comments to review feedback from supervisors and library staff.
+          </div>
           {(detail.comments || []).length === 0 ? (
-            <div className="text-muted small text-center py-3">No comments yet.</div>
+            <div className="text-muted small text-center py-3">No staff comments have been added yet.</div>
           ) : (
             <div className="vstack gap-2">
               {(detail.comments || []).map((comment) => (
@@ -299,6 +429,17 @@ export default function StudentCaseDetailPage() {
               ))}
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Timeline */}
+      <div className="su-card fade-in" style={{ animationDelay: '0.35s' }}>
+        <div className="card-body">
+          <h3 className="h6 mb-3 su-page-title">Activity Timeline</h3>
+          <div className="small text-muted mb-3">
+            This timeline shows the case history so you can confirm what has already been completed.
+          </div>
+          <CaseTimeline items={detail.timeline ?? []} />
         </div>
       </div>
     </ShellLayout>

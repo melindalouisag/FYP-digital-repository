@@ -154,8 +154,8 @@ class AdminClearancePublishingIntegrationTest {
 
     mockMvc.perform(get("/api/admin/publish").session(adminSession))
       .andExpect(status().isOk())
-      .andExpect(jsonPath("$[*].caseId", hasItem(readyCase.getId().intValue())))
-      .andExpect(jsonPath("$[*].title", hasItem("Publish Ready Case")));
+      .andExpect(jsonPath("$.items[*].caseId", hasItem(readyCase.getId().intValue())))
+      .andExpect(jsonPath("$.items[*].title", hasItem("Publish Ready Case")));
 
     String detailBody = mockMvc.perform(get("/api/admin/publish/{caseId}", readyCase.getId()).session(adminSession))
       .andExpect(status().isOk())

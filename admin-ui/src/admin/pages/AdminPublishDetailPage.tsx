@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
 import DownloadFilenameLink from '../../lib/components/DownloadFilenameLink';
 import { adminApi } from '../../lib/api/admin';
+import PortalIcon from '../../lib/components/PortalIcon';
+import { adminSidebarIcons } from '../../lib/portalIcons';
 import type { AdminPublishDetail } from '../../lib/types/workflow';
 
 export default function AdminPublishDetailPage() {
@@ -47,7 +49,7 @@ export default function AdminPublishDetailPage() {
     setMessage('');
     try {
       await adminApi.publish(Number(caseId));
-      setMessage('Published successfully! 🎉');
+      setMessage('Case published to repository.');
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Publish action failed.');
@@ -71,7 +73,7 @@ export default function AdminPublishDetailPage() {
     setMessage('');
     try {
       await adminApi.unpublish(Number(caseId), trimmed);
-      setMessage('Unpublished and sent back for correction.');
+      setMessage('Case removed from the repository and returned for correction.');
       setUnpublishReason('');
       await load();
     } catch (err) {
@@ -82,13 +84,13 @@ export default function AdminPublishDetailPage() {
   };
 
   return (
-    <ShellLayout title="Publish Detail" subtitle="Review metadata and publish to repository">
+    <ShellLayout title="Publishing Detail" subtitle="Review metadata, the latest submission, and final publishing actions">
       <button className="btn btn-outline-secondary btn-sm mb-4" style={{ borderRadius: '999px' }} onClick={() => navigate('/admin/publish')}>
-        ← Back to Publish Manager
+        Return to Publishing
       </button>
 
-      {error && <div className="alert alert-danger d-flex align-items-center gap-2" style={{ borderRadius: '0.75rem' }}><span>⚠️</span> {error}</div>}
-      {message && <div className="alert alert-success d-flex align-items-center gap-2" style={{ borderRadius: '0.75rem' }}><span>✅</span> {message}</div>}
+      {error && <div className="alert alert-danger" style={{ borderRadius: '0.75rem' }}>{error}</div>}
+      {message && <div className="alert alert-success" style={{ borderRadius: '0.75rem' }}>{message}</div>}
 
       {loading && (
         <div className="text-center py-5">
@@ -103,7 +105,15 @@ export default function AdminPublishDetailPage() {
           <div className="col-lg-6">
             <div className="su-card h-100">
               <div className="card-body p-4">
-                <h3 className="h6 mb-3 su-page-title">📋 Case Summary</h3>
+                <h3 className="h6 mb-3 su-page-title">
+                  <span className="su-title-with-icon">
+                    <PortalIcon src={adminSidebarIcons.publishing} />
+                    <span>Case Summary</span>
+                  </span>
+                </h3>
+                <div className="text-muted small mb-3">
+                  Confirm the case status and current repository readiness before publishing or unpublishing.
+                </div>
                 {[
                   { label: 'Title', value: detail.title || `Case #${detail.caseId}` },
                   { label: 'Type', value: detail.type },
@@ -123,7 +133,15 @@ export default function AdminPublishDetailPage() {
           <div className="col-lg-6">
             <div className="su-card h-100">
               <div className="card-body p-4">
-                <h3 className="h6 mb-3 su-page-title">📄 Latest Submission</h3>
+                <h3 className="h6 mb-3 su-page-title">
+                  <span className="su-title-with-icon">
+                    <PortalIcon src={adminSidebarIcons.submission} />
+                    <span>Latest Submission</span>
+                  </span>
+                </h3>
+                <div className="text-muted small mb-3">
+                  Review the final uploaded file before publishing the repository record.
+                </div>
                 {detail.latestSubmission ? (
                   <>
                     <div className="d-flex py-2" style={{ borderBottom: '1px solid #f0f0f0' }}>
@@ -146,7 +164,7 @@ export default function AdminPublishDetailPage() {
                     ))}
                   </>
                 ) : (
-                  <div className="text-muted">No submission file found.</div>
+                  <div className="text-muted">No submission file is available for this case.</div>
                 )}
               </div>
             </div>
@@ -156,7 +174,10 @@ export default function AdminPublishDetailPage() {
           <div className="col-12">
             <div className="su-card">
               <div className="card-body p-4">
-                <h3 className="h6 mb-3 su-page-title">📑 Metadata</h3>
+                <h3 className="h6 mb-3 su-page-title">Repository Metadata</h3>
+                <div className="text-muted small mb-3">
+                  Review the metadata below as it will appear in the repository record after publishing.
+                </div>
                 <div className="row g-3">
                   {[
                     { label: 'Title', value: detail.metadata?.title, col: 6 },
@@ -188,14 +209,13 @@ export default function AdminPublishDetailPage() {
                       disabled={working}
                       onClick={() => void publish()}
                     >
-                      {workingAction === 'publish' ? '⏳ Publishing...' : '🚀 Publish to Repository'}
+                      {workingAction === 'publish' ? 'Publishing...' : 'Publish to Repository'}
                     </button>
                   )}
 
                   {isPublished && (
                     <div className="mt-3 p-3" style={{ background: '#fef3f2', borderRadius: '0.75rem', border: '1px solid #fecaca' }}>
-                      <div className="d-flex align-items-center gap-2 mb-2">
-                        <span>⚠️</span>
+                      <div className="mb-2">
                         <strong style={{ color: '#dc3545' }}>Unpublish</strong>
                       </div>
                       <p className="small text-muted mb-2">
@@ -216,14 +236,14 @@ export default function AdminPublishDetailPage() {
                         disabled={!canUnpublish}
                         onClick={() => void unpublish()}
                       >
-                        {workingAction === 'unpublish' ? '⏳ Unpublishing...' : '❌ Unpublish & Send Back'}
+                        {workingAction === 'unpublish' ? 'Unpublishing...' : 'Unpublish and Return for Correction'}
                       </button>
                     </div>
                   )}
 
                   {!isReadyToPublish && !isPublished && (
                     <div className="text-muted p-3" style={{ background: '#f8fafc', borderRadius: '0.5rem' }}>
-                      This case is not in a publishable state.
+                      This case is not currently ready for publication.
                     </div>
                   )}
                 </div>

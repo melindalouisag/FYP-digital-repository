@@ -95,8 +95,8 @@ class AdminReviewIntegrationTest {
 
     mockMvc.perform(get("/api/admin/review").session(adminSession))
       .andExpect(status().isOk())
-      .andExpect(jsonPath("$[*].id", hasItem(reviewCase.getId().intValue())))
-      .andExpect(jsonPath("$[*].title", hasItem("Admin Detail Case")));
+      .andExpect(jsonPath("$.items[*].id", hasItem(reviewCase.getId().intValue())))
+      .andExpect(jsonPath("$.items[*].title", hasItem("Admin Detail Case")));
 
     String detailBody = mockMvc.perform(get("/api/admin/cases/{caseId}", reviewCase.getId()).session(adminSession))
       .andExpect(status().isOk())

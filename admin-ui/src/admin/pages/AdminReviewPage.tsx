@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
+import PortalIcon from '../../lib/components/PortalIcon';
 import { adminApi } from '../../lib/api/admin';
+import { adminSidebarIcons } from '../../lib/portalIcons';
 import type { AdminStudentReviewGroup } from '../../lib/types/workflow';
 
 export default function AdminReviewPage() {
@@ -40,7 +42,7 @@ export default function AdminReviewPage() {
   ), [groups]);
 
   return (
-    <ShellLayout title="Submission Review" subtitle="Cases forwarded to library for checklist review">
+    <ShellLayout title="Submission Review" subtitle="Review library-stage cases grouped by student">
       {error && <div className="alert alert-danger">{error}</div>}
 
       {loading && (
@@ -52,9 +54,19 @@ export default function AdminReviewPage() {
 
       {!loading && rows.length === 0 && (
         <div className="su-empty-state">
-          <div className="su-empty-icon">📝</div>
-          <h5>No Cases in Review</h5>
-          <p className="text-muted">Review queue is empty.</p>
+          <div className="su-empty-icon">
+            <PortalIcon src={adminSidebarIcons.submission} size={40} />
+          </div>
+          <h5>No Cases Awaiting Library Review</h5>
+          <p className="text-muted">No cases are waiting for library checklist review.</p>
+        </div>
+      )}
+
+      {!loading && rows.length > 0 && (
+        <div className="mb-3">
+          <p className="text-muted small mb-0">
+            Select a student to open case-level checklist work, review history, and final library decisions.
+          </p>
         </div>
       )}
 
@@ -71,8 +83,8 @@ export default function AdminReviewPage() {
                 <div className="d-flex justify-content-between align-items-start mb-2">
                   <div>
                     <h3 className="h6 mb-1 fw-bold">{group.studentName}</h3>
-                    <div className="text-muted small">
-                      🆔 {group.studentIdNumber || 'N/A'} • 🏛️ {[group.faculty, group.program].filter(Boolean).join(' / ') || 'N/A'}
+                    <div className="su-meta-item">
+                      <strong>Student ID:</strong> {group.studentIdNumber || 'N/A'} • {[group.faculty, group.program].filter(Boolean).join(' / ') || 'N/A'}
                     </div>
                   </div>
                   <span className="badge bg-primary-subtle text-primary-emphasis" style={{ borderRadius: '999px' }}>

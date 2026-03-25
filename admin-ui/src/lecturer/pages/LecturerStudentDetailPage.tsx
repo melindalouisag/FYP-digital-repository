@@ -4,6 +4,8 @@ import ShellLayout from '../../layout/ShellLayout';
 import { lecturerApi, type LecturerCaseWorkItem, type LecturerStudentGroup, type LecturerSubmissionVersion } from '../../lib/api/lecturer';
 import CaseTimeline from '../../lib/components/CaseTimeline';
 import DownloadFilenameLink from '../../lib/components/DownloadFilenameLink';
+import PortalIcon from '../../lib/components/PortalIcon';
+import { lecturerSidebarIcons } from '../../lib/portalIcons';
 import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 import type { TimelineItem } from '../../lib/types/workflow';
 
@@ -121,17 +123,17 @@ export default function LecturerStudentDetailPage() {
     setSubmissionsOpen((prev) => ({ ...prev, [caseId]: !isOpen }));
   };
 
-  const renderTimestamp = (value?: string | null) => (value ? new Date(value).toLocaleString() : '—');
+  const renderTimestamp = (value?: string | null) => (value ? new Date(value).toLocaleString() : 'N/A');
 
   return (
-    <ShellLayout title="Student Detail" subtitle="Case status, timestamps, and supervisor actions">
-      {error && <div className="alert alert-danger d-flex align-items-center gap-2" style={{ borderRadius: '0.75rem' }}><span>⚠️</span> {error}</div>}
+    <ShellLayout title="Student Cases" subtitle="Review case history, submission files, and supervisor decisions for the selected student">
+      {error && <div className="alert alert-danger" style={{ borderRadius: '0.75rem' }}>{error}</div>}
 
       <div className="d-flex flex-wrap align-items-center gap-2 mb-4">
         <button className="btn btn-outline-secondary btn-sm" style={{ borderRadius: '999px' }} onClick={() => navigate(-1)}>
-          ← Back
+          Return to Previous Page
         </button>
-        <label className="form-label mb-0 fw-semibold small">📅 Year:</label>
+        <label className="form-label mb-0 fw-semibold small">Year:</label>
         <select
           className="form-select form-select-sm"
           style={{ width: 120, borderRadius: '999px' }}
@@ -153,9 +155,11 @@ export default function LecturerStudentDetailPage() {
 
       {!loading && !group && (
         <div className="su-empty-state">
-          <div className="su-empty-icon">🎓</div>
+          <div className="su-empty-icon">
+            <PortalIcon src={lecturerSidebarIcons.students} size={40} />
+          </div>
           <h5>Student Not Found</h5>
-          <p className="text-muted">No data found for selected year.</p>
+          <p className="text-muted">No supervised student record is available for the selected year.</p>
         </div>
       )}
 
@@ -173,14 +177,17 @@ export default function LecturerStudentDetailPage() {
                 </div>
                 <div>
                   <h3 className="h5 mb-0 fw-bold">{group.studentName || group.studentEmail}</h3>
-                  <div className="text-muted small">
-                    🆔 {group.studentIdNumber ?? 'N/A'} • 🏛️ {group.faculty ?? 'N/A'} {group.program ? `• 📖 ${group.program}` : ''}
+                  <div className="su-meta-item">
+                    <strong>Student ID:</strong> {group.studentIdNumber ?? 'N/A'} / {group.faculty ?? 'N/A'} {group.program ? ` / ${group.program}` : ''}
                   </div>
                 </div>
                 <span className="badge bg-primary-subtle text-primary-emphasis ms-auto" style={{ borderRadius: '999px', fontSize: '0.8rem' }}>
                   {group.cases.length} case{group.cases.length > 1 ? 's' : ''}
                 </span>
               </div>
+              <p className="text-muted small mb-0 mt-3">
+                Use the case cards below to review case history, open submission files, and complete supervisor decisions when they are available.
+              </p>
             </div>
           </div>
 
@@ -199,7 +206,7 @@ export default function LecturerStudentDetailPage() {
                         <div className="d-flex flex-wrap gap-2 align-items-center">
                           <span className="badge bg-dark-subtle text-dark-emphasis" style={{ borderRadius: '999px' }}>{c.type}</span>
                           <span className={`badge status-badge ${statusBadgeClass(c.status)}`}>{formatStatus(c.status)}</span>
-                          {c.registrationYear && <span className="text-muted small">📅 {c.registrationYear}</span>}
+                          {c.registrationYear && <span className="text-muted small">Year {c.registrationYear}</span>}
                         </div>
                       </div>
                       <div className="text-md-end">
@@ -215,7 +222,7 @@ export default function LecturerStudentDetailPage() {
                             style={{ borderRadius: '999px' }}
                             href={`/api/lecturer/cases/${c.caseId}/submissions/latest/download`}
                           >
-                            ⬇️ Download Latest
+                            Download Latest
                           </a>
                         ) : (
                           <span className="text-muted small">No submission file yet.</span>
@@ -226,14 +233,14 @@ export default function LecturerStudentDetailPage() {
                     {/* Timestamps */}
                     <div className="row g-2 mb-3">
                       {[
-                        { label: 'Last Submission', value: renderTimestamp(c.latestSubmissionAt), icon: '📄' },
-                        { label: 'Lecturer Feedback', value: renderTimestamp(c.lastLecturerFeedbackAt), icon: '💬' },
-                        { label: 'Forwarded', value: renderTimestamp(c.lecturerForwardedAt), icon: '📦' },
-                        { label: 'Library Feedback', value: renderTimestamp(c.lastLibraryFeedbackAt), icon: '🏛️' },
+                        { label: 'Last Submission', value: renderTimestamp(c.latestSubmissionAt) },
+                        { label: 'Lecturer Feedback', value: renderTimestamp(c.lastLecturerFeedbackAt) },
+                        { label: 'Forwarded', value: renderTimestamp(c.lecturerForwardedAt) },
+                        { label: 'Library Feedback', value: renderTimestamp(c.lastLibraryFeedbackAt) },
                       ].map((ts) => (
                         <div className="col-6 col-md-3" key={ts.label}>
                           <div className="p-2" style={{ background: '#f8fafc', borderRadius: '0.5rem', fontSize: '0.78rem' }}>
-                            <div className="text-muted">{ts.icon} {ts.label}</div>
+                            <div className="text-muted">{ts.label}</div>
                             <div className="fw-semibold">{ts.value}</div>
                           </div>
                         </div>
@@ -243,17 +250,17 @@ export default function LecturerStudentDetailPage() {
                     {/* Toggle buttons */}
                     <div className="d-flex flex-wrap gap-2 mb-3">
                       <button className="btn btn-outline-secondary btn-sm" style={{ borderRadius: '999px' }} onClick={() => void toggleTimeline(c.caseId)}>
-                        {timelineOpen[c.caseId] ? '📜 Hide Timeline' : '📜 Show Timeline'}
+                        {timelineOpen[c.caseId] ? 'Hide Timeline' : 'Show Timeline'}
                       </button>
                       <button className="btn btn-outline-secondary btn-sm" style={{ borderRadius: '999px' }} onClick={() => void toggleSubmissions(c.caseId)}>
-                        {submissionsOpen[c.caseId] ? '📄 Hide Submissions' : '📄 View Submissions'}
+                        {submissionsOpen[c.caseId] ? 'Hide Submission History' : 'Show Submission History'}
                       </button>
                     </div>
 
                     {/* Timeline */}
                     {timelineOpen[c.caseId] && (
                       <div className="mb-3 p-3" style={{ background: '#f8fafc', borderRadius: '0.6rem' }}>
-                        <h6 className="fw-bold mb-2">📜 Timeline</h6>
+                        <h6 className="fw-bold mb-2">Timeline</h6>
                         <CaseTimeline items={timelines[c.caseId] ?? []} />
                       </div>
                     )}
@@ -261,9 +268,17 @@ export default function LecturerStudentDetailPage() {
                     {/* Submissions */}
                     {submissionsOpen[c.caseId] && (
                       <div className="mb-3 p-3" style={{ background: '#f8fafc', borderRadius: '0.6rem' }}>
-                        <h6 className="fw-bold mb-2">📄 Submissions</h6>
+                        <h6 className="fw-bold mb-2">
+                          <span className="su-title-with-icon">
+                            <PortalIcon src={lecturerSidebarIcons.review} />
+                            <span>Submission History</span>
+                          </span>
+                        </h6>
+                        <div className="text-muted small mb-2">
+                          Review the uploaded versions here before recording feedback or forwarding the case to library review.
+                        </div>
                         {(submissions[c.caseId] ?? []).length === 0 ? (
-                          <div className="text-muted small">No submission versions yet.</div>
+                          <div className="text-muted small">No submission versions are available.</div>
                         ) : (
                           <div className="vstack gap-2">
                             {(submissions[c.caseId] ?? []).map((version) => (
@@ -271,7 +286,7 @@ export default function LecturerStudentDetailPage() {
                                 <div>
                                   <div className="d-flex flex-wrap align-items-center gap-2">
                                     <span className="fw-semibold">v{version.versionNumber}</span>
-                                    <span className="text-muted">•</span>
+                                    <span className="text-muted">/</span>
                                     <DownloadFilenameLink
                                       href={`/api/lecturer/cases/${c.caseId}/submissions/${version.id}/download`}
                                       filename={version.originalFilename || `Submission v${version.versionNumber}`}
@@ -292,12 +307,15 @@ export default function LecturerStudentDetailPage() {
                     {/* Supervisor Actions */}
                     {canAct && (
                       <div className="p-3" style={{ background: '#f0f9ff', borderRadius: '0.6rem', border: '1px solid #bae6fd' }}>
-                        <h6 className="fw-bold mb-2">⚡ Supervisor Actions</h6>
+                        <h6 className="fw-bold mb-2">Supervisor Actions</h6>
+                        <div className="text-muted small mb-3">
+                          Record comments for the student, request correction when needed, or approve the case for library review.
+                        </div>
                         <div className="mb-2">
                           <textarea
                             className="form-control form-control-sm mb-1"
                             rows={2}
-                            placeholder="Post feedback comment..."
+                            placeholder="Enter case comment"
                             value={commentDrafts[c.caseId] ?? ''}
                             onChange={(event) =>
                               setCommentDrafts((prev) => ({ ...prev, [c.caseId]: event.target.value }))
@@ -319,14 +337,14 @@ export default function LecturerStudentDetailPage() {
                               })
                             }
                           >
-                            💬 Post Feedback
+                            Add Comment
                           </button>
                         </div>
                         <div className="mb-2">
                           <textarea
                             className="form-control form-control-sm mb-1"
                             rows={2}
-                            placeholder="Revision request reason..."
+                            placeholder="Enter correction reason"
                             value={revisionDrafts[c.caseId] ?? ''}
                             onChange={(event) =>
                               setRevisionDrafts((prev) => ({ ...prev, [c.caseId]: event.target.value }))
@@ -348,7 +366,7 @@ export default function LecturerStudentDetailPage() {
                               })
                             }
                           >
-                            🔄 Request Revision
+                            Request Correction
                           </button>
                         </div>
                         <button
@@ -357,7 +375,7 @@ export default function LecturerStudentDetailPage() {
                           disabled={busy}
                           onClick={() => void runAction(c.caseId, () => lecturerApi.approveAndForward(c.caseId).then(() => undefined))}
                         >
-                          ✅ Approve & Forward to Library
+                          Approve and Forward to Library
                         </button>
                       </div>
                     )}
@@ -369,9 +387,11 @@ export default function LecturerStudentDetailPage() {
 
           {group.cases.length === 0 && (
             <div className="su-empty-state mt-3">
-              <div className="su-empty-icon">📁</div>
-              <h5>No Cases</h5>
-              <p className="text-muted">No cases available for this student.</p>
+              <div className="su-empty-icon">
+                <PortalIcon src={lecturerSidebarIcons.students} size={40} />
+              </div>
+              <h5>No Cases for This Student</h5>
+              <p className="text-muted">No cases are available for this student in the selected year.</p>
             </div>
           )}
         </>

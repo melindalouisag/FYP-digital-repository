@@ -103,9 +103,15 @@ public class LecturerWorkflowController {
   }
 
   @GetMapping("/review")
-  public List<StudentCaseSummaryResponse> reviewQueue() {
+  public PagedResponse<StudentCaseSummaryResponse> reviewQueue(
+    @RequestParam(defaultValue = "0") int page,
+    @RequestParam(defaultValue = "" + DEFAULT_PAGE_SIZE) int size
+  ) {
     User me = currentUser.requireCurrentUser();
-    return lecturerReviewService.reviewQueue(me);
+    return lecturerReviewService.reviewQueue(
+      me,
+      PageRequest.of(Math.max(page, 0), normalizePageSize(size))
+    );
   }
 
   @GetMapping("/pending-supervisor")

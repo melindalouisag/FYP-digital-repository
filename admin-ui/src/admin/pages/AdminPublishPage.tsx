@@ -2,24 +2,44 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
 import { adminApi } from '../../lib/api/admin';
-import type { AdminPublishQueueItem } from '../../lib/types/workflow';
+import PortalIcon from '../../lib/components/PortalIcon';
+import { adminSidebarIcons } from '../../lib/portalIcons';
+import type { AdminPublishQueueItem, PagedResponse } from '../../lib/types/workflow';
 import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
+
+const PAGE_SIZE = 10;
+
+const EMPTY_PAGE: PagedResponse<AdminPublishQueueItem> = {
+  items: [],
+  page: 0,
+  size: PAGE_SIZE,
+  totalElements: 0,
+  totalPages: 0,
+  hasNext: false,
+  hasPrevious: false,
+};
 
 export default function AdminPublishPage() {
   const navigate = useNavigate();
-  const [cases, setCases] = useState<AdminPublishQueueItem[]>([]);
+  const [pageData, setPageData] = useState<PagedResponse<AdminPublishQueueItem>>(EMPTY_PAGE);
+  const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [workingCaseId, setWorkingCaseId] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
-  const load = async () => {
+  const load = async (requestedPage: number) => {
     setLoading(true);
     setError('');
     try {
-      setCases(await adminApi.publishQueue());
+      const response = await adminApi.publishQueue({ page: requestedPage, size: PAGE_SIZE });
+      if (response.totalPages > 0 && requestedPage >= response.totalPages) {
+        setPage(response.totalPages - 1);
+        return;
+      }
+      setPageData(response);
     } catch (err) {
-      setCases([]);
+      setPageData(EMPTY_PAGE);
       setError(err instanceof Error ? err.message : 'Failed to load publish queue.');
     } finally {
       setLoading(false);
@@ -27,8 +47,8 @@ export default function AdminPublishPage() {
   };
 
   useEffect(() => {
-    void load();
-  }, []);
+    void load(page);
+  }, [page]);
 
   const publishCase = async (caseId: number) => {
     setWorkingCaseId(caseId);
@@ -37,7 +57,7 @@ export default function AdminPublishPage() {
     try {
       await adminApi.publish(caseId);
       setMessage(`Case #${caseId} published to repository.`);
-      await load();
+      await load(page);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Publish action failed.');
     } finally {
@@ -45,10 +65,14 @@ export default function AdminPublishPage() {
     }
   };
 
+  const cases = pageData.items;
+  const pageStart = pageData.totalElements === 0 ? 0 : pageData.page * pageData.size + 1;
+  const pageEnd = pageStart === 0 ? 0 : pageStart + cases.length - 1;
+
   return (
-    <ShellLayout title="Publish Manager" subtitle="Publish cases that are ready for repository release">
-      {error && <div className="alert alert-danger d-flex align-items-center gap-2" style={{ borderRadius: '0.75rem' }}><span>⚠️</span> {error}</div>}
-      {message && <div className="alert alert-success d-flex align-items-center gap-2" style={{ borderRadius: '0.75rem' }}><span>✅</span> {message}</div>}
+    <ShellLayout title="Publishing" subtitle="Review cases that are ready for repository release and publish them when metadata is complete">
+      {error && <div className="alert alert-danger" style={{ borderRadius: '0.75rem' }}>{error}</div>}
+      {message && <div className="alert alert-success" style={{ borderRadius: '0.75rem' }}>{message}</div>}
 
       {loading && (
         <div className="text-center py-5">
@@ -59,9 +83,19 @@ export default function AdminPublishPage() {
 
       {!loading && cases.length === 0 && (
         <div className="su-empty-state">
-          <div className="su-empty-icon">🚀</div>
-          <h5>Nothing to Publish</h5>
-          <p className="text-muted">No cases ready to be published yet.</p>
+          <div className="su-empty-icon">
+            <PortalIcon src={adminSidebarIcons.publishing} size={40} />
+          </div>
+          <h5>No Cases Ready for Publication</h5>
+          <p className="text-muted">No cases are ready for publication at this time.</p>
+        </div>
+      )}
+
+      {!loading && cases.length > 0 && (
+        <div className="mb-3">
+          <p className="text-muted small mb-0">
+            Open a case to review the latest submission and metadata, or publish directly from this queue when everything is complete.
+          </p>
         </div>
       )}
 
@@ -94,7 +128,7 @@ export default function AdminPublishPage() {
                       void publishCase(c.caseId);
                     }}
                   >
-                    {workingCaseId === c.caseId ? '⏳ Publishing...' : '🚀 Publish'}
+                    {workingCaseId === c.caseId ? 'Publishing...' : 'Publish to Repository'}
                   </button>
                   <button
                     className="btn btn-outline-primary btn-sm"
@@ -104,7 +138,7 @@ export default function AdminPublishPage() {
                       navigate(`/admin/publish/${c.caseId}`);
                     }}
                   >
-                    Open Details →
+                    Open Publishing Detail
                   </button>
                 </div>
               </div>
@@ -112,6 +146,43 @@ export default function AdminPublishPage() {
           </div>
         ))}
       </div>
+
+      {!loading && pageData.totalElements > 0 && (
+        <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-4">
+          <div className="text-muted small">
+            Showing {pageStart}-{pageEnd} of {pageData.totalElements}
+          </div>
+          <nav aria-label="Publish queue pagination">
+            <ul className="pagination pagination-sm mb-0">
+              <li className={`page-item ${!pageData.hasPrevious || loading ? 'disabled' : ''}`}>
+                <button
+                  className="page-link"
+                  type="button"
+                  onClick={() => setPage((current) => Math.max(current - 1, 0))}
+                  disabled={!pageData.hasPrevious || loading}
+                >
+                  Previous
+                </button>
+              </li>
+              <li className="page-item disabled">
+                <span className="page-link">
+                  Page {pageData.page + 1} of {Math.max(pageData.totalPages, 1)}
+                </span>
+              </li>
+              <li className={`page-item ${!pageData.hasNext || loading ? 'disabled' : ''}`}>
+                <button
+                  className="page-link"
+                  type="button"
+                  onClick={() => setPage((current) => current + 1)}
+                  disabled={!pageData.hasNext || loading}
+                >
+                  Next
+                </button>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      )}
     </ShellLayout>
   );
 }

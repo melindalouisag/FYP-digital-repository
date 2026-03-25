@@ -85,8 +85,8 @@ class LecturerReviewIntegrationTest {
 
     mockMvc.perform(get("/api/lecturer/review").session(lecturerSession))
       .andExpect(status().isOk())
-      .andExpect(jsonPath("$[*].id", hasItem(reviewCase.getId().intValue())))
-      .andExpect(jsonPath("$[*].title", hasItem("Lecturer DTO Case")));
+      .andExpect(jsonPath("$.items[*].id", hasItem(reviewCase.getId().intValue())))
+      .andExpect(jsonPath("$.items[*].title", hasItem("Lecturer DTO Case")));
 
     mockMvc.perform(get("/api/lecturer/students").session(lecturerSession))
       .andExpect(status().isOk())

@@ -159,7 +159,7 @@ class WorkflowGateIntegrationTest {
 
     mockMvc.perform(get("/api/admin/review").session(adminSession))
       .andExpect(status().isOk())
-      .andExpect(jsonPath("$[*].id", not(hasItem(caseId.intValue()))));
+      .andExpect(jsonPath("$.items[*].id", not(hasItem(caseId.intValue()))));
 
     mockMvc.perform(post("/api/lecturer/cases/{caseId}/approve-and-forward", caseId)
         .session(lecturerSession))
@@ -167,7 +167,7 @@ class WorkflowGateIntegrationTest {
 
     mockMvc.perform(get("/api/admin/review").session(adminSession))
       .andExpect(status().isOk())
-      .andExpect(jsonPath("$[*].id", hasItem(caseId.intValue())));
+      .andExpect(jsonPath("$.items[*].id", hasItem(caseId.intValue())));
   }
 
   @Test

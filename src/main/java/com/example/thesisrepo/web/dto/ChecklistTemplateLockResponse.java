@@ -4,5 +4,5 @@ public record ChecklistTemplateLockResponse(
   Long templateId,
   boolean locked,
   ChecklistTemplateDetailResponse.EditLockResponse lock
-) {
+) implements ChecklistTemplateActionResponse {
 }

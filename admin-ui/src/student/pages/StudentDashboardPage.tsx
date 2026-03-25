@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
 import { studentApi } from '../../lib/api/student';
+import PortalIcon from '../../lib/components/PortalIcon';
+import { studentSidebarIcons } from '../../lib/portalIcons';
 import type { CaseSummary } from '../../lib/types/workflow';
 import { canSubmitClearance, canSubmitRegistration, canUploadSubmission, formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 import { isNavigationActivationKey, resolveStudentCaseNavigation, selectDashboardCases } from '../lib/caseNavigation';
@@ -47,7 +49,7 @@ export default function StudentDashboardPage() {
   );
 
   return (
-    <ShellLayout title="Student Dashboard" subtitle="Overview of cases that need attention now or were updated most recently">
+    <ShellLayout title="Student Dashboard" subtitle="Start with cases that need your action, then monitor your most recent progress">
       {/* ===== STAT CARDS ===== */}
       <div className="row g-3 mb-4">
         <div className="col-6 col-md-3">
@@ -83,10 +85,10 @@ export default function StudentDashboardPage() {
       {/* ===== ACTIONS BAR ===== */}
       <div className="d-flex justify-content-between align-items-center mb-3">
         <button className="btn btn-primary" onClick={() => navigate('/student/registrations/new')}>
-          ➕ New Publication Registration
+          New Publication Registration
         </button>
         <button className="btn btn-outline-secondary btn-sm" onClick={() => void load()} disabled={loading}>
-          {loading ? <><span className="su-spinner d-inline-block me-1" style={{ width: '0.9rem', height: '0.9rem', borderWidth: 2 }} /> Loading...</> : '🔄 Refresh'}
+          {loading ? <><span className="su-spinner d-inline-block me-1" style={{ width: '0.9rem', height: '0.9rem', borderWidth: 2 }} /> Loading...</> : 'Refresh'}
         </button>
       </div>
 
@@ -94,9 +96,11 @@ export default function StudentDashboardPage() {
 
       {!loading && cases.length === 0 && (
         <div className="su-empty-state">
-          <div className="su-empty-icon">📁</div>
+          <div className="su-empty-icon">
+            <PortalIcon src={studentSidebarIcons.registration} size={40} />
+          </div>
           <h5>No Publication Cases Yet</h5>
-          <p className="text-muted">Start by creating a new publication registration to begin the submission process.</p>
+          <p className="text-muted">Create a publication registration when you are ready to start a thesis or article submission.</p>
           <button className="btn btn-primary" onClick={() => navigate('/student/registrations/new')}>
             Create First Registration
           </button>
@@ -105,20 +109,22 @@ export default function StudentDashboardPage() {
 
       {!loading && cases.length > 0 && visibleCases.length === 0 && (
         <div className="su-empty-state">
-          <div className="su-empty-icon">✅</div>
-          <h5>No Cases Need Attention Right Now</h5>
-          <p className="text-muted">Your dashboard only shows cases that need action first or were updated most recently.</p>
+          <div className="su-empty-icon">
+            <PortalIcon src={studentSidebarIcons.dashboard} size={40} />
+          </div>
+          <h5>No Priority Cases Right Now</h5>
+          <p className="text-muted">When a case needs your action or receives a recent update, it will appear here first.</p>
         </div>
       )}
 
       {visibleCases.length > 0 && (
         <div className="mb-3">
           <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-            <h2 className="h6 mb-0 su-page-title">Attention & Recent Activity</h2>
-            <span className="text-muted small">Showing up to {DASHBOARD_CASE_LIMIT} active cases</span>
+            <h2 className="h6 mb-0 su-page-title">Priority Cases</h2>
+            <span className="text-muted small">Showing up to {DASHBOARD_CASE_LIMIT} cases that need action or changed recently</span>
           </div>
           <p className="text-muted small mb-0">
-            Actionable cases appear first, followed by your most recently updated in-progress work.
+            Cases you can act on appear first, followed by your most recently updated in-progress work.
           </p>
         </div>
       )}
@@ -154,7 +160,7 @@ export default function StudentDashboardPage() {
                       Last updated: {c.updatedAt ? new Date(c.updatedAt).toLocaleString() : 'N/A'}
                     </p>
                     <p className="small fw-semibold text-body-secondary mb-0 mt-2">
-                      Next: {navigationTarget.label}
+                      Recommended next step: {navigationTarget.label}
                     </p>
                   </div>
                 </div>

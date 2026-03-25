@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
 import { lecturerApi, type LecturerStudentGroup } from '../../lib/api/lecturer';
+import PortalIcon from '../../lib/components/PortalIcon';
+import { lecturerSidebarIcons } from '../../lib/portalIcons';
 
 export default function LecturerReviewPage() {
   const navigate = useNavigate();
@@ -33,11 +35,11 @@ export default function LecturerReviewPage() {
   }, []);
 
   return (
-    <ShellLayout title="Submission Review" subtitle="Pending supervisor-stage cases grouped by student">
+    <ShellLayout title="Submission Review" subtitle="Review submission cases grouped by student for supervisor action">
       {error && <div className="alert alert-danger">{error}</div>}
 
       <div className="d-flex flex-wrap align-items-center gap-2 mb-4">
-        <label className="form-label mb-0 fw-semibold small">📅 Year:</label>
+        <label className="form-label mb-0 fw-semibold small">Year:</label>
         <select
           className="form-select form-select-sm"
           style={{ width: 120, borderRadius: '999px' }}
@@ -59,9 +61,19 @@ export default function LecturerReviewPage() {
 
       {!loading && groups.length === 0 && (
         <div className="su-empty-state">
-          <div className="su-empty-icon">📝</div>
-          <h5>No Pending Reviews</h5>
-          <p className="text-muted">No cases in supervisor review stage for {year}.</p>
+          <div className="su-empty-icon">
+            <PortalIcon src={lecturerSidebarIcons.review} size={40} />
+          </div>
+          <h5>No Cases Awaiting Supervisor Review</h5>
+          <p className="text-muted">No cases are waiting for supervisor review for {year}.</p>
+        </div>
+      )}
+
+      {!loading && groups.length > 0 && (
+        <div className="mb-3">
+          <p className="text-muted small mb-0">
+            Select a student record to open case history, submission files, and the supervisor actions for each case.
+          </p>
         </div>
       )}
 
@@ -84,7 +96,7 @@ export default function LecturerReviewPage() {
                     <div>
                       <h3 className="h6 mb-1 fw-bold">{group.studentName || group.studentEmail}</h3>
                       <div className="text-muted small">
-                        {group.studentIdNumber ?? 'ID N/A'} • {group.faculty ?? 'Faculty N/A'}
+                        Student ID: {group.studentIdNumber ?? 'N/A'} / {group.faculty ?? 'Faculty N/A'}
                       </div>
                     </div>
                     <span className="badge bg-primary-subtle text-primary-emphasis" style={{ borderRadius: '999px' }}>
@@ -97,7 +109,7 @@ export default function LecturerReviewPage() {
                   <div className="vstack gap-1">
                     {group.cases.map((c) => (
                       <div key={c.caseId} className="small p-2" style={{ background: '#f8fafc', borderRadius: '0.4rem' }}>
-                        📄 {c.registrationTitle || `Case #${c.caseId}`}
+                        {c.registrationTitle || `Case #${c.caseId}`}
                       </div>
                     ))}
                   </div>

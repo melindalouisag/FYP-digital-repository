@@ -687,8 +687,8 @@ export default function AdminChecklistEditorPage() {
           <div className="text-muted">Loading checklist template...</div>
         </div>
       )}
-      {error && <div className="alert alert-danger d-flex align-items-center gap-2" style={{ borderRadius: '0.75rem' }}><span>⚠️</span> {error}</div>}
-      {message && <div className="alert alert-success d-flex align-items-center gap-2" style={{ borderRadius: '0.75rem' }}><span>✅</span> {message}</div>}
+      {error && <div className="alert alert-danger" style={{ borderRadius: '0.75rem' }}>{error}</div>}
+      {message && <div className="alert alert-success" style={{ borderRadius: '0.75rem' }}>{message}</div>}
 
       {!isLoading && !selectedTemplate && (
         <div className="su-card">
@@ -1060,18 +1060,18 @@ export default function AdminChecklistEditorPage() {
                   disabled={isReadOnly}
                   onClick={addCategory}
                 >
-                  ➕ Add Category
+                  Add Category
                 </button>
               </div>
             </div>
 
             <div className="mt-4 d-flex flex-wrap gap-2">
               <button className="btn btn-primary" style={{ borderRadius: '999px', padding: '0.5rem 1.5rem' }} disabled={isMutating || isReadOnly} onClick={() => void saveDraft()}>
-                💾 Save Draft
+                Save Draft
               </button>
               {!isReadOnly && (
                 <button className="btn btn-success" style={{ borderRadius: '999px', padding: '0.5rem 1.5rem' }} disabled={isMutating} onClick={() => void activateFromEditor()}>
-                  🚀 Activate
+                  Activate
                 </button>
               )}
             </div>

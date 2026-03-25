@@ -95,6 +95,91 @@ class PublicRepositorySearchPaginationIntegrationTest {
   }
 
   @Test
+  void searchFallsBackToStablePublishedDateOrderingWhenPostgresRankingIsUnavailable() throws Exception {
+    PublishedItem newerPartialMatch = createPublishedItem(
+      "Applied Machine Learning",
+      "Student Researcher",
+      "Faculty of Engineering and Technology (FET)",
+      "Information Systems",
+      2024,
+      "machine, analytics",
+      Instant.parse("2026-02-20T10:00:00Z")
+    );
+    createPublishedItem(
+      "Machine Learning",
+      "Student Researcher",
+      "Faculty of Engineering and Technology (FET)",
+      "Information Systems",
+      2023,
+      "machine, learning",
+      Instant.parse("2026-01-10T10:00:00Z")
+    );
+
+    mockMvc.perform(get("/api/public/repository/search")
+        .param("title", "machine learning")
+        .param("size", "1"))
+      .andExpect(status().isOk())
+      .andExpect(jsonPath("$.totalElements").value(2))
+      .andExpect(jsonPath("$.items[0].id").value(newerPartialMatch.getId()))
+      .andExpect(jsonPath("$.items[0].title").value("Applied Machine Learning"));
+  }
+
+  @Test
+  void searchSupportsTokenizedTitleMatchingWithoutExactPhraseOrder() throws Exception {
+    PublishedItem reorderedTitle = createPublishedItem(
+      "Learning Machine Systems",
+      "Student Researcher",
+      "Faculty of Engineering and Technology (FET)",
+      "Information Systems",
+      2025,
+      "systems",
+      Instant.parse("2026-02-10T10:00:00Z")
+    );
+
+    mockMvc.perform(get("/api/public/repository/search")
+        .param("title", "machine learning"))
+      .andExpect(status().isOk())
+      .andExpect(jsonPath("$.totalElements").value(1))
+      .andExpect(jsonPath("$.items[0].id").value(reorderedTitle.getId()))
+      .andExpect(jsonPath("$.items[0].title").value("Learning Machine Systems"));
+  }
+
+  @Test
+  void searchAppliesFiltersWhileAllowingKeywordDiscoveryFromTitleAndAbstract() throws Exception {
+    PublishedItem filteredMatch = createPublishedItem(
+      "Neural Network Optimization",
+      "Student Researcher",
+      "Faculty of Engineering and Technology (FET)",
+      "Information Systems",
+      2025,
+      "",
+      Instant.parse("2026-03-01T10:00:00Z"),
+      "This study evaluates neural network pruning for repository search relevance."
+    );
+    createPublishedItem(
+      "Neural Network Optimization",
+      "Student Researcher",
+      "Faculty of Business",
+      "Management",
+      2025,
+      "",
+      Instant.parse("2026-03-02T10:00:00Z"),
+      "This study evaluates neural network pruning for repository search relevance."
+    );
+
+    mockMvc.perform(get("/api/public/repository/search")
+        .param("keyword", "neural network")
+        .param("faculty", "Faculty of Engineering and Technology (FET)")
+        .param("program", "Information Systems")
+        .param("year", "2025"))
+      .andExpect(status().isOk())
+      .andExpect(jsonPath("$.totalElements").value(1))
+      .andExpect(jsonPath("$.items[0].id").value(filteredMatch.getId()))
+      .andExpect(jsonPath("$.items[0].faculty").value("Faculty of Engineering and Technology (FET)"))
+      .andExpect(jsonPath("$.items[0].program").value("Information Systems"));
+  }
+
+  @Test
   void searchReturnsEmptyEnvelopeWhenNoResultsMatch() throws Exception {
     mockMvc.perform(get("/api/public/repository/search")
         .param("title", "nonexistent")
@@ -147,6 +232,19 @@ class PublicRepositorySearchPaginationIntegrationTest {
     String keywords,
     Instant publishedAt
   ) {
+    return createPublishedItem(title, authors, faculty, program, year, keywords, publishedAt, "Repository search test item");
+  }
+
+  private PublishedItem createPublishedItem(
+    String title,
+    String authors,
+    String faculty,
+    String program,
+    int year,
+    String keywords,
+    Instant publishedAt,
+    String abstractText
+  ) {
     PublicationCase publicationCase = cases.save(PublicationCase.builder()
       .student(student)
       .type(PublicationType.THESIS)
@@ -163,7 +261,7 @@ class PublicRepositorySearchPaginationIntegrationTest {
       .program(program)
       .year(year)
       .keywords(keywords)
-      .abstractText("Repository search test item")
+      .abstractText(abstractText)
       .build());
   }
 

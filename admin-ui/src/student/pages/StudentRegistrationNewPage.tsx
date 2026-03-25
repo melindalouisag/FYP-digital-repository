@@ -274,11 +274,18 @@ export default function StudentRegistrationNewPage() {
   return (
     <ShellLayout
       title={isEditMode ? 'Edit Publication Registration' : 'New Publication Registration'}
-      subtitle={isEditMode ? 'Update the same case and resubmit when required' : 'Create draft then submit when agreement is accepted'}
+      subtitle={isEditMode ? 'Update the same case, then resubmit it when your revisions are complete' : 'Prepare the registration details now, then submit the same case when everything is complete'}
     >
       <div className="su-card fade-in">
         <div className="card-body p-4">
           {loadingPage && <div className="alert alert-info">Loading registration...</div>}
+          {!loadingPage && (
+            <div className="small text-muted mb-4">
+              {isEditMode
+                ? 'Use this page to update the same registration case. Save changes if you are still preparing details, then submit the case again when it is ready.'
+                : 'Use this form to prepare your registration. Save a draft if you are still working, then submit the same case after selecting a supervisor and accepting both permission statements.'}
+            </div>
+          )}
           {thesisBlocked && (
             <div className="alert alert-warning">
               You already have a THESIS registration case.
@@ -429,17 +436,18 @@ export default function StudentRegistrationNewPage() {
             </div>
 
             <div className="col-12">
-              <label className="form-label">Article Publish In</label>
+              <label className="form-label">Journal or Conference (for Articles)</label>
               <input
                 className="form-control"
                 value={articlePublishIn}
                 onChange={(event) => setArticlePublishIn(event.target.value)}
                 placeholder="Journal or conference name"
               />
+              <div className="form-text">Leave this blank for thesis registrations.</div>
             </div>
 
             <div className="col-12" id="registration-supervisors">
-              <label className="form-label">Supervisors</label>
+              <label className="form-label">Supervisor</label>
               <select
                 className={`form-select${errors.supervisorIds ? ' is-invalid' : ''}`}
                 value={selectedSupervisorEmail}
@@ -469,11 +477,14 @@ export default function StudentRegistrationNewPage() {
                     : 'Complete onboarding to load supervisors.'}
                 </div>
               )}
-              <div className="form-text">Supervisor options are loaded from the lecturer directory.</div>
+              <div className="form-text">Choose the lecturer who should review this registration first.</div>
               {errors.supervisorIds && <div className="text-danger small mt-1">{errors.supervisorIds}</div>}
             </div>
 
             <div className="col-12" id="registration-agreements">
+              <div className="small text-muted mb-2">
+                Both permission statements are required when you submit the registration for approval.
+              </div>
               <div className="form-check mb-2">
                 <input
                   className={`form-check-input${errors.agreement1 ? ' is-invalid' : ''}`}
@@ -510,13 +521,13 @@ export default function StudentRegistrationNewPage() {
 
             {serverError && (
               <div className="col-12">
-                <div className="alert alert-danger d-flex align-items-center gap-2 mb-0" style={{ borderRadius: '0.75rem' }}><span>⚠️</span> {serverError}</div>
+                <div className="alert alert-danger mb-0" style={{ borderRadius: '0.75rem' }}>{serverError}</div>
               </div>
             )}
 
             <div className="col-12 d-flex flex-wrap gap-2">
               <button className="btn btn-outline-primary" type="submit" disabled={saving || loadingSupervisors || loadingPage} style={{ borderRadius: '999px', padding: '0.5rem 1.5rem' }}>
-                {saving ? '⏳ Saving...' : (isEditMode ? '💾 Save Changes' : '💾 Save Draft')}
+                {saving ? 'Saving...' : (isEditMode ? 'Save Changes' : 'Save Draft')}
               </button>
               <button
                 className="btn btn-primary"
@@ -526,10 +537,10 @@ export default function StudentRegistrationNewPage() {
                 style={{ borderRadius: '999px', padding: '0.5rem 1.5rem' }}
               >
                 {saving
-                  ? '⏳ Submitting...'
+                  ? 'Submitting...'
                   : (isEditMode && currentStatus && currentStatus !== 'REGISTRATION_DRAFT'
-                    ? '📨 Save and Resubmit for Approval'
-                    : '📨 Save and Submit for Approval')}
+                    ? 'Save and Resubmit for Approval'
+                    : 'Save and Submit for Approval')}
               </button>
             </div>
           </form>

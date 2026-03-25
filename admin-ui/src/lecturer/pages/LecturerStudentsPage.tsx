@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
 import { lecturerApi, type LecturerStudentGroup } from '../../lib/api/lecturer';
+import PortalIcon from '../../lib/components/PortalIcon';
+import { lecturerSidebarIcons } from '../../lib/portalIcons';
 
 export default function LecturerStudentsPage() {
   const navigate = useNavigate();
@@ -33,9 +35,9 @@ export default function LecturerStudentsPage() {
   }, []);
 
   return (
-    <ShellLayout title="My Students" subtitle="Students under your supervision, grouped by year">
+    <ShellLayout title="My Students" subtitle="Review supervised students and case activity for the selected year">
       <div className="d-flex flex-wrap align-items-center gap-2 mb-4">
-        <label className="form-label mb-0 fw-semibold small">📅 Year:</label>
+        <label className="form-label mb-0 fw-semibold small">Year:</label>
         <select
           className="form-select form-select-sm"
           style={{ width: 120, borderRadius: '999px' }}
@@ -62,9 +64,19 @@ export default function LecturerStudentsPage() {
 
       {!loading && groups.length === 0 && (
         <div className="su-empty-state">
-          <div className="su-empty-icon">🎓</div>
-          <h5>No Students Found</h5>
-          <p className="text-muted">No students assigned to you for {year}.</p>
+          <div className="su-empty-icon">
+            <PortalIcon src={lecturerSidebarIcons.students} size={40} />
+          </div>
+          <h5>No Supervised Students</h5>
+          <p className="text-muted">No students are assigned to you for {year}.</p>
+        </div>
+      )}
+
+      {!loading && groups.length > 0 && (
+        <div className="mb-3">
+          <p className="text-muted small mb-0">
+            Select a student to review case status, submission history, and any pending supervisor actions.
+          </p>
         </div>
       )}
 
@@ -81,8 +93,8 @@ export default function LecturerStudentsPage() {
                 <div className="d-flex justify-content-between align-items-start mb-2">
                   <div>
                     <h3 className="h6 mb-1 fw-bold">{group.studentName || group.studentEmail}</h3>
-                    <div className="text-muted small">
-                      🆔 {group.studentIdNumber ?? 'ID N/A'} • 🏛️ {group.faculty ?? 'Faculty N/A'}
+                    <div className="su-meta-item">
+                      <strong>Student ID:</strong> {group.studentIdNumber ?? 'N/A'} / {group.faculty ?? 'Faculty N/A'}
                     </div>
                   </div>
                   <span className="badge bg-primary-subtle text-primary-emphasis" style={{ borderRadius: '999px' }}>
@@ -92,7 +104,7 @@ export default function LecturerStudentsPage() {
                 <div className="vstack gap-1 mt-2">
                   {group.cases.slice(0, 3).map((c) => (
                     <div key={c.caseId} className="small p-2" style={{ background: '#f8fafc', borderRadius: '0.4rem' }}>
-                      📄 {c.registrationTitle || `Case #${c.caseId}`}
+                      {c.registrationTitle || `Case #${c.caseId}`}
                     </div>
                   ))}
                   {group.cases.length > 3 && (
