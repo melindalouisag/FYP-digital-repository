@@ -4,8 +4,6 @@ import ShellLayout from '../../layout/ShellLayout';
 import { lecturerApi, type LecturerCaseWorkItem, type LecturerStudentGroup, type LecturerSubmissionVersion } from '../../lib/api/lecturer';
 import CaseTimeline from '../../lib/components/CaseTimeline';
 import DownloadFilenameLink from '../../lib/components/DownloadFilenameLink';
-import PortalIcon from '../../lib/components/PortalIcon';
-import { lecturerSidebarIcons } from '../../lib/portalIcons';
 import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 import type { TimelineItem } from '../../lib/types/workflow';
 
@@ -155,9 +153,6 @@ export default function LecturerStudentDetailPage() {
 
       {!loading && !group && (
         <div className="su-empty-state">
-          <div className="su-empty-icon">
-            <PortalIcon src={lecturerSidebarIcons.students} size={40} />
-          </div>
           <h5>Student Not Found</h5>
           <p className="text-muted">No supervised student record is available for the selected year.</p>
         </div>
@@ -268,12 +263,7 @@ export default function LecturerStudentDetailPage() {
                     {/* Submissions */}
                     {submissionsOpen[c.caseId] && (
                       <div className="mb-3 p-3" style={{ background: '#f8fafc', borderRadius: '0.6rem' }}>
-                        <h6 className="fw-bold mb-2">
-                          <span className="su-title-with-icon">
-                            <PortalIcon src={lecturerSidebarIcons.review} />
-                            <span>Submission History</span>
-                          </span>
-                        </h6>
+                        <h6 className="fw-bold mb-2">Submission History</h6>
                         <div className="text-muted small mb-2">
                           Review the uploaded versions here before recording feedback or forwarding the case to library review.
                         </div>
@@ -387,9 +377,6 @@ export default function LecturerStudentDetailPage() {
 
           {group.cases.length === 0 && (
             <div className="su-empty-state mt-3">
-              <div className="su-empty-icon">
-                <PortalIcon src={lecturerSidebarIcons.students} size={40} />
-              </div>
               <h5>No Cases for This Student</h5>
               <p className="text-muted">No cases are available for this student in the selected year.</p>
             </div>

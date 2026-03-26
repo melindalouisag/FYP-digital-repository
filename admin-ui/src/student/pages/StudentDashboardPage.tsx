@@ -2,8 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
 import { studentApi } from '../../lib/api/student';
-import PortalIcon from '../../lib/components/PortalIcon';
-import { studentSidebarIcons } from '../../lib/portalIcons';
 import type { CaseSummary } from '../../lib/types/workflow';
 import { canSubmitClearance, canSubmitRegistration, canUploadSubmission, formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 import { isNavigationActivationKey, resolveStudentCaseNavigation, selectDashboardCases } from '../lib/caseNavigation';
@@ -54,28 +52,24 @@ export default function StudentDashboardPage() {
       <div className="row g-3 mb-4">
         <div className="col-6 col-md-3">
           <div className="su-stat-card">
-            <div className="su-stat-icon" style={{ background: '#e8f4f8' }}><img src="/icons/student/registration.png" alt="" style={{ width: 28, height: 28 }} /></div>
             <div className="su-stat-value">{stats.total}</div>
             <div className="su-stat-label">Total Cases</div>
           </div>
         </div>
         <div className="col-6 col-md-3">
           <div className="su-stat-card">
-            <div className="su-stat-icon" style={{ background: '#fff3cd' }}><img src="/icons/student/in progress.png" alt="" style={{ width: 28, height: 28 }} /></div>
             <div className="su-stat-value">{stats.inProgress}</div>
             <div className="su-stat-label">In Progress</div>
           </div>
         </div>
         <div className="col-6 col-md-3">
           <div className="su-stat-card">
-            <div className="su-stat-icon" style={{ background: '#d1e7dd' }}><img src="/icons/student/published.png" alt="" style={{ width: 28, height: 28 }} /></div>
             <div className="su-stat-value">{stats.published}</div>
             <div className="su-stat-label">Published</div>
           </div>
         </div>
         <div className="col-6 col-md-3">
           <div className="su-stat-card" style={{ borderColor: stats.needsAction > 0 ? '#0b7584' : undefined }}>
-            <div className="su-stat-icon" style={{ background: stats.needsAction > 0 ? '#e0f7fa' : '#f0f0f0' }}><img src="/icons/student/need action.png" alt="" style={{ width: 28, height: 28 }} /></div>
             <div className="su-stat-value" style={{ color: stats.needsAction > 0 ? '#0b7584' : undefined }}>{stats.needsAction}</div>
             <div className="su-stat-label">Needs Action</div>
           </div>
@@ -96,9 +90,6 @@ export default function StudentDashboardPage() {
 
       {!loading && cases.length === 0 && (
         <div className="su-empty-state">
-          <div className="su-empty-icon">
-            <PortalIcon src={studentSidebarIcons.registration} size={40} />
-          </div>
           <h5>No Publication Cases Yet</h5>
           <p className="text-muted">Create a publication registration when you are ready to start a thesis or article submission.</p>
           <button className="btn btn-primary" onClick={() => navigate('/student/registrations/new')}>
@@ -109,9 +100,6 @@ export default function StudentDashboardPage() {
 
       {!loading && cases.length > 0 && visibleCases.length === 0 && (
         <div className="su-empty-state">
-          <div className="su-empty-icon">
-            <PortalIcon src={studentSidebarIcons.dashboard} size={40} />
-          </div>
           <h5>No Priority Cases Right Now</h5>
           <p className="text-muted">When a case needs your action or receives a recent update, it will appear here first.</p>
         </div>
@@ -139,7 +127,7 @@ export default function StudentDashboardPage() {
               key={c.id}
               role="link"
               tabIndex={0}
-              aria-label={`${navigationTarget.label}: ${c.title || `Case #${c.id}`}`}
+              aria-label={`${navigationTarget.label}: ${c.title || 'Untitled Publication'}`}
               onClick={() => navigate(navigationTarget.path)}
               onKeyDown={(event) => {
                 if (!isNavigationActivationKey(event)) return;
@@ -151,7 +139,7 @@ export default function StudentDashboardPage() {
               <div className="card-body">
                 <div className="d-flex flex-wrap justify-content-between gap-2 align-items-start">
                   <div style={{ flex: 1 }}>
-                    <h3 className="h6 mb-1 fw-bold">{c.title || `Case #${c.id}`}</h3>
+                    <h3 className="h6 mb-1 fw-bold">{c.title || 'Untitled Publication'}</h3>
                     <div className="d-flex flex-wrap gap-2 align-items-center mb-2">
                       <span className="badge bg-dark-subtle text-dark-emphasis" style={{ borderRadius: '999px' }}>{c.type}</span>
                       <span className={`badge status-badge ${statusBadgeClass(c.status)}`}>{formatStatus(c.status)}</span>

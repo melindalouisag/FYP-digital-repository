@@ -2,8 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
 import { studentApi } from '../../lib/api/student';
-import PortalIcon from '../../lib/components/PortalIcon';
-import { studentSidebarIcons } from '../../lib/portalIcons';
 import type { CaseSummary } from '../../lib/types/workflow';
 import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 import { getStudentCaseGuidance } from '../lib/casePresentation';
@@ -74,9 +72,6 @@ export default function StudentRegistrationsPage() {
 
       {!loading && registrationCases.length === 0 && (
         <div className="su-empty-state">
-          <div className="su-empty-icon">
-            <PortalIcon src={studentSidebarIcons.registration} size={40} />
-          </div>
           <h5>No Registration Cases to Work On</h5>
           <p className="text-muted">Draft registrations, returned cases, and registrations still in approval will appear here.</p>
           <button className="btn btn-primary" onClick={() => navigate('/student/registrations/new')}>
@@ -114,7 +109,7 @@ export default function StudentRegistrationsPage() {
                     key={c.id}
                     className="su-table-row-clickable"
                     tabIndex={0}
-                    aria-label={`${navigationTarget.label}: ${c.title || `Case #${c.id}`}`}
+                    aria-label={`${navigationTarget.label}: ${c.title || 'Untitled Publication'}`}
                     onClick={() => navigate(navigationTarget.path)}
                     onKeyDown={(event) => {
                       if (!isNavigationActivationKey(event)) return;
@@ -123,7 +118,7 @@ export default function StudentRegistrationsPage() {
                     }}
                   >
                     <td>
-                      <div className="fw-semibold">{c.title || `Case #${c.id}`}</div>
+                      <div className="fw-semibold">{c.title || 'Untitled Publication'}</div>
                     </td>
                     <td><span className="badge bg-dark-subtle text-dark-emphasis" style={{ borderRadius: '999px' }}>{c.type}</span></td>
                     <td>

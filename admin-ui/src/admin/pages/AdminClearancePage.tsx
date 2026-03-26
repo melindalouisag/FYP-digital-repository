@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 import ShellLayout from '../../layout/ShellLayout';
-import PortalIcon from '../../lib/components/PortalIcon';
 import { adminApi } from '../../lib/api/admin';
-import { adminSidebarIcons } from '../../lib/portalIcons';
 import type { CaseSummary, PagedResponse } from '../../lib/types/workflow';
 import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 
@@ -78,9 +76,6 @@ export default function AdminClearancePage() {
 
       {!loading && cases.length === 0 && (
         <div className="su-empty-state">
-          <div className="su-empty-icon">
-            <PortalIcon src={adminSidebarIcons.clearance} size={40} />
-          </div>
           <h5>No Clearance Reviews Pending</h5>
           <p className="text-muted">No submitted clearance forms are waiting for library review.</p>
         </div>

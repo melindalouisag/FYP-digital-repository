@@ -165,8 +165,8 @@ export default function StudentCaseSubmissionPage() {
 
   return (
     <ShellLayout
-      title={detail?.case.title || `Case #${caseId} Submission`}
-      subtitle={`Case #${caseId} | Upload the first approved PDF or a revised version with repository metadata`}
+      title={detail?.case.title?.trim() || 'Submission'}
+      subtitle="Submission"
     >
       {loading && <div className="alert alert-info">Loading submission page...</div>}
       {error && <div className="alert alert-danger">{error}</div>}

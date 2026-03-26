@@ -4,8 +4,6 @@ import ShellLayout from '../../layout/ShellLayout';
 import { adminApi } from '../../lib/api/admin';
 import CaseTimeline from '../../lib/components/CaseTimeline';
 import DownloadFilenameLink from '../../lib/components/DownloadFilenameLink';
-import PortalIcon from '../../lib/components/PortalIcon';
-import { adminSidebarIcons } from '../../lib/portalIcons';
 import type {
   CaseDetailPayload,
   ChecklistItem,
@@ -222,12 +220,7 @@ export default function AdminReviewDetailPage() {
 
           <div className="su-card mb-3 fade-in" style={{ animationDelay: '0.05s' }}>
             <div className="card-body p-4">
-              <h3 className="h6 su-page-title">
-                <span className="su-title-with-icon">
-                  <PortalIcon src={adminSidebarIcons.submission} />
-                  <span>Selected Submission</span>
-                </span>
-              </h3>
+              <h3 className="h6 su-page-title">Selected Submission</h3>
               <div className="text-muted small mb-3">
                 Confirm the submission version and template assignment before saving checklist results or recording a decision.
               </div>
@@ -272,12 +265,7 @@ export default function AdminReviewDetailPage() {
 
           <div className="su-card mb-3 fade-in" style={{ animationDelay: '0.1s' }}>
             <div className="card-body p-4">
-              <h3 className="h6 mb-3 su-page-title">
-                <span className="su-title-with-icon">
-                  <PortalIcon src={adminSidebarIcons.template} />
-                  <span>Checklist Review</span>
-                </span>
-              </h3>
+              <h3 className="h6 mb-3 su-page-title">Checklist Review</h3>
               <div className="text-muted small mb-3">
                 Use the active template for this publication type and save checklist results before recording the final library decision.
               </div>

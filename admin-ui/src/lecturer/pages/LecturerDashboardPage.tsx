@@ -2,8 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
 import { lecturerApi } from '../../lib/api/lecturer';
-import PortalIcon from '../../lib/components/PortalIcon';
-import { lecturerSidebarIcons } from '../../lib/portalIcons';
 
 export default function LecturerDashboardPage() {
   const navigate = useNavigate();
@@ -45,10 +43,10 @@ export default function LecturerDashboardPage() {
   }, []);
 
   const cards = [
-    { label: 'Registration Approvals', value: approvals, icon: lecturerSidebarIcons.approvals, color: '#e0f2fe', path: '/lecturer/approvals', desc: 'Registration requests awaiting your approval' },
-    { label: 'Submission Review', value: pendingSupervisor, icon: lecturerSidebarIcons.review, color: '#fff3cd', path: '/lecturer/review', desc: 'Student submissions needing your review' },
-    { label: 'Library Tracking', value: libraryTracking, icon: lecturerSidebarIcons.library, color: '#ede9fe', path: '/lecturer/library', desc: 'Cases forwarded to library for processing' },
-    { label: 'My Students', value: students, icon: lecturerSidebarIcons.students, color: '#d1e7dd', path: '/lecturer/students', desc: 'Students under your supervision' },
+    { label: 'Registration Approvals', value: approvals, path: '/lecturer/approvals', desc: 'Registration requests awaiting your approval' },
+    { label: 'Submission Review', value: pendingSupervisor, path: '/lecturer/review', desc: 'Student submissions needing your review' },
+    { label: 'Library Tracking', value: libraryTracking, path: '/lecturer/library', desc: 'Cases forwarded to library for processing' },
+    { label: 'My Students', value: students, path: '/lecturer/students', desc: 'Students under your supervision' },
   ];
 
   return (
@@ -78,9 +76,6 @@ export default function LecturerDashboardPage() {
               onClick={() => navigate(card.path)}
               style={{ animationDelay: `${index * 0.08}s` }}
             >
-              <div className="su-stat-icon" style={{ background: card.color }}>
-                <PortalIcon src={card.icon} size={22} />
-              </div>
               <div className="su-stat-value">{loading ? '—' : card.value}</div>
               <div className="su-stat-label">{card.label}</div>
               <div className="text-muted small mt-2" style={{ fontSize: '0.75rem' }}>{card.desc}</div>

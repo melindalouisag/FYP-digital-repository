@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 import ShellLayout from '../../layout/ShellLayout';
-import PortalIcon from '../../lib/components/PortalIcon';
 import { adminApi } from '../../lib/api/admin';
-import { adminSidebarIcons } from '../../lib/portalIcons';
 import type { AdminRegistrationApproval, PagedResponse } from '../../lib/types/workflow';
 import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 
@@ -87,9 +85,6 @@ export default function AdminRegistrationApprovalsPage() {
 
       {!loading && rows.length === 0 && (
         <div className="su-empty-state">
-          <div className="su-empty-icon">
-            <PortalIcon src={adminSidebarIcons.registration} size={40} />
-          </div>
           <h5>No Registration Verifications Pending</h5>
           <p className="text-muted">No supervisor-approved registrations are waiting for library verification.</p>
         </div>

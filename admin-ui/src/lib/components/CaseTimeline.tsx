@@ -1,5 +1,3 @@
-import PortalIcon from './PortalIcon';
-import { adminSidebarIcons } from '../portalIcons';
 import type { TimelineItem } from '../types/workflow';
 
 interface CaseTimelineProps {
@@ -7,34 +5,10 @@ interface CaseTimelineProps {
   emptyLabel?: string;
 }
 
-const EVENT_ICONS: Record<string, string> = {
-  REGISTRATION_CREATED: adminSidebarIcons.registration,
-  REGISTRATION_SUBMITTED: adminSidebarIcons.registration,
-  REGISTRATION_APPROVED: adminSidebarIcons.registration,
-  REGISTRATION_VERIFIED: adminSidebarIcons.registration,
-  REGISTRATION_REJECTED: adminSidebarIcons.registration,
-  SUBMISSION_UPLOADED: adminSidebarIcons.submission,
-  SUPERVISOR_FORWARDED_TO_LIBRARY: adminSidebarIcons.submission,
-  SUPERVISOR_REQUESTED_REVISION: adminSidebarIcons.submission,
-  LIBRARY_CHECKLIST_REVIEWED: adminSidebarIcons.template,
-  LIBRARY_APPROVED_FOR_CLEARANCE: adminSidebarIcons.clearance,
-  LIBRARY_REQUESTED_REVISION: adminSidebarIcons.clearance,
-  CLEARANCE_SUBMITTED: adminSidebarIcons.clearance,
-  CLEARANCE_APPROVED: adminSidebarIcons.clearance,
-  PUBLISHED: adminSidebarIcons.publishing,
-};
-
-function getIcon(type: string): string {
-  return EVENT_ICONS[type] ?? adminSidebarIcons.dashboard;
-}
-
 export default function CaseTimeline({ items, emptyLabel = 'No timeline activity yet.' }: CaseTimelineProps) {
   if (items.length === 0) {
     return (
       <div className="su-empty-state">
-        <div className="su-empty-icon">
-          <PortalIcon src={adminSidebarIcons.dashboard} size={40} />
-        </div>
         <div>{emptyLabel}</div>
       </div>
     );
@@ -45,7 +19,6 @@ export default function CaseTimeline({ items, emptyLabel = 'No timeline activity
       {items.map((item, index) => (
         <li key={`${item.type}-${item.at ?? index}-${index}`} className="fade-in" style={{ animationDelay: `${index * 0.05}s` }}>
           <div className="d-flex flex-wrap align-items-center gap-2 mb-1">
-            <PortalIcon src={getIcon(item.type)} size={16} />
             <span className="text-muted small">{item.at ? new Date(item.at).toLocaleString() : 'N/A'}</span>
             {item.actorRole && (
               <span className="badge bg-secondary-subtle text-secondary-emphasis"

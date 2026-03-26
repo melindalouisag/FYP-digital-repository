@@ -3,8 +3,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
 import DownloadFilenameLink from '../../lib/components/DownloadFilenameLink';
 import { adminApi } from '../../lib/api/admin';
-import PortalIcon from '../../lib/components/PortalIcon';
-import { adminSidebarIcons } from '../../lib/portalIcons';
 import type { AdminPublishDetail } from '../../lib/types/workflow';
 
 export default function AdminPublishDetailPage() {
@@ -105,12 +103,7 @@ export default function AdminPublishDetailPage() {
           <div className="col-lg-6">
             <div className="su-card h-100">
               <div className="card-body p-4">
-                <h3 className="h6 mb-3 su-page-title">
-                  <span className="su-title-with-icon">
-                    <PortalIcon src={adminSidebarIcons.publishing} />
-                    <span>Case Summary</span>
-                  </span>
-                </h3>
+                <h3 className="h6 mb-3 su-page-title">Case Summary</h3>
                 <div className="text-muted small mb-3">
                   Confirm the case status and current repository readiness before publishing or unpublishing.
                 </div>
@@ -133,12 +126,7 @@ export default function AdminPublishDetailPage() {
           <div className="col-lg-6">
             <div className="su-card h-100">
               <div className="card-body p-4">
-                <h3 className="h6 mb-3 su-page-title">
-                  <span className="su-title-with-icon">
-                    <PortalIcon src={adminSidebarIcons.submission} />
-                    <span>Latest Submission</span>
-                  </span>
-                </h3>
+                <h3 className="h6 mb-3 su-page-title">Latest Submission</h3>
                 <div className="text-muted small mb-3">
                   Review the final uploaded file before publishing the repository record.
                 </div>

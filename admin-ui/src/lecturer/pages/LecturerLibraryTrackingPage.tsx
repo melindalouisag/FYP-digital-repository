@@ -2,8 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
 import { lecturerApi, type LecturerStudentGroup } from '../../lib/api/lecturer';
-import PortalIcon from '../../lib/components/PortalIcon';
-import { lecturerSidebarIcons } from '../../lib/portalIcons';
 
 type LibraryStatusSummary = {
   needRevisions: number;
@@ -93,9 +91,6 @@ export default function LecturerLibraryTrackingPage() {
 
       {!loading && groups.length === 0 && (
         <div className="su-empty-state">
-          <div className="su-empty-icon">
-            <PortalIcon src={lecturerSidebarIcons.library} size={40} />
-          </div>
           <h5>No Cases in Library Review</h5>
           <p className="text-muted">No cases are currently in library review for {year}.</p>
         </div>

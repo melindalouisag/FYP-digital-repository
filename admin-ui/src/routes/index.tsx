@@ -14,6 +14,8 @@ import StudentRegistrationNewPage from '../student/pages/StudentRegistrationNewP
 import StudentSubmissionsPage from '../student/pages/StudentSubmissionsPage';
 import StudentCaseDetailPage from '../student/pages/StudentCaseDetailPage';
 import StudentCaseSubmissionPage from '../student/pages/StudentCaseSubmissionPage';
+import StudentSubmissionHistoryPage from '../student/pages/StudentSubmissionHistoryPage';
+import StudentFeedbackPage from '../student/pages/StudentFeedbackPage';
 import StudentClearanceDetailPage from '../student/pages/StudentClearanceDetailPage';
 import LecturerDashboardPage from '../lecturer/pages/LecturerDashboardPage';
 import LecturerApprovalsPage from '../lecturer/pages/LecturerApprovalsPage';
@@ -62,6 +64,8 @@ export function AppRoutes() {
       <Route path="/student/submissions" element={<ProtectedRoute user={user} loading={loading}><RoleGuard user={user} allowedRoles={['STUDENT']}><StudentSubmissionsPage /></RoleGuard></ProtectedRoute>} />
       <Route path="/student/cases/:caseId" element={<ProtectedRoute user={user} loading={loading}><RoleGuard user={user} allowedRoles={['STUDENT']}><StudentCaseDetailPage /></RoleGuard></ProtectedRoute>} />
       <Route path="/student/cases/:caseId/submission" element={<ProtectedRoute user={user} loading={loading}><RoleGuard user={user} allowedRoles={['STUDENT']}><StudentCaseSubmissionPage /></RoleGuard></ProtectedRoute>} />
+      <Route path="/student/cases/:caseId/submissions/history" element={<ProtectedRoute user={user} loading={loading}><RoleGuard user={user} allowedRoles={['STUDENT']}><StudentSubmissionHistoryPage /></RoleGuard></ProtectedRoute>} />
+      <Route path="/student/cases/:caseId/feedback" element={<ProtectedRoute user={user} loading={loading}><RoleGuard user={user} allowedRoles={['STUDENT']}><StudentFeedbackPage /></RoleGuard></ProtectedRoute>} />
       <Route path="/student/clearance/:caseId" element={<ProtectedRoute user={user} loading={loading}><RoleGuard user={user} allowedRoles={['STUDENT']}><StudentClearanceDetailPage /></RoleGuard></ProtectedRoute>} />
 
       <Route path="/lecturer/dashboard" element={<ProtectedRoute user={user} loading={loading}><RoleGuard user={user} allowedRoles={['LECTURER']}><LecturerDashboardPage /></RoleGuard></ProtectedRoute>} />

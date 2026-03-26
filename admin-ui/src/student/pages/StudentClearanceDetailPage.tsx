@@ -2,8 +2,6 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
 import { studentApi } from '../../lib/api/student';
-import PortalIcon from '../../lib/components/PortalIcon';
-import { adminSidebarIcons } from '../../lib/portalIcons';
 import type { CaseDetailPayload } from '../../lib/types/workflow';
 import { canSubmitClearance, formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 
@@ -58,7 +56,7 @@ export default function StudentClearanceDetailPage() {
   };
 
   return (
-    <ShellLayout title={`Clearance Form - Case #${caseId}`} subtitle="Library clearance declaration for publication">
+    <ShellLayout title={detail?.case.title?.trim() || 'Library Clearance'} subtitle="Library Clearance">
       {loading && (
         <div className="text-center py-5">
           <div className="su-spinner mx-auto mb-3" />
@@ -79,12 +77,7 @@ export default function StudentClearanceDetailPage() {
             </div>
 
             <div className="p-3 mb-4" style={{ background: '#f0f6fa', borderRadius: '0.75rem', border: '1px solid #d5e3ed' }}>
-              <h6 className="fw-bold mb-2">
-                <span className="su-title-with-icon">
-                  <PortalIcon src={adminSidebarIcons.clearance} />
-                  <span>Declaration</span>
-                </span>
-              </h6>
+              <h6 className="fw-bold mb-2">Declaration</h6>
               <p className="small text-muted mb-0">
                 By submitting this clearance form, I hereby declare that I have no outstanding library obligations,
                 including but not limited to borrowed books, equipment, or any other library assets. I understand
@@ -119,7 +112,7 @@ export default function StudentClearanceDetailPage() {
                 style={{ borderRadius: '999px' }}
                 onClick={() => navigate(`/student/cases/${caseId}`)}
               >
-                ← Back to Case
+                Return to Case Detail
               </button>
             </div>
           </div>

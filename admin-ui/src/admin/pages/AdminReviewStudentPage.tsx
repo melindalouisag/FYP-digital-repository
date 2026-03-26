@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
-import PortalIcon from '../../lib/components/PortalIcon';
 import { adminApi } from '../../lib/api/admin';
-import { adminSidebarIcons } from '../../lib/portalIcons';
 import type { AdminStudentReviewGroup } from '../../lib/types/workflow';
 import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 
@@ -60,9 +58,6 @@ export default function AdminReviewStudentPage() {
 
       {!loading && !group && !error && (
         <div className="su-empty-state">
-          <div className="su-empty-icon">
-            <PortalIcon src={adminSidebarIcons.submission} size={40} />
-          </div>
           <h5>Student Not Found</h5>
           <p className="text-muted">This student is not currently in the library review queue.</p>
         </div>

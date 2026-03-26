@@ -2,8 +2,6 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
 import { adminApi } from '../../lib/api/admin';
-import PortalIcon from '../../lib/components/PortalIcon';
-import { adminSidebarIcons } from '../../lib/portalIcons';
 import type { AdminPublishQueueItem, PagedResponse } from '../../lib/types/workflow';
 import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 
@@ -83,9 +81,6 @@ export default function AdminPublishPage() {
 
       {!loading && cases.length === 0 && (
         <div className="su-empty-state">
-          <div className="su-empty-icon">
-            <PortalIcon src={adminSidebarIcons.publishing} size={40} />
-          </div>
           <h5>No Cases Ready for Publication</h5>
           <p className="text-muted">No cases are ready for publication at this time.</p>
         </div>

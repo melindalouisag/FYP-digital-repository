@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
-import PortalIcon from '../../lib/components/PortalIcon';
 import { adminApi } from '../../lib/api/admin';
-import { adminSidebarIcons } from '../../lib/portalIcons';
 import type { AdminStudentReviewGroup } from '../../lib/types/workflow';
 
 export default function AdminReviewPage() {
@@ -54,9 +52,6 @@ export default function AdminReviewPage() {
 
       {!loading && rows.length === 0 && (
         <div className="su-empty-state">
-          <div className="su-empty-icon">
-            <PortalIcon src={adminSidebarIcons.submission} size={40} />
-          </div>
           <h5>No Cases Awaiting Library Review</h5>
           <p className="text-muted">No cases are waiting for library checklist review.</p>
         </div>
