@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
 import { studentApi } from '../../lib/api/student';
+import PortalIcon from '../../lib/components/PortalIcon';
+import { studentSidebarIcons } from '../../lib/portalIcons';
 import type { CaseSummary } from '../../lib/types/workflow';
 import { canSubmitClearance, canSubmitRegistration, canUploadSubmission, formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 import { isNavigationActivationKey, resolveStudentCaseNavigation, selectDashboardCases } from '../lib/caseNavigation';
@@ -52,24 +54,36 @@ export default function StudentDashboardPage() {
       <div className="row g-3 mb-4">
         <div className="col-6 col-md-3">
           <div className="su-stat-card">
+            <div className="su-stat-icon" style={{ background: '#e8f4f8' }}>
+              <PortalIcon src={studentSidebarIcons.registration} size={22} />
+            </div>
             <div className="su-stat-value">{stats.total}</div>
             <div className="su-stat-label">Total Cases</div>
           </div>
         </div>
         <div className="col-6 col-md-3">
           <div className="su-stat-card">
+            <div className="su-stat-icon" style={{ background: '#fff3cd' }}>
+              <PortalIcon src={studentSidebarIcons.inProgress} size={22} />
+            </div>
             <div className="su-stat-value">{stats.inProgress}</div>
             <div className="su-stat-label">In Progress</div>
           </div>
         </div>
         <div className="col-6 col-md-3">
           <div className="su-stat-card">
+            <div className="su-stat-icon" style={{ background: '#d1e7dd' }}>
+              <PortalIcon src={studentSidebarIcons.published} size={22} />
+            </div>
             <div className="su-stat-value">{stats.published}</div>
             <div className="su-stat-label">Published</div>
           </div>
         </div>
         <div className="col-6 col-md-3">
           <div className="su-stat-card" style={{ borderColor: stats.needsAction > 0 ? '#0b7584' : undefined }}>
+            <div className="su-stat-icon" style={{ background: stats.needsAction > 0 ? '#e0f7fa' : '#f0f0f0' }}>
+              <PortalIcon src={studentSidebarIcons.needsAction} size={22} />
+            </div>
             <div className="su-stat-value" style={{ color: stats.needsAction > 0 ? '#0b7584' : undefined }}>{stats.needsAction}</div>
             <div className="su-stat-label">Needs Action</div>
           </div>
@@ -90,6 +104,9 @@ export default function StudentDashboardPage() {
 
       {!loading && cases.length === 0 && (
         <div className="su-empty-state">
+          <div className="su-empty-icon">
+            <PortalIcon src={studentSidebarIcons.registration} size={40} />
+          </div>
           <h5>No Publication Cases Yet</h5>
           <p className="text-muted">Create a publication registration when you are ready to start a thesis or article submission.</p>
           <button className="btn btn-primary" onClick={() => navigate('/student/registrations/new')}>
@@ -100,6 +117,9 @@ export default function StudentDashboardPage() {
 
       {!loading && cases.length > 0 && visibleCases.length === 0 && (
         <div className="su-empty-state">
+          <div className="su-empty-icon">
+            <PortalIcon src={studentSidebarIcons.dashboard} size={40} />
+          </div>
           <h5>No Priority Cases Right Now</h5>
           <p className="text-muted">When a case needs your action or receives a recent update, it will appear here first.</p>
         </div>

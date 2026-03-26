@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import ShellLayout from '../../layout/ShellLayout';
 import { lecturerApi, type LecturerApprovalQueueRow } from '../../lib/api/lecturer';
+import PortalIcon from '../../lib/components/PortalIcon';
+import { lecturerSidebarIcons } from '../../lib/portalIcons';
 import type { PagedResponse } from '../../lib/types/workflow';
 import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 
@@ -88,6 +90,9 @@ export default function LecturerApprovalsPage() {
 
       {!loading && rows.length === 0 && (
         <div className="su-empty-state">
+          <div className="su-empty-icon">
+            <PortalIcon src={lecturerSidebarIcons.approvals} size={40} />
+          </div>
           <h5>No Registration Approvals Pending</h5>
           <p className="text-muted">No student registrations are waiting for supervisor approval at this time.</p>
         </div>

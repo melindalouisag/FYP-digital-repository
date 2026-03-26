@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
 import { studentApi } from '../../lib/api/student';
+import PortalIcon from '../../lib/components/PortalIcon';
+import { studentSidebarIcons } from '../../lib/portalIcons';
 import type { CaseSummary } from '../../lib/types/workflow';
 import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 import { getStudentCaseGuidance } from '../lib/casePresentation';
@@ -72,6 +74,9 @@ export default function StudentRegistrationsPage() {
 
       {!loading && registrationCases.length === 0 && (
         <div className="su-empty-state">
+          <div className="su-empty-icon">
+            <PortalIcon src={studentSidebarIcons.registration} size={40} />
+          </div>
           <h5>No Registration Cases to Work On</h5>
           <p className="text-muted">Draft registrations, returned cases, and registrations still in approval will appear here.</p>
           <button className="btn btn-primary" onClick={() => navigate('/student/registrations/new')}>

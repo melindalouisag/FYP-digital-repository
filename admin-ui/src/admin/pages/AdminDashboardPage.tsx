@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
 import { adminApi } from '../../lib/api/admin';
+import PortalIcon from '../../lib/components/PortalIcon';
+import { adminSidebarIcons } from '../../lib/portalIcons';
 
 export default function AdminDashboardPage() {
   const navigate = useNavigate();
@@ -37,10 +39,10 @@ export default function AdminDashboardPage() {
   }, []);
 
   const cards = [
-    { label: 'Registration', value: registrationCount, path: '/admin/registration-approvals', desc: 'Pending registration verifications' },
-    { label: 'Submission Review', value: reviewCount, path: '/admin/review', desc: 'Submissions awaiting checklist review' },
-    { label: 'Clearance', value: clearanceCount, path: '/admin/clearance', desc: 'Clearance forms pending approval' },
-    { label: 'Publishing', value: publishCount, path: '/admin/publish', desc: 'Ready to publish to repository' },
+    { label: 'Registration', value: registrationCount, icon: adminSidebarIcons.registration, color: '#e0f2fe', path: '/admin/registration-approvals', desc: 'Pending registration verifications' },
+    { label: 'Submission Review', value: reviewCount, icon: adminSidebarIcons.submission, color: '#fff3cd', path: '/admin/review', desc: 'Submissions awaiting checklist review' },
+    { label: 'Clearance', value: clearanceCount, icon: adminSidebarIcons.clearance, color: '#ede9fe', path: '/admin/clearance', desc: 'Clearance forms pending approval' },
+    { label: 'Publishing', value: publishCount, icon: adminSidebarIcons.publishing, color: '#d1e7dd', path: '/admin/publish', desc: 'Ready to publish to repository' },
   ];
 
   const totalPending = registrationCount + reviewCount + clearanceCount + publishCount;
@@ -68,6 +70,9 @@ export default function AdminDashboardPage() {
               onClick={() => navigate(card.path)}
               style={{ animationDelay: `${index * 0.08}s` }}
             >
+              <div className="su-stat-icon" style={{ background: card.color }}>
+                <PortalIcon src={card.icon} size={22} />
+              </div>
               <div className="su-stat-value">{loading ? '—' : card.value}</div>
               <div className="su-stat-label">{card.label}</div>
               <div className="text-muted small mt-2" style={{ fontSize: '0.75rem' }}>{card.desc}</div>

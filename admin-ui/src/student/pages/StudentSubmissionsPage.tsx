@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
 import { studentApi } from '../../lib/api/student';
+import PortalIcon from '../../lib/components/PortalIcon';
+import { studentSidebarIcons } from '../../lib/portalIcons';
 import type { CaseSummary } from '../../lib/types/workflow';
 import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 import { getStudentCaseGuidance } from '../lib/casePresentation';
@@ -69,6 +71,9 @@ export default function StudentSubmissionsPage() {
 
       {!loading && submissionCases.length === 0 && (
         <div className="su-empty-state">
+          <div className="su-empty-icon">
+            <PortalIcon src={studentSidebarIcons.submission} size={40} />
+          </div>
           <h5>No Submission-Stage Cases Yet</h5>
           <p className="text-muted">Cases will appear here after registration verification and remain here while submission review is still in progress.</p>
         </div>
