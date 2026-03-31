@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
 import { lecturerApi } from '../../lib/api/lecturer';
-import PortalIcon from '../../lib/components/PortalIcon';
+import DashboardMetricCard from '../../lib/components/DashboardMetricCard';
 import { lecturerSidebarIcons } from '../../lib/portalIcons';
 
 export default function LecturerDashboardPage() {
@@ -71,20 +71,18 @@ export default function LecturerDashboardPage() {
 
       <div className="row g-3 mb-4">
         {cards.map((card, index) => (
-          <div className="col-md-6 col-xl-3" key={card.path}>
-            <div
-              className="su-stat-card su-card-clickable fade-in"
+          <div className="col-md-6 col-xl-3 d-flex" key={card.path}>
+            <DashboardMetricCard
+              iconSrc={card.icon}
+              iconBackground={card.color}
+              value={loading ? '—' : card.value}
+              label={card.label}
+              description={card.desc}
+              className="fade-in"
               role="button"
               onClick={() => navigate(card.path)}
               style={{ animationDelay: `${index * 0.08}s` }}
-            >
-              <div className="su-stat-icon" style={{ background: card.color }}>
-                <PortalIcon src={card.icon} size={22} />
-              </div>
-              <div className="su-stat-value">{loading ? '—' : card.value}</div>
-              <div className="su-stat-label">{card.label}</div>
-              <div className="text-muted small mt-2" style={{ fontSize: '0.75rem' }}>{card.desc}</div>
-            </div>
+            />
           </div>
         ))}
       </div>

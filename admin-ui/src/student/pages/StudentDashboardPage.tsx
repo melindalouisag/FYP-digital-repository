@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
 import { studentApi } from '../../lib/api/student';
+import DashboardMetricCard from '../../lib/components/DashboardMetricCard';
 import PortalIcon from '../../lib/components/PortalIcon';
 import { studentSidebarIcons } from '../../lib/portalIcons';
 import type { CaseSummary } from '../../lib/types/workflow';
@@ -47,47 +48,39 @@ export default function StudentDashboardPage() {
     () => selectDashboardCases(cases, DASHBOARD_CASE_LIMIT),
     [cases]
   );
+  const summaryCards = useMemo(
+    () => [
+      { label: 'Total Cases', value: stats.total, icon: studentSidebarIcons.registration, color: '#e8f4f8' },
+      { label: 'In Progress', value: stats.inProgress, icon: studentSidebarIcons.inProgress, color: '#fff3cd' },
+      { label: 'Published', value: stats.published, icon: studentSidebarIcons.published, color: '#d1e7dd' },
+      {
+        label: 'Needs Action',
+        value: stats.needsAction,
+        icon: studentSidebarIcons.needsAction,
+        color: stats.needsAction > 0 ? '#e0f7fa' : '#f0f0f0',
+        borderColor: stats.needsAction > 0 ? '#0b7584' : undefined,
+        valueColor: stats.needsAction > 0 ? '#0b7584' : undefined,
+      },
+    ],
+    [stats]
+  );
 
   return (
     <ShellLayout title="Student Dashboard" subtitle="Monitor your recent progress">
       {/* ===== STAT CARDS ===== */}
       <div className="row g-3 mb-4">
-        <div className="col-6 col-md-3">
-          <div className="su-stat-card">
-            <div className="su-stat-icon" style={{ background: '#e8f4f8' }}>
-              <PortalIcon src={studentSidebarIcons.registration} size={22} />
-            </div>
-            <div className="su-stat-value">{stats.total}</div>
-            <div className="su-stat-label">Total Cases</div>
+        {summaryCards.map((card) => (
+          <div className="col-6 col-md-3 d-flex" key={card.label}>
+            <DashboardMetricCard
+              iconSrc={card.icon}
+              iconBackground={card.color}
+              value={card.value}
+              label={card.label}
+              style={card.borderColor ? { borderColor: card.borderColor } : undefined}
+              valueStyle={card.valueColor ? { color: card.valueColor } : undefined}
+            />
           </div>
-        </div>
-        <div className="col-6 col-md-3">
-          <div className="su-stat-card">
-            <div className="su-stat-icon" style={{ background: '#fff3cd' }}>
-              <PortalIcon src={studentSidebarIcons.inProgress} size={22} />
-            </div>
-            <div className="su-stat-value">{stats.inProgress}</div>
-            <div className="su-stat-label">In Progress</div>
-          </div>
-        </div>
-        <div className="col-6 col-md-3">
-          <div className="su-stat-card">
-            <div className="su-stat-icon" style={{ background: '#d1e7dd' }}>
-              <PortalIcon src={studentSidebarIcons.published} size={22} />
-            </div>
-            <div className="su-stat-value">{stats.published}</div>
-            <div className="su-stat-label">Published</div>
-          </div>
-        </div>
-        <div className="col-6 col-md-3">
-          <div className="su-stat-card" style={{ borderColor: stats.needsAction > 0 ? '#0b7584' : undefined }}>
-            <div className="su-stat-icon" style={{ background: stats.needsAction > 0 ? '#e0f7fa' : '#f0f0f0' }}>
-              <PortalIcon src={studentSidebarIcons.needsAction} size={22} />
-            </div>
-            <div className="su-stat-value" style={{ color: stats.needsAction > 0 ? '#0b7584' : undefined }}>{stats.needsAction}</div>
-            <div className="su-stat-label">Needs Action</div>
-          </div>
-        </div>
+        ))}
       </div>
 
       {/* ===== ACTIONS BAR ===== */}
