@@ -4,9 +4,10 @@ import type {
   ChecklistResult,
   PagedResponse,
   PublicationType,
+  StudentReminder,
   SubmissionVersion,
 } from '../types/workflow';
-import { getJson, postJson, putJson, request } from './http';
+import { deleteJson, getJson, postJson, putJson, request } from './http';
 
 export interface CreateRegistrationPayload {
   type: PublicationType;
@@ -55,6 +56,13 @@ export interface SupervisorRow {
   name: string;
   faculty?: string | null;
   department?: string | null;
+}
+
+export interface StudentReminderPayload {
+  title: string;
+  reminderDate: string;
+  reminderTime: string;
+  caseId?: number | null;
 }
 
 const STUDENT_CASES_PAGE_SIZE = 50;
@@ -138,5 +146,25 @@ export const studentApi = {
       method: 'POST',
       body: form,
     });
+  },
+
+  listReminders(): Promise<StudentReminder[]> {
+    return getJson('/api/student/reminders');
+  },
+
+  createReminder(payload: StudentReminderPayload): Promise<StudentReminder> {
+    return postJson('/api/student/reminders', payload);
+  },
+
+  updateReminder(reminderId: number, payload: StudentReminderPayload): Promise<StudentReminder> {
+    return putJson(`/api/student/reminders/${reminderId}`, payload);
+  },
+
+  markReminderDone(reminderId: number): Promise<StudentReminder> {
+    return postJson(`/api/student/reminders/${reminderId}/done`);
+  },
+
+  deleteReminder(reminderId: number): Promise<{ ok: boolean }> {
+    return deleteJson(`/api/student/reminders/${reminderId}`);
   },
 };

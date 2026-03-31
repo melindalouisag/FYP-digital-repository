@@ -7,11 +7,13 @@ import com.example.thesisrepo.service.ClearanceService;
 import com.example.thesisrepo.service.checklist.ChecklistImportService;
 import com.example.thesisrepo.service.CurrentUserService;
 import com.example.thesisrepo.service.LibraryReviewService;
+import com.example.thesisrepo.service.dashboard.AdminDashboardService;
 import com.example.thesisrepo.service.PublishingService;
 import com.example.thesisrepo.service.RegistrationService;
 import com.example.thesisrepo.service.StorageService;
 import com.example.thesisrepo.service.workflow.PublicationWorkflowGateService;
 import com.example.thesisrepo.user.User;
+import com.example.thesisrepo.web.dto.AdminDashboardResponse;
 import com.example.thesisrepo.web.dto.AdminClearanceCaseSummaryResponse;
 import com.example.thesisrepo.web.dto.AdminCaseDetailResponse;
 import com.example.thesisrepo.web.dto.AdminPublishDetailDto;
@@ -66,9 +68,15 @@ public class AdminWorkflowController {
   private final LibraryReviewService libraryReviewService;
   private final ClearanceService clearanceService;
   private final PublishingService publishingService;
+  private final AdminDashboardService adminDashboardService;
   private final ChecklistTemplateService checklistTemplateService;
   private final PublicationWorkflowGateService workflowGates;
   private final StorageService storageService;
+
+  @GetMapping("/dashboard")
+  public AdminDashboardResponse dashboard() {
+    return adminDashboardService.build();
+  }
 
   @GetMapping("/review")
   public PagedResponse<StudentCaseSummaryResponse> reviewQueue(

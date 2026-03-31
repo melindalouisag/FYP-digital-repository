@@ -1,5 +1,24 @@
 import type { CaseStatus } from './types/workflow';
 
+const WORKFLOW_PROGRESS_PERCENT: Record<CaseStatus, number> = {
+  REGISTRATION_DRAFT: 10,
+  REGISTRATION_PENDING: 20,
+  REGISTRATION_APPROVED: 30,
+  REGISTRATION_VERIFIED: 40,
+  UNDER_SUPERVISOR_REVIEW: 55,
+  NEEDS_REVISION_SUPERVISOR: 55,
+  READY_TO_FORWARD: 65,
+  FORWARDED_TO_LIBRARY: 70,
+  UNDER_LIBRARY_REVIEW: 75,
+  NEEDS_REVISION_LIBRARY: 75,
+  APPROVED_FOR_CLEARANCE: 85,
+  CLEARANCE_SUBMITTED: 90,
+  CLEARANCE_APPROVED: 95,
+  READY_TO_PUBLISH: 98,
+  PUBLISHED: 100,
+  REJECTED: 15,
+};
+
 const STATUS_LABELS: Partial<Record<CaseStatus, string>> = {
   REGISTRATION_APPROVED: 'Registration approved (Supervisor)',
   REGISTRATION_VERIFIED: 'Registration verified',
@@ -172,4 +191,12 @@ export function formatStageName(stage: WorkflowStageKey): string {
     case 'rejected':
       return 'Rejected';
   }
+}
+
+export function getWorkflowProgressPercent(status: CaseStatus): number {
+  return WORKFLOW_PROGRESS_PERCENT[status] ?? 0;
+}
+
+export function isActiveWorkflowCase(status: CaseStatus): boolean {
+  return status !== 'PUBLISHED';
 }

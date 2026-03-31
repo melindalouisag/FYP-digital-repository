@@ -27,6 +27,10 @@ export type SubmissionStatus =
   | 'APPROVED'
   | 'REJECTED';
 
+export type ReminderStatus = 'ACTIVE' | 'DONE';
+
+export type DashboardQueueKey = 'registration' | 'review' | 'clearance' | 'publishing';
+
 export interface CaseSummary {
   id: number;
   type: PublicationType;
@@ -225,4 +229,64 @@ export interface PagedResponse<T> {
   totalPages: number;
   hasNext: boolean;
   hasPrevious: boolean;
+}
+
+export interface StudentReminder {
+  id: number;
+  userId: number;
+  caseId?: number | null;
+  caseTitle?: string | null;
+  title: string;
+  reminderDate: string;
+  reminderTime: string;
+  status: ReminderStatus;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface DashboardStageCount {
+  label: string;
+  count: number;
+}
+
+export interface DashboardActivityItem {
+  caseId: number;
+  studentUserId?: number | null;
+  title: string;
+  subtitle?: string | null;
+  detail: string;
+  occurredAt?: string;
+  status: CaseStatus;
+}
+
+export interface DashboardActionItem {
+  caseId: number;
+  title: string;
+  status: CaseStatus;
+  queueKey: DashboardQueueKey;
+  queueLabel: string;
+  detail: string;
+  updatedAt?: string;
+}
+
+export interface LecturerDashboardData {
+  supervisionProgressPercent: number;
+  activeSupervisedCaseCount: number;
+  registrationApprovalCount: number;
+  submissionReviewCount: number;
+  studentCount: number;
+  stageDistribution: DashboardStageCount[];
+  recentActivity: DashboardActivityItem[];
+}
+
+export interface AdminDashboardData {
+  workflowProgressPercent: number;
+  activeCaseCount: number;
+  registrationQueueCount: number;
+  submissionReviewQueueCount: number;
+  clearanceQueueCount: number;
+  publishingQueueCount: number;
+  needsActionNow: DashboardActionItem[];
+  stageDistribution: DashboardStageCount[];
+  recentActivity: DashboardActivityItem[];
 }

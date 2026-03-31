@@ -8,10 +8,12 @@ import com.example.thesisrepo.service.CurrentUserService;
 import com.example.thesisrepo.service.LecturerReviewService;
 import com.example.thesisrepo.service.RegistrationService;
 import com.example.thesisrepo.service.StorageService;
+import com.example.thesisrepo.service.dashboard.LecturerDashboardService;
 import com.example.thesisrepo.service.workflow.PublicationWorkflowGateService;
 import com.example.thesisrepo.user.Role;
 import com.example.thesisrepo.user.User;
 import com.example.thesisrepo.web.dto.CaseStatusResponse;
+import com.example.thesisrepo.web.dto.LecturerDashboardResponse;
 import com.example.thesisrepo.web.dto.LecturerApprovalQueueRowDto;
 import com.example.thesisrepo.web.dto.LecturerCaseWorkItemDto;
 import com.example.thesisrepo.web.dto.LecturerStudentCaseResponse;
@@ -59,7 +61,14 @@ public class LecturerWorkflowController {
   private final CurrentUserService currentUser;
   private final RegistrationService registrationService;
   private final LecturerReviewService lecturerReviewService;
+  private final LecturerDashboardService lecturerDashboardService;
   private final PublicationWorkflowGateService workflowGates;
+
+  @GetMapping("/dashboard")
+  public LecturerDashboardResponse dashboard(@RequestParam(required = false) Integer year) {
+    User me = currentUser.requireCurrentUser();
+    return lecturerDashboardService.build(me, year);
+  }
 
   @GetMapping("/approvals")
   public List<StudentCaseSummaryResponse> approvalQueue() {

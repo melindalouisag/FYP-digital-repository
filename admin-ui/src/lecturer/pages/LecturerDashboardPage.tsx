@@ -1,16 +1,24 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ShellLayout from '../../layout/ShellLayout';
+import DashboardPanel from '../../lib/components/DashboardPanel';
 import { lecturerApi } from '../../lib/api/lecturer';
-import DashboardMetricCard from '../../lib/components/DashboardMetricCard';
-import { lecturerSidebarIcons } from '../../lib/portalIcons';
+import type { DashboardActivityItem, LecturerDashboardData } from '../../lib/types/workflow';
+import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
+
+const EMPTY_DASHBOARD: LecturerDashboardData = {
+  supervisionProgressPercent: 0,
+  activeSupervisedCaseCount: 0,
+  registrationApprovalCount: 0,
+  submissionReviewCount: 0,
+  studentCount: 0,
+  stageDistribution: [],
+  recentActivity: [],
+};
 
 export default function LecturerDashboardPage() {
   const navigate = useNavigate();
-  const [approvals, setApprovals] = useState(0);
-  const [pendingSupervisor, setPendingSupervisor] = useState(0);
-  const [libraryTracking, setLibraryTracking] = useState(0);
-  const [students, setStudents] = useState(0);
+  const [dashboard, setDashboard] = useState<LecturerDashboardData>(EMPTY_DASHBOARD);
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -18,18 +26,11 @@ export default function LecturerDashboardPage() {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
+      setError('');
       try {
-        const [approvalRows, supervisorGroups, libraryGroups, studentGroups] = await Promise.all([
-          lecturerApi.approvalQueue(),
-          lecturerApi.pendingSupervisor(year),
-          lecturerApi.libraryTracking(year),
-          lecturerApi.myStudents(year),
-        ]);
-        setApprovals(approvalRows.length);
-        setPendingSupervisor(supervisorGroups.reduce((total, group) => total + group.cases.length, 0));
-        setLibraryTracking(libraryGroups.reduce((total, group) => total + group.cases.length, 0));
-        setStudents(studentGroups.length);
+        setDashboard(await lecturerApi.dashboard(year));
       } catch (err) {
+        setDashboard(EMPTY_DASHBOARD);
         setError(err instanceof Error ? err.message : 'Failed to load lecturer dashboard.');
       } finally {
         setLoading(false);
@@ -43,12 +44,30 @@ export default function LecturerDashboardPage() {
     const current = new Date().getFullYear();
     return [current - 1, current, current + 1];
   }, []);
+  const maxStageCount = useMemo(
+    () => Math.max(...dashboard.stageDistribution.map((item) => item.count), 1),
+    [dashboard.stageDistribution]
+  );
 
-  const cards = [
-    { label: 'Registration Approvals', value: approvals, icon: lecturerSidebarIcons.approvals, color: '#e0f2fe', path: '/lecturer/approvals', desc: 'Registration requests awaiting your approval' },
-    { label: 'Submission Review', value: pendingSupervisor, icon: lecturerSidebarIcons.review, color: '#fff3cd', path: '/lecturer/review', desc: 'Student submissions needing your review' },
-    { label: 'Library Tracking', value: libraryTracking, icon: lecturerSidebarIcons.library, color: '#ede9fe', path: '/lecturer/library', desc: 'Cases forwarded to library for processing' },
-    { label: 'My Students', value: students, icon: lecturerSidebarIcons.students, color: '#d1e7dd', path: '/lecturer/students', desc: 'Students under your supervision' },
+  const summaryCards = [
+    {
+      title: 'Registration Approvals',
+      value: dashboard.registrationApprovalCount,
+      detail: 'Registration requests awaiting your approval',
+      onClick: () => navigate('/lecturer/approvals'),
+    },
+    {
+      title: 'Submission Review',
+      value: dashboard.submissionReviewCount,
+      detail: 'Student submissions needing your review',
+      onClick: () => navigate('/lecturer/review'),
+    },
+    {
+      title: 'My Students',
+      value: dashboard.studentCount,
+      detail: 'Students under your supervision',
+      onClick: () => navigate('/lecturer/students'),
+    },
   ];
 
   return (
@@ -69,23 +88,95 @@ export default function LecturerDashboardPage() {
         </select>
       </div>
 
-      <div className="row g-3 mb-4">
-        {cards.map((card, index) => (
-          <div className="col-md-6 col-xl-3 d-flex" key={card.path}>
-            <DashboardMetricCard
-              iconSrc={card.icon}
-              iconBackground={card.color}
-              value={loading ? '—' : card.value}
-              label={card.label}
-              description={card.desc}
-              className="fade-in"
-              role="button"
-              onClick={() => navigate(card.path)}
-              style={{ animationDelay: `${index * 0.08}s` }}
-            />
+      <div className="su-dashboard-grid su-dashboard-grid-4 mb-4">
+        <DashboardPanel title="Supervision Progress">
+          <div className="su-dashboard-progress-value">{loading ? '—%' : `${dashboard.supervisionProgressPercent}%`}</div>
+          <div className="su-dashboard-progress-bar" aria-hidden="true">
+            <div className="su-dashboard-progress-fill" style={{ width: `${dashboard.supervisionProgressPercent}%` }} />
           </div>
+          <p className="su-dashboard-support mb-0">
+            {loading
+              ? 'Loading dashboard data.'
+              : dashboard.activeSupervisedCaseCount > 0
+                ? 'Based on active supervised cases'
+                : 'No active supervised cases.'}
+          </p>
+        </DashboardPanel>
+
+        {summaryCards.map((card) => (
+          <DashboardPanel key={card.title} title={card.title} className="su-card-clickable" bodyClassName="justify-content-between">
+            <button type="button" className="su-dashboard-panel-button" onClick={card.onClick}>
+              <div className="su-dashboard-progress-value">{loading ? '—' : card.value}</div>
+              <p className="su-dashboard-support mb-0">{card.detail}</p>
+            </button>
+          </DashboardPanel>
         ))}
       </div>
+
+      <div className="row g-3">
+        <div className="col-12 col-xl-5 d-flex">
+          <DashboardPanel title="Stage Distribution" className="w-100">
+            {loading ? (
+              <p className="su-dashboard-empty-copy mb-0">Loading dashboard data.</p>
+            ) : dashboard.stageDistribution.length === 0 ? (
+              <p className="su-dashboard-empty-copy mb-0">No supervised cases available for this view.</p>
+            ) : (
+              <div className="su-dashboard-bars">
+                {dashboard.stageDistribution.map((item) => (
+                  <div className="su-dashboard-bar-row" key={item.label}>
+                    <div className="d-flex justify-content-between gap-2 mb-2">
+                      <span className="su-dashboard-bar-label">{item.label}</span>
+                      <span className="su-dashboard-bar-value">{item.count}</span>
+                    </div>
+                    <div className="su-dashboard-bar-track" aria-hidden="true">
+                      <div
+                        className="su-dashboard-bar-fill"
+                        style={{ width: `${maxStageCount === 0 ? 0 : (item.count / maxStageCount) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </DashboardPanel>
+        </div>
+
+        <div className="col-12 col-xl-7 d-flex">
+          <DashboardPanel title="Recent Student Activity" className="w-100">
+            {loading ? (
+              <p className="su-dashboard-empty-copy mb-0">Loading dashboard data.</p>
+            ) : dashboard.recentActivity.length === 0 ? (
+              <p className="su-dashboard-empty-copy mb-0">No recent student activity.</p>
+            ) : (
+              <div className="su-dashboard-list">
+                {dashboard.recentActivity.map((item) => (
+                  <div className="su-dashboard-list-item" key={`${item.caseId}-${item.occurredAt ?? item.detail}`}>
+                    <LecturerActivityItem item={item} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </DashboardPanel>
+        </div>
+      </div>
     </ShellLayout>
+  );
+}
+
+function LecturerActivityItem({ item }: { item: DashboardActivityItem }) {
+  return (
+    <div className="d-flex justify-content-between gap-2 align-items-start">
+      <div className="min-w-0">
+        <div className="su-dashboard-item-title su-text-truncate">{item.title}</div>
+        <div className="su-dashboard-item-support">{item.detail}</div>
+        <div className="su-dashboard-item-meta">
+          {item.subtitle ? `${item.subtitle} • ` : ''}
+          {item.occurredAt ? new Date(item.occurredAt).toLocaleString() : 'N/A'}
+        </div>
+      </div>
+      <span className={`badge status-badge ${statusBadgeClass(item.status)}`}>
+        {formatStatus(item.status)}
+      </span>
+    </div>
   );
 }

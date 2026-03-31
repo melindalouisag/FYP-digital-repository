@@ -1,4 +1,5 @@
 import type {
+  AdminDashboardData,
   AdminPublishDetail,
   AdminPublishQueueItem,
   AdminRegistrationApproval,
@@ -46,6 +47,10 @@ function buildPageQuery(page?: number, size?: number): string {
 }
 
 export const adminApi = {
+  dashboard(): Promise<AdminDashboardData> {
+    return getJson('/api/admin/dashboard');
+  },
+
   reviewQueue(params?: { page?: number; size?: number }): Promise<PagedResponse<CaseSummary>> {
     return getJson(`/api/admin/review${buildPageQuery(params?.page, params?.size)}`);
   },

@@ -1,4 +1,11 @@
-import type { CaseStatus, CaseSummary, PagedResponse, PublicationType, TimelineItem } from '../types/workflow';
+import type {
+  CaseStatus,
+  CaseSummary,
+  LecturerDashboardData,
+  PagedResponse,
+  PublicationType,
+  TimelineItem,
+} from '../types/workflow';
 import { getJson, postJson } from './http';
 
 export interface LecturerApprovalQueueRow {
@@ -62,6 +69,11 @@ function buildPageQuery(page?: number, size?: number): string {
 }
 
 export const lecturerApi = {
+  dashboard(year?: number): Promise<LecturerDashboardData> {
+    const query = year ? `?year=${year}` : '';
+    return getJson(`/api/lecturer/dashboard${query}`);
+  },
+
   approvals(): Promise<{ id: number; status: CaseStatus; type: PublicationType }[]> {
     return getJson('/api/lecturer/approvals');
   },

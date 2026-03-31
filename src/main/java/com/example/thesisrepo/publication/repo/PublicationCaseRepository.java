@@ -15,6 +15,7 @@ import java.util.List;
 public interface PublicationCaseRepository extends JpaRepository<PublicationCase, Long> {
   List<PublicationCase> findByStudentOrderByUpdatedAtDesc(User student);
   Page<PublicationCase> findByStudent(User student, Pageable pageable);
+  java.util.Optional<PublicationCase> findByIdAndStudent(Long id, User student);
   List<PublicationCase> findByStudentAndTypeOrderByUpdatedAtDesc(User student, PublicationType type);
   List<PublicationCase> findByStatusInOrderByUpdatedAtDesc(List<CaseStatus> statuses);
   Page<PublicationCase> findByStatusIn(List<CaseStatus> statuses, Pageable pageable);
