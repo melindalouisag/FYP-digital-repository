@@ -60,7 +60,22 @@ export default function StudentRegistrationsPage() {
   const hasNext = page + 1 < totalPages;
 
   return (
-    <ShellLayout title="Publication Registration" subtitle="Prepare registration details, correct returned cases, and track approval progress">
+    <ShellLayout
+      title="Publication Registration"
+      subtitle={(
+        <>
+          How to use this page:
+          <br />
+          1. Click "Create New Registration" to start a new case.
+          <br />
+          2. Fill in the registration form completely.
+          <br />
+          3. Submit the registration for approval.
+          <br />
+          4. Return to this page to track the status or reopen returned cases.
+        </>
+      )}
+    >
       <div className="d-flex justify-content-between align-items-center mb-4">
         <button className="btn btn-outline-secondary btn-sm" style={{ borderRadius: '999px' }} onClick={() => void load()} disabled={loading}>
           {loading ? 'Loading...' : 'Refresh'}
@@ -82,14 +97,6 @@ export default function StudentRegistrationsPage() {
           <button className="btn btn-primary" onClick={() => navigate('/student/registrations/new')}>
             Create First Registration
           </button>
-        </div>
-      )}
-
-      {registrationCases.length > 0 && (
-        <div className="mb-3">
-          <p className="text-muted small mb-0">
-            Use this page to finish draft registrations, reopen returned cases, and monitor approval progress before submission begins.
-          </p>
         </div>
       )}
 

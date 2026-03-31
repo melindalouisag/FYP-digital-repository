@@ -49,7 +49,7 @@ export default function StudentDashboardPage() {
   );
 
   return (
-    <ShellLayout title="Student Dashboard" subtitle="Start with cases that need your action, then monitor your most recent progress">
+    <ShellLayout title="Student Dashboard" subtitle="Monitor your recent progress">
       {/* ===== STAT CARDS ===== */}
       <div className="row g-3 mb-4">
         <div className="col-6 col-md-3">
@@ -91,10 +91,7 @@ export default function StudentDashboardPage() {
       </div>
 
       {/* ===== ACTIONS BAR ===== */}
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <button className="btn btn-primary" onClick={() => navigate('/student/registrations/new')}>
-          New Publication Registration
-        </button>
+      <div className="d-flex justify-content-end align-items-center mb-3">
         <button className="btn btn-outline-secondary btn-sm" onClick={() => void load()} disabled={loading}>
           {loading ? <><span className="su-spinner d-inline-block me-1" style={{ width: '0.9rem', height: '0.9rem', borderWidth: 2 }} /> Loading...</> : 'Refresh'}
         </button>
@@ -109,9 +106,6 @@ export default function StudentDashboardPage() {
           </div>
           <h5>No Publication Cases Yet</h5>
           <p className="text-muted">Create a publication registration when you are ready to start a thesis or article submission.</p>
-          <button className="btn btn-primary" onClick={() => navigate('/student/registrations/new')}>
-            Create First Registration
-          </button>
         </div>
       )}
 
@@ -128,12 +122,8 @@ export default function StudentDashboardPage() {
       {visibleCases.length > 0 && (
         <div className="mb-3">
           <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-            <h2 className="h6 mb-0 su-page-title">Priority Cases</h2>
-            <span className="text-muted small">Showing up to {DASHBOARD_CASE_LIMIT} cases that need action or changed recently</span>
+            <h2 className="h6 mb-0 su-page-title">Case List</h2>
           </div>
-          <p className="text-muted small mb-0">
-            Cases you can act on appear first, followed by your most recently updated in-progress work.
-          </p>
         </div>
       )}
 

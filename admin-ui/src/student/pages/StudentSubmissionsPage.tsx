@@ -60,7 +60,22 @@ export default function StudentSubmissionsPage() {
   const hasNext = page + 1 < totalPages;
 
   return (
-    <ShellLayout title="Submission" subtitle="Upload approved files, respond to revision requests, and track review progress">
+    <ShellLayout
+      title="Submission"
+      subtitle={(
+        <>
+          How to use this page:
+          <br />
+          1. Open a case that is ready for submission.
+          <br />
+          2. Upload the required submission file.
+          <br />
+          3. Resubmit the file if a revision is requested.
+          <br />
+          4. Return to this page to track review progress.
+        </>
+      )}
+    >
       <div className="d-flex justify-content-between align-items-center mb-4">
         <button className="btn btn-outline-secondary btn-sm" style={{ borderRadius: '999px' }} onClick={() => void load()} disabled={loading}>
           {loading ? 'Loading...' : 'Refresh'}
@@ -76,14 +91,6 @@ export default function StudentSubmissionsPage() {
           </div>
           <h5>No Submission-Stage Cases Yet</h5>
           <p className="text-muted">Cases will appear here after registration verification and remain here while submission review is still in progress.</p>
-        </div>
-      )}
-
-      {submissionCases.length > 0 && (
-        <div className="mb-3">
-          <p className="text-muted small mb-0">
-            Use this page to upload the first PDF, respond to revision requests, and follow submission progress until clearance and publishing take over.
-          </p>
         </div>
       )}
 

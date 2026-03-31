@@ -6,7 +6,7 @@ import { useTheme } from '../theme/ThemeContext';
 
 interface ShellLayoutProps {
   title: string;
-  subtitle?: string;
+  subtitle?: ReactNode;
   children: ReactNode;
 }
 
