@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import ShellLayout from '../../layout/ShellLayout';
+import ShellLayout from '../../ShellLayout';
 import { studentApi } from '../../lib/api/student';
-import type { CaseDetailPayload } from '../../lib/types/workflow';
+import type { CaseDetailPayload } from '../../lib/workflowTypes';
 import { canSubmitClearance, formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 
 export default function StudentClearanceDetailPage() {
@@ -15,7 +15,7 @@ export default function StudentClearanceDetailPage() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!caseId) return;
     setLoading(true);
     setError('');
@@ -28,11 +28,11 @@ export default function StudentClearanceDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [caseId]);
 
   useEffect(() => {
     void load();
-  }, [caseId]);
+  }, [load]);
 
   const onSubmit = async () => {
     if (!caseId || !detail) return;

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import ShellLayout from '../../layout/ShellLayout';
+import ShellLayout from '../../ShellLayout';
 import { studentApi } from '../../lib/api/student';
-import type { CaseDetailPayload, ChecklistResult } from '../../lib/types/workflow';
+import type { CaseDetailPayload, ChecklistResult } from '../../lib/workflowTypes';
 
 export default function StudentFeedbackPage() {
   const { caseId } = useParams();

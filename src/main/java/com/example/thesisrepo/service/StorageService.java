@@ -101,7 +101,7 @@ public class StorageService {
   public String saveWithKey(MultipartFile file, String objectKey) throws IOException {
     validatePdf(file);
     String normalizedObjectKey = normalizeObjectKey(objectKey);
-    if ("memory".equals(normalizedProvider)) {
+    if (usesMemoryStorage()) {
       return saveToMemory(file, normalizedObjectKey);
     }
     return saveToAzure(file, normalizedObjectKey);
@@ -112,10 +112,9 @@ public class StorageService {
       return false;
     }
 
-    if ("memory".equals(normalizedProvider)) {
+    if (usesMemoryStorage()) {
       try {
-        String normalizedKey = normalizeObjectKey(storedKey);
-        return inMemoryStore.containsKey(normalizedKey);
+        return inMemoryStore.containsKey(normalizeObjectKey(storedKey));
       } catch (IOException ex) {
         return false;
       }
@@ -129,7 +128,7 @@ public class StorageService {
       throw new IOException("Stored key is empty");
     }
 
-    if ("memory".equals(normalizedProvider)) {
+    if (usesMemoryStorage()) {
       String normalizedKey = normalizeObjectKey(storedKey);
       StoredObject storedObject = inMemoryStore.get(normalizedKey);
       if (storedObject == null) {
@@ -150,9 +149,8 @@ public class StorageService {
       return;
     }
 
-    if ("memory".equals(normalizedProvider)) {
-      String normalizedKey = normalizeObjectKey(storedKey);
-      inMemoryStore.remove(normalizedKey);
+    if (usesMemoryStorage()) {
+      inMemoryStore.remove(normalizeObjectKey(storedKey));
       return;
     }
 
@@ -247,7 +245,7 @@ public class StorageService {
       throw new IOException("Invalid file name");
     }
 
-    String normalized = candidate.replace('\\', '/');
+    String normalized = normalizeSlashes(candidate);
     int slashIndex = normalized.lastIndexOf('/');
     String basename = slashIndex >= 0 ? normalized.substring(slashIndex + 1) : normalized;
 
@@ -274,10 +272,7 @@ public class StorageService {
     if (!hasText(objectKey)) {
       throw new IOException("Invalid storage key");
     }
-    String normalized = objectKey.trim().replace('\\', '/');
-    while (normalized.startsWith("/")) {
-      normalized = normalized.substring(1);
-    }
+    String normalized = trimLeadingSlashes(normalizeSlashes(objectKey));
     Path normalizedPath = Paths.get(normalized).normalize();
     if (normalizedPath.isAbsolute() || normalizedPath.startsWith("..")) {
       throw new IOException("Invalid storage key");
@@ -294,13 +289,7 @@ public class StorageService {
       return "";
     }
 
-    String normalized = prefix.trim().replace('\\', '/');
-    while (normalized.startsWith("/")) {
-      normalized = normalized.substring(1);
-    }
-    while (normalized.endsWith("/")) {
-      normalized = normalized.substring(0, normalized.length() - 1);
-    }
+    String normalized = trimTrailingSlashes(trimLeadingSlashes(normalizeSlashes(prefix)));
     if (!hasText(normalized)) {
       return "";
     }
@@ -314,10 +303,7 @@ public class StorageService {
   }
 
   private String toBlobName(String storedKey) {
-    String normalized = storedKey.trim().replace('\\', '/');
-    while (normalized.startsWith("/")) {
-      normalized = normalized.substring(1);
-    }
+    String normalized = trimLeadingSlashes(normalizeSlashes(storedKey));
     if (normalizedAzurePrefix.isBlank()) {
       return normalized;
     }
@@ -329,6 +315,30 @@ public class StorageService {
 
   private String buildBlobName(String objectKey) {
     return normalizedAzurePrefix.isBlank() ? objectKey : normalizedAzurePrefix + "/" + objectKey;
+  }
+
+  private boolean usesMemoryStorage() {
+    return "memory".equals(normalizedProvider);
+  }
+
+  private static String normalizeSlashes(String value) {
+    return value.trim().replace('\\', '/');
+  }
+
+  private static String trimLeadingSlashes(String value) {
+    String normalized = value;
+    while (normalized.startsWith("/")) {
+      normalized = normalized.substring(1);
+    }
+    return normalized;
+  }
+
+  private static String trimTrailingSlashes(String value) {
+    String normalized = value;
+    while (normalized.endsWith("/")) {
+      normalized = normalized.substring(0, normalized.length() - 1);
+    }
+    return normalized;
   }
 
   private String extension(String originalFilename) {

@@ -2,9 +2,7 @@ package com.example.thesisrepo.web;
 
 import com.example.thesisrepo.publication.*;
 import com.example.thesisrepo.publication.repo.*;
-import com.example.thesisrepo.service.ChecklistTemplateService;
 import com.example.thesisrepo.service.ClearanceService;
-import com.example.thesisrepo.service.checklist.ChecklistImportService;
 import com.example.thesisrepo.service.CurrentUserService;
 import com.example.thesisrepo.service.LibraryReviewService;
 import com.example.thesisrepo.service.dashboard.AdminDashboardService;
@@ -21,17 +19,10 @@ import com.example.thesisrepo.web.dto.AdminPublishQueueDto;
 import com.example.thesisrepo.web.dto.AdminRegistrationApprovalDto;
 import com.example.thesisrepo.web.dto.AdminStudentGroupDto;
 import com.example.thesisrepo.web.dto.CaseStatusResponse;
-import com.example.thesisrepo.web.dto.ChecklistImportSummaryResponse;
-import com.example.thesisrepo.web.dto.ChecklistTemplateActionResponse;
-import com.example.thesisrepo.web.dto.ChecklistTemplateDetailResponse;
-import com.example.thesisrepo.web.dto.ChecklistTemplateReleaseResponse;
-import com.example.thesisrepo.web.dto.ChecklistTemplateSummaryResponse;
-import com.example.thesisrepo.web.dto.ChecklistVersionResponse;
 import com.example.thesisrepo.web.dto.OperationResultResponse;
 import com.example.thesisrepo.web.dto.PagedResponse;
 import com.example.thesisrepo.web.dto.PublishResultResponse;
 import com.example.thesisrepo.web.dto.StudentCaseSummaryResponse;
-import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.transaction.Transactional;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -44,7 +35,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
@@ -62,14 +52,12 @@ public class AdminWorkflowController {
   private static final int MAX_PAGE_SIZE = 100;
 
   private final SubmissionVersionRepository submissionVersions;
-  private final ChecklistImportService checklistImportService;
   private final CurrentUserService currentUser;
   private final RegistrationService registrationService;
   private final LibraryReviewService libraryReviewService;
   private final ClearanceService clearanceService;
   private final PublishingService publishingService;
   private final AdminDashboardService adminDashboardService;
-  private final ChecklistTemplateService checklistTemplateService;
   private final PublicationWorkflowGateService workflowGates;
   private final StorageService storageService;
 
@@ -254,94 +242,6 @@ public class AdminWorkflowController {
   public ResponseEntity<CaseStatusResponse> unpublish(@PathVariable Long caseId, @RequestBody DecisionRequest req) {
     User admin = currentUser.requireCurrentUser();
     return ResponseEntity.ok(publishingService.unpublish(admin, caseId, req.getReason()));
-  }
-
-  @GetMapping("/checklists")
-  public List<ChecklistTemplateSummaryResponse> checklists(@RequestParam("type") ChecklistScope type) {
-    return checklistTemplateService.listTemplates(type);
-  }
-
-  // Backward-compatible endpoint used by existing review/detail pages that still need item payloads.
-  @GetMapping("/checklists/full")
-  public List<ChecklistTemplateDetailResponse> checklistsFull(@RequestParam("type") ChecklistScope type) {
-    return checklistTemplateService.listTemplatesWithItems(type);
-  }
-
-  @PostMapping("/checklists/{type}/create-empty")
-  @Transactional
-  public ResponseEntity<ChecklistTemplateSummaryResponse> createEmptyTemplate(@PathVariable ChecklistScope type) {
-    return ResponseEntity.ok(checklistTemplateService.createEmptyTemplate(type));
-  }
-
-  @PostMapping("/checklists/{type}/new-draft")
-  @Transactional
-  public ResponseEntity<ChecklistTemplateSummaryResponse> createNewDraftTemplate(@PathVariable ChecklistScope type) {
-    return ResponseEntity.ok(checklistTemplateService.createNewDraftTemplate(type));
-  }
-
-  @PostMapping("/checklists/{type}/new-version")
-  @Transactional
-  public ResponseEntity<ChecklistVersionResponse> createNewVersion(@PathVariable ChecklistScope type) {
-    return ResponseEntity.ok(checklistTemplateService.createNewVersion(type));
-  }
-
-  @PostMapping(value = "/checklists/{type}/import-xlsx", consumes = "multipart/form-data")
-  @Transactional
-  public ResponseEntity<ChecklistImportSummaryResponse> importChecklist(
-    @PathVariable ChecklistScope type,
-    @RequestPart("file") MultipartFile file,
-    @RequestParam(defaultValue = "false") boolean activate,
-    @RequestParam(required = false) String sheetName
-  ) {
-    ChecklistImportService.ImportSummary summary = checklistImportService.importChecklist(type, file, activate, sheetName);
-    return ResponseEntity.ok(new ChecklistImportSummaryResponse(
-      summary.type(),
-      summary.newTemplateId(),
-      summary.newVersion(),
-      summary.itemsImported(),
-      summary.sections()
-    ));
-  }
-
-  @GetMapping("/checklists/templates/{templateId}")
-  public ResponseEntity<ChecklistTemplateDetailResponse> checklistTemplateDetail(@PathVariable Long templateId) {
-    User admin = currentUser.requireCurrentUser();
-    return ResponseEntity.ok(checklistTemplateService.templateDetail(admin, templateId));
-  }
-
-  @PostMapping("/checklists/templates/{templateId}/lock")
-  @Transactional
-  public ResponseEntity<ChecklistTemplateActionResponse> acquireTemplateLock(@PathVariable Long templateId) {
-    User admin = currentUser.requireCurrentUser();
-    return checklistTemplateService.acquireLock(admin, templateId).toResponseEntity();
-  }
-
-  @DeleteMapping("/checklists/templates/{templateId}/lock")
-  @Transactional
-  public ResponseEntity<ChecklistTemplateReleaseResponse> releaseTemplateLock(@PathVariable Long templateId) {
-    User admin = currentUser.requireCurrentUser();
-    return ResponseEntity.ok(checklistTemplateService.releaseLock(admin, templateId));
-  }
-
-  @DeleteMapping("/checklists/templates/{templateId}")
-  @Transactional
-  public ResponseEntity<ChecklistTemplateActionResponse> deleteTemplate(@PathVariable Long templateId) {
-    User admin = currentUser.requireCurrentUser();
-    return checklistTemplateService.deleteTemplate(admin, templateId).toResponseEntity();
-  }
-
-  @PutMapping("/checklists/templates/{templateId}/items")
-  @Transactional
-  public ResponseEntity<ChecklistTemplateActionResponse> replaceTemplateItems(@PathVariable Long templateId, @RequestBody JsonNode payload) {
-    User admin = currentUser.requireCurrentUser();
-    return checklistTemplateService.replaceTemplateItems(admin, templateId, payload).toResponseEntity();
-  }
-
-  @PostMapping("/checklists/templates/{templateId}/activate")
-  @Transactional
-  public ResponseEntity<ChecklistTemplateActionResponse> activateTemplate(@PathVariable Long templateId) {
-    User admin = currentUser.requireCurrentUser();
-    return checklistTemplateService.activateTemplate(admin, templateId).toResponseEntity();
   }
 
   private PublicationCase getCase(Long caseId) {

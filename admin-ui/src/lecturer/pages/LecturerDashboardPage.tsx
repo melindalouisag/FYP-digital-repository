@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import ShellLayout from '../../layout/ShellLayout';
+import ShellLayout from '../../ShellLayout';
 import DashboardPanel from '../../lib/components/DashboardPanel';
 import { lecturerApi } from '../../lib/api/lecturer';
-import type { DashboardActivityItem, LecturerDashboardData } from '../../lib/types/workflow';
+import type { DashboardActivityItem, LecturerDashboardData } from '../../lib/workflowTypes';
 import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 
 const EMPTY_DASHBOARD: LecturerDashboardData = {

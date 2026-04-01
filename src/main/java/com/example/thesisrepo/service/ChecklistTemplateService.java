@@ -156,19 +156,7 @@ public class ChecklistTemplateService {
     List<ReplaceItemCommand> items = readReplaceItems(payload);
     validateTemplateItems(items);
 
-    checklistItems.deleteByTemplate(template);
-    List<ReplaceItemCommand> normalized = normalizeOrder(items);
-    int idx = 1;
-    for (ReplaceItemCommand item : normalized) {
-      checklistItems.save(ChecklistItemV2.builder()
-        .template(template)
-        .orderIndex(idx++)
-        .section(item.section() != null ? item.section().trim() : null)
-        .itemText(item.itemText().trim())
-        .guidanceText(item.guidanceText() != null ? item.guidanceText().trim() : null)
-        .isRequired(item.required())
-        .build());
-    }
+    saveTemplateItems(template, items);
 
     checklistLocks.release(template, admin);
     return ServiceResponse.ok(new ChecklistItemsSaveResponse(true, true));
@@ -182,15 +170,11 @@ public class ChecklistTemplateService {
       return ServiceResponse.status(CONFLICT, lockConflict(lock));
     }
 
-    int itemCount = checklistItems.findByTemplateOrderByOrderIndexAsc(toActivate).size();
-    if (itemCount == 0) {
+    if (templateItemCount(toActivate) == 0) {
       throw new ResponseStatusException(BAD_REQUEST, "Template must have at least 1 item before activation");
     }
 
-    checklistTemplates.findByPublicationTypeOrderByVersionDesc(toActivate.getPublicationType()).forEach(template -> {
-      template.setActive(template.getId().equals(templateId));
-      checklistTemplates.save(template);
-    });
+    setActiveTemplateVersion(toActivate);
     checklistLocks.release(toActivate, admin);
 
     return ServiceResponse.ok(new ChecklistActivationResponse(templateId, true));
@@ -202,14 +186,13 @@ public class ChecklistTemplateService {
   }
 
   private ChecklistTemplateSummaryResponse toSummaryResponse(ChecklistTemplate template) {
-    int itemCount = checklistItems.findByTemplateOrderByOrderIndexAsc(template).size();
     return new ChecklistTemplateSummaryResponse(
       template.getId(),
       template.getPublicationType(),
       template.getVersion(),
       template.isActive(),
       template.getCreatedAt(),
-      itemCount
+      templateItemCount(template)
     );
   }
 
@@ -222,16 +205,7 @@ public class ChecklistTemplateService {
         template.isActive(),
         template.getCreatedAt()
       ),
-      checklistItems.findByTemplateOrderByOrderIndexAsc(template).stream()
-        .map(item -> new ChecklistTemplateDetailResponse.ItemResponse(
-          item.getId(),
-          item.getOrderIndex(),
-          item.getSection(),
-          item.getItemText(),
-          item.getGuidanceText(),
-          item.isRequired()
-        ))
-        .toList(),
+      detailItems(template),
       toEditLockResponse(lockInfo)
     );
   }
@@ -280,6 +254,49 @@ public class ChecklistTemplateService {
     return items.stream()
       .sorted(Comparator.comparing(item -> item.orderIndex() == null ? Integer.MAX_VALUE : item.orderIndex()))
       .toList();
+  }
+
+  private void saveTemplateItems(ChecklistTemplate template, List<ReplaceItemCommand> items) {
+    checklistItems.deleteByTemplate(template);
+    List<ReplaceItemCommand> normalized = normalizeOrder(items);
+    for (int index = 0; index < normalized.size(); index++) {
+      checklistItems.save(toChecklistItem(template, normalized.get(index), index + 1));
+    }
+  }
+
+  private int templateItemCount(ChecklistTemplate template) {
+    return checklistItems.findByTemplateOrderByOrderIndexAsc(template).size();
+  }
+
+  private List<ChecklistTemplateDetailResponse.ItemResponse> detailItems(ChecklistTemplate template) {
+    return checklistItems.findByTemplateOrderByOrderIndexAsc(template).stream()
+      .map(item -> new ChecklistTemplateDetailResponse.ItemResponse(
+        item.getId(),
+        item.getOrderIndex(),
+        item.getSection(),
+        item.getItemText(),
+        item.getGuidanceText(),
+        item.isRequired()
+      ))
+      .toList();
+  }
+
+  private ChecklistItemV2 toChecklistItem(ChecklistTemplate template, ReplaceItemCommand item, int orderIndex) {
+    return ChecklistItemV2.builder()
+      .template(template)
+      .orderIndex(orderIndex)
+      .section(item.section() != null ? item.section().trim() : null)
+      .itemText(item.itemText().trim())
+      .guidanceText(item.guidanceText() != null ? item.guidanceText().trim() : null)
+      .isRequired(item.required())
+      .build();
+  }
+
+  private void setActiveTemplateVersion(ChecklistTemplate activeTemplate) {
+    checklistTemplates.findByPublicationTypeOrderByVersionDesc(activeTemplate.getPublicationType()).forEach(template -> {
+      template.setActive(template.getId().equals(activeTemplate.getId()));
+      checklistTemplates.save(template);
+    });
   }
 
   private static void validateTemplateItems(List<ReplaceItemCommand> items) {

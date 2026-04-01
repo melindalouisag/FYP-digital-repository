@@ -1,18 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import ShellLayout from '../../layout/ShellLayout';
+import ShellLayout from '../../ShellLayout';
 import { studentApi } from '../../lib/api/student';
 import PortalIcon from '../../lib/components/PortalIcon';
 import { studentSidebarIcons } from '../../lib/portalIcons';
-import type { CaseSummary } from '../../lib/types/workflow';
-import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
-import { getStudentCaseGuidance } from '../lib/casePresentation';
+import type { CaseSummary } from '../../lib/workflowTypes';
+import { formatStatus, getStudentCaseGuidance, statusBadgeClass } from '../../lib/workflowUi';
 import {
   isNavigationActivationKey,
   isSubmissionWorkspaceCase,
   resolveStudentCaseNavigation,
   sortCasesByRecentActivity,
-} from '../lib/caseNavigation';
+} from '../caseNavigation';
 
 const PAGE_SIZE = 10;
 

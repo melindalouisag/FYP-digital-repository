@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
-import type { AuthUser } from '../lib/api/auth';
+import { defaultPath, type AuthUser } from '../lib/api/auth';
 
 interface RoleGuardProps {
   user: AuthUser | null;
@@ -24,13 +24,7 @@ export function RoleGuard({
   }
 
   if (!allowedRoles.includes(user.role)) {
-    const defaultPath =
-      user.role === 'STUDENT'
-        ? '/student/dashboard'
-        : user.role === 'LECTURER'
-          ? '/lecturer/dashboard'
-          : '/admin/dashboard';
-    return <Navigate to={redirectTo ?? defaultPath} replace />;
+    return <Navigate to={redirectTo ?? defaultPath(user.role)} replace />;
   }
 
   return <>{children}</>;

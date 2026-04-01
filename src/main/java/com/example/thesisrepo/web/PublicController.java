@@ -5,9 +5,9 @@ import com.example.thesisrepo.publication.PublishedItem;
 import com.example.thesisrepo.publication.repo.DownloadEventRepository;
 import com.example.thesisrepo.publication.repo.PublishedItemRepository;
 import com.example.thesisrepo.service.CurrentUserService;
-import com.example.thesisrepo.service.PublicRepositorySearchCriteria;
 import com.example.thesisrepo.service.PublicRepositorySearchService;
 import com.example.thesisrepo.service.StorageService;
+import com.example.thesisrepo.service.publicsearch.PublicRepositorySearchRequest;
 import com.example.thesisrepo.web.dto.PagedResponse;
 import com.example.thesisrepo.web.dto.PublicRepositoryItemDetailDto;
 import com.example.thesisrepo.web.dto.PublicRepositoryItemDto;
@@ -57,7 +57,7 @@ public class PublicController {
     @RequestParam(defaultValue = "" + DEFAULT_PAGE_SIZE) int size
   ) {
     return ResponseEntity.ok(publicRepositorySearchService.search(
-      new PublicRepositorySearchCriteria(title, author, faculty, program, year, keyword),
+      PublicRepositorySearchRequest.fromFilters(title, author, faculty, program, year, keyword),
       PageRequest.of(Math.max(page, 0), normalizePageSize(size))
     ));
   }

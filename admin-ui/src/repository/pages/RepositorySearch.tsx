@@ -1,195 +1,22 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { publicRepositoryApi, type RepositoryItemSummary, type RepositorySearchParams } from '../../lib/api/publicRepository';
-import { masterApi, type Faculty, type Program } from '../../lib/api/master';
-import ThemeSwitch from '../../components/ThemeSwitch';
+import { useNavigate } from 'react-router-dom';
+import ThemeSwitch from '../../theme/ThemeSwitch';
 import PortalIcon from '../../lib/components/PortalIcon';
-import KeywordChipInput from '../../lib/components/KeywordChipInput';
 import { useAuth } from '../../lib/context/AuthContext';
-import { joinKeywordTokens } from '../../lib/keywords';
 import { adminSidebarIcons } from '../../lib/portalIcons';
-import type { PagedResponse } from '../../lib/types/workflow';
 import { useTheme } from '../../theme/ThemeContext';
-
-const INITIAL_FILTERS: RepositorySearchParams = {
-  title: '',
-  author: '',
-  faculty: '',
-  program: '',
-  keyword: '',
-};
-
-const PAGE_SIZE = 10;
-
-const EMPTY_PAGE: PagedResponse<RepositoryItemSummary> = {
-  items: [],
-  page: 0,
-  size: PAGE_SIZE,
-  totalElements: 0,
-  totalPages: 0,
-  hasNext: false,
-  hasPrevious: false,
-};
+import { RepositorySearchFilters } from '../components/RepositorySearchFilters';
+import { RepositorySearchPagination } from '../components/RepositorySearchPagination';
+import { RepositorySearchResults } from '../components/RepositorySearchResults';
+import { useRepositorySearch } from '../useRepositorySearch';
 
 export default function RepositorySearchPage() {
   const { user, logout } = useAuth();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
-
-  const [filters, setFilters] = useState<RepositorySearchParams>(INITIAL_FILTERS);
-  const [submittedFilters, setSubmittedFilters] = useState<RepositorySearchParams>(INITIAL_FILTERS);
-  const [keywordTokens, setKeywordTokens] = useState<string[]>([]);
-  const [pageData, setPageData] = useState<PagedResponse<RepositoryItemSummary>>(EMPTY_PAGE);
-  const [page, setPage] = useState(0);
-  const [faculties, setFaculties] = useState<Faculty[]>([]);
-  const [programs, setPrograms] = useState<Program[]>([]);
-  const [selectedFacultyId, setSelectedFacultyId] = useState<number | undefined>(undefined);
-  const [selectedProgramId, setSelectedProgramId] = useState<number | undefined>(undefined);
-  const [masterLoadError, setMasterLoadError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  const yearOptions = useMemo(() => {
-    const currentYear = new Date().getFullYear();
-    const values: number[] = [];
-    for (let year = currentYear; year >= 2014; year -= 1) {
-      values.push(year);
-    }
-    return values;
-  }, []);
-
-  const activeFilterCount = useMemo(
-    () =>
-      Object.values(filters).filter((value) => value !== undefined && value !== null && String(value).trim() !== '').length,
-    [filters]
-  );
-
-  const load = async (params: RepositorySearchParams, requestedPage: number) => {
-    setLoading(true);
-    setError('');
-    try {
-      const response = await publicRepositoryApi.search({ ...params, page: requestedPage, size: PAGE_SIZE });
-      if (response.totalPages > 0 && requestedPage >= response.totalPages) {
-        setPage(response.totalPages - 1);
-        return;
-      }
-      setPageData(response);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load repository data.');
-      setPageData(EMPTY_PAGE);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    void load(submittedFilters, page);
-  }, [submittedFilters, page]);
-
-  useEffect(() => {
-    const joinedKeywords = joinKeywordTokens(keywordTokens);
-    setFilters((prev) => (
-      prev.keyword === joinedKeywords
-        ? prev
-        : { ...prev, keyword: joinedKeywords }
-    ));
-  }, [keywordTokens]);
-
-  useEffect(() => {
-    const loadFaculties = async () => {
-      try {
-        setMasterLoadError('');
-        const data = await masterApi.listFaculties();
-        setFaculties(data);
-      } catch {
-        setMasterLoadError('Failed to load faculty/program filters.');
-      }
-    };
-    void loadFaculties();
-  }, []);
-
-  useEffect(() => {
-    if (!selectedFacultyId) {
-      setPrograms([]);
-      return;
-    }
-
-    const loadPrograms = async () => {
-      try {
-        setMasterLoadError('');
-        const data = await masterApi.listPrograms(selectedFacultyId);
-        setPrograms(data);
-      } catch {
-        setPrograms([]);
-        setMasterLoadError('Failed to load study programs for selected faculty.');
-      }
-    };
-    void loadPrograms();
-  }, [selectedFacultyId]);
-
-  const onChange = (key: keyof RepositorySearchParams, value: string) => {
-    setFilters((prev) => ({
-      ...prev,
-      [key]: key === 'year' ? (value ? Number(value) : undefined) : value,
-    }));
-  };
-
-  const onFacultyChange = (value: string) => {
-    if (!value) {
-      setSelectedFacultyId(undefined);
-      setSelectedProgramId(undefined);
-      setPrograms([]);
-      setFilters((prev) => ({ ...prev, faculty: '', program: '' }));
-      return;
-    }
-
-    const facultyId = Number(value);
-    const faculty = faculties.find((item) => item.id === facultyId);
-    setSelectedFacultyId(facultyId);
-    setSelectedProgramId(undefined);
-    setFilters((prev) => ({
-      ...prev,
-      faculty: faculty?.name ?? '',
-      program: '',
-    }));
-  };
-
-  const onProgramChange = (value: string) => {
-    if (!value) {
-      setSelectedProgramId(undefined);
-      setFilters((prev) => ({ ...prev, program: '' }));
-      return;
-    }
-
-    const programId = Number(value);
-    const program = programs.find((item) => item.id === programId);
-    setSelectedProgramId(programId);
-    setFilters((prev) => ({ ...prev, program: program?.name ?? '' }));
-  };
-
-  const onSearch = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setPage(0);
-    setSubmittedFilters(filters);
-  };
-
-  const onReset = () => {
-    setFilters(INITIAL_FILTERS);
-    setSubmittedFilters(INITIAL_FILTERS);
-    setPage(0);
-    setKeywordTokens([]);
-    setSelectedFacultyId(undefined);
-    setSelectedProgramId(undefined);
-    setPrograms([]);
-  };
-
-  const results = pageData.items;
-  const pageStart = pageData.totalElements === 0 ? 0 : pageData.page * pageData.size + 1;
-  const pageEnd = pageStart === 0 ? 0 : pageStart + results.length - 1;
+  const search = useRepositorySearch();
 
   return (
     <div className="min-vh-100" style={{ background: 'linear-gradient(180deg, #f0f6fa 0%, #fff 30%)' }}>
-      {/* ===== HEADER ===== */}
       <header className="su-app-header">
         <div className="container py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
           <div className="d-flex align-items-center gap-2">
@@ -202,10 +29,7 @@ export default function RepositorySearchPage() {
           <div className="d-flex flex-wrap align-items-center gap-3">
             <div className="d-flex align-items-center gap-2 text-white">
               <span className="small text-white-50">Dark mode</span>
-              <ThemeSwitch
-                checked={theme === 'dark'}
-                onChange={(checked) => setTheme(checked ? 'dark' : 'light')}
-              />
+              <ThemeSwitch checked={theme === 'dark'} onChange={(checked) => setTheme(checked ? 'dark' : 'light')} />
             </div>
             <div className="d-flex flex-wrap gap-2">
               {user ? (
@@ -247,7 +71,6 @@ export default function RepositorySearchPage() {
       </header>
 
       <div className="container py-4 fade-in">
-        {/* ===== HERO SECTION ===== */}
         <section className="su-hero mb-4">
           <div className="row align-items-center">
             <div className="col-lg-7">
@@ -260,12 +83,12 @@ export default function RepositorySearchPage() {
             <div className="col-lg-5 text-center mt-3 mt-lg-0">
               <div className="d-flex justify-content-center gap-3">
                 <div className="text-center">
-                  <div style={{ fontSize: '2.5rem', fontWeight: 800 }}>{pageData.totalElements}</div>
+                  <div style={{ fontSize: '2.5rem', fontWeight: 800 }}>{search.pageData.totalElements}</div>
                   <div style={{ fontSize: '0.78rem', opacity: 0.7, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Publications</div>
                 </div>
                 <div style={{ width: 1, background: 'rgba(255,255,255,0.2)', margin: '0.5rem 0' }} />
                 <div className="text-center">
-                  <div style={{ fontSize: '2.5rem', fontWeight: 800 }}>{faculties.length}</div>
+                  <div style={{ fontSize: '2.5rem', fontWeight: 800 }}>{search.faculties.length}</div>
                   <div style={{ fontSize: '0.78rem', opacity: 0.7, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Faculties</div>
                 </div>
               </div>
@@ -273,214 +96,49 @@ export default function RepositorySearchPage() {
           </div>
         </section>
 
-        {/* ===== SEARCH FILTERS ===== */}
-        <div className="su-card mb-4">
-          <div className="card-body p-4">
-            <h3 className="h6 su-page-title mb-3">
-              <span className="su-title-with-icon">
-                <PortalIcon src={adminSidebarIcons.search} />
-                <span>Search Repository</span>
-              </span>
-            </h3>
-            <form className="row g-3" onSubmit={onSearch}>
-              <div className="col-md-6">
-                <label className="form-label">Title</label>
-                <input
-                  className="form-control"
-                  value={filters.title ?? ''}
-                  onChange={(event) => onChange('title', event.target.value)}
-                  placeholder="Search by publication title..."
-                />
-              </div>
-              <div className="col-md-6">
-                <label className="form-label">Author</label>
-                <input
-                  className="form-control"
-                  value={filters.author ?? ''}
-                  onChange={(event) => onChange('author', event.target.value)}
-                  placeholder="Search by author name..."
-                />
-              </div>
+        <RepositorySearchFilters
+          filters={search.filters}
+          keywordTokens={search.keywordTokens}
+          faculties={search.faculties}
+          programs={search.programs}
+          selectedFacultyId={search.selectedFacultyId}
+          selectedProgramId={search.selectedProgramId}
+          yearOptions={search.yearOptions}
+          loading={search.loading}
+          activeFilterCount={search.activeFilterCount}
+          onKeywordTokensChange={search.setKeywordTokens}
+          onChange={search.onChange}
+          onFacultyChange={search.onFacultyChange}
+          onProgramChange={search.onProgramChange}
+          onSearch={search.onSearch}
+          onReset={search.onReset}
+        />
 
-              <div className="col-md-3">
-                <label className="form-label">Faculty</label>
-                <select
-                  className="form-select"
-                  value={selectedFacultyId ?? ''}
-                  onChange={(event) => onFacultyChange(event.target.value)}
-                >
-                  <option value="">Any faculty</option>
-                  {faculties.map((faculty) => (
-                    <option key={faculty.id} value={faculty.id}>{faculty.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="col-md-3">
-                <label className="form-label">Study Program</label>
-                <select
-                  className="form-select"
-                  value={selectedProgramId ?? ''}
-                  onChange={(event) => onProgramChange(event.target.value)}
-                  disabled={!selectedFacultyId}
-                >
-                  <option value="">Any study program</option>
-                  {programs.map((program) => (
-                    <option key={program.id} value={program.id}>{program.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="col-md-3">
-                <label className="form-label">Keywords</label>
-                <KeywordChipInput
-                  values={keywordTokens}
-                  onChange={setKeywordTokens}
-                  placeholder="Type one keyword and press Enter"
-                />
-              </div>
-
-              <div className="col-md-3">
-                <label className="form-label">Year Published</label>
-                <select
-                  className="form-select"
-                  value={filters.year ?? ''}
-                  onChange={(event) => onChange('year', event.target.value)}
-                >
-                  <option value="">Any year</option>
-                  {yearOptions.map((year) => (
-                    <option key={year} value={year}>{year}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="col-12 d-flex flex-wrap gap-2 align-items-center">
-                <button className="btn btn-primary" type="submit" disabled={loading}>
-                  {loading ? (
-                    <><span className="su-spinner d-inline-block me-2" style={{ width: '1rem', height: '1rem', borderWidth: 2 }} /> Searching...</>
-                  ) : (
-                    <span className="su-label-with-icon">
-                      <PortalIcon src={adminSidebarIcons.search} />
-                      <span>Search Repository</span>
-                    </span>
-                  )}
-                </button>
-                <button className="btn btn-outline-secondary" type="button" onClick={onReset} disabled={loading}>
-                  Reset Filters
-                </button>
-                {activeFilterCount > 0 && (
-                  <span className="badge bg-primary-subtle text-primary-emphasis" style={{ borderRadius: '999px' }}>
-                    {activeFilterCount} active filter{activeFilterCount > 1 ? 's' : ''}
-                  </span>
-                )}
-              </div>
-            </form>
-          </div>
-        </div>
-
-        {error && (
-          <div className="alert alert-danger" role="alert">{error}</div>
+        {search.error && (
+          <div className="alert alert-danger" role="alert">{search.error}</div>
         )}
-        {masterLoadError && (
-          <div className="alert alert-warning" role="alert">{masterLoadError}</div>
+        {search.masterLoadError && (
+          <div className="alert alert-warning" role="alert">{search.masterLoadError}</div>
         )}
 
-        {/* ===== RESULTS ===== */}
-        <div className="d-flex justify-content-between align-items-center mb-3">
-          <h3 className="h5 mb-0 su-page-title">
-            <span className="su-title-with-icon">
-              <PortalIcon src={adminSidebarIcons.search} />
-              <span>Search Results</span>
-            </span>
-          </h3>
-          <span className="badge bg-secondary-subtle text-secondary-emphasis" style={{ borderRadius: '999px', fontSize: '0.8rem' }}>
-            {pageData.totalElements} item{pageData.totalElements !== 1 ? 's' : ''}
-          </span>
-        </div>
+        <RepositorySearchResults
+          results={search.results}
+          loading={search.loading}
+          totalElements={search.pageData.totalElements}
+        />
 
-        <div className="vstack gap-3">
-          {results.map((item, index) => (
-            <div className="su-result-card fade-in" key={item.id} style={{ animationDelay: `${index * 0.04}s` }}>
-              <div className="d-flex justify-content-between align-items-start gap-3">
-                <div style={{ flex: 1 }}>
-                  <h4 className="h6 mb-1 su-page-title" style={{ fontSize: '1rem' }}>{item.title}</h4>
-                  <div className="d-flex flex-wrap gap-2 mb-2">
-                    <span className="badge bg-primary-subtle text-primary-emphasis" style={{ borderRadius: '999px', fontSize: '0.72rem' }}>
-                      Author: {item.authors || item.authorName || 'Unknown author'}
-                    </span>
-                    <span className="badge bg-secondary-subtle text-secondary-emphasis" style={{ borderRadius: '999px', fontSize: '0.72rem' }}>
-                      Faculty: {item.faculty || 'Unknown faculty'}
-                    </span>
-                    {item.program && (
-                      <span className="badge bg-secondary-subtle text-secondary-emphasis" style={{ borderRadius: '999px', fontSize: '0.72rem' }}>
-                        Program: {item.program}
-                      </span>
-                    )}
-                    {item.year && (
-                      <span className="badge bg-secondary-subtle text-secondary-emphasis" style={{ borderRadius: '999px', fontSize: '0.72rem' }}>
-                        Year: {item.year}
-                      </span>
-                    )}
-                  </div>
-                  {item.keywords && (
-                    <p className="mb-0 small text-muted">
-                      <strong>Keywords:</strong> {item.keywords}
-                    </p>
-                  )}
-                </div>
-                <Link to={`/repo/${item.id}`} className="btn btn-primary btn-sm" style={{ borderRadius: '999px', whiteSpace: 'nowrap' }}>
-                  View Detail →
-                </Link>
-              </div>
-            </div>
-          ))}
-          {!loading && results.length === 0 && (
-            <div className="su-empty-state">
-              <div className="su-empty-icon">
-                <PortalIcon src={adminSidebarIcons.search} size={40} />
-              </div>
-              <h5>No Publications Found</h5>
-              <p className="mb-0">Try adjusting your filters or search terms to discover more publications.</p>
-            </div>
-          )}
-        </div>
-
-        {!loading && pageData.totalElements > 0 && (
-          <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-4">
-            <div className="text-muted small">
-              Showing {pageStart}-{pageEnd} of {pageData.totalElements}
-            </div>
-            <nav aria-label="Repository search pagination">
-              <ul className="pagination pagination-sm mb-0">
-                <li className={`page-item ${!pageData.hasPrevious || loading ? 'disabled' : ''}`}>
-                  <button
-                    className="page-link"
-                    type="button"
-                    onClick={() => setPage((current) => Math.max(current - 1, 0))}
-                    disabled={!pageData.hasPrevious || loading}
-                  >
-                    Previous
-                  </button>
-                </li>
-                <li className="page-item disabled">
-                  <span className="page-link">
-                    Page {pageData.page + 1} of {Math.max(pageData.totalPages, 1)}
-                  </span>
-                </li>
-                <li className={`page-item ${!pageData.hasNext || loading ? 'disabled' : ''}`}>
-                  <button
-                    className="page-link"
-                    type="button"
-                    onClick={() => setPage((current) => current + 1)}
-                    disabled={!pageData.hasNext || loading}
-                  >
-                    Next
-                  </button>
-                </li>
-              </ul>
-            </nav>
-          </div>
-        )}
+        <RepositorySearchPagination
+          loading={search.loading}
+          hasPrevious={search.pageData.hasPrevious}
+          hasNext={search.pageData.hasNext}
+          page={search.pageData.page}
+          totalPages={search.pageData.totalPages}
+          pageStart={search.pageStart}
+          pageEnd={search.pageEnd}
+          totalElements={search.pageData.totalElements}
+          onPrevious={() => search.setPage((current) => Math.max(current - 1, 0))}
+          onNext={() => search.setPage((current) => current + 1)}
+        />
 
         <footer className="text-center text-muted small py-4 mt-4">
           <div className="fw-semibold">Sampoerna University Library</div>

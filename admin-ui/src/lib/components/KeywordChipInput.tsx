@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 type KeywordChipInputProps = {
+  id?: string;
   values: string[];
   onChange: (nextValues: string[]) => void;
   placeholder?: string;
@@ -8,6 +9,7 @@ type KeywordChipInputProps = {
 };
 
 export default function KeywordChipInput({
+  id,
   values,
   onChange,
   placeholder = 'Type a keyword and press Enter',
@@ -59,6 +61,7 @@ export default function KeywordChipInput({
       )}
 
       <input
+        id={id}
         className="form-control"
         value={draft}
         onChange={(event) => setDraft(event.target.value)}

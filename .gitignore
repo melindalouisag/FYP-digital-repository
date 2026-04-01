@@ -5,6 +5,7 @@ target/**/*.png
 **/.DS_Store
 .DS_Store
 __MACOSX/
+.sixth/
 hs_err_pid*.log
 *.log
 storage/
@@ -15,11 +16,14 @@ admin-ui/node_modules/
 node_modules/
 admin-ui/dist/
 dist/
+src/main/resources/static/*
+!src/main/resources/static/.gitkeep
 .cache/
 .eslintcache
 coverage/
 *.tsbuildinfo
 *.zip
+submission/
 .env
 *.env
 application-local.properties

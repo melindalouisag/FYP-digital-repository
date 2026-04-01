@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { publicRepositoryApi, type RepositoryItemDetail } from '../../lib/api/publicRepository';
-import ThemeSwitch from '../../components/ThemeSwitch';
+import ThemeSwitch from '../../theme/ThemeSwitch';
 import PortalIcon from '../../lib/components/PortalIcon';
 import { useAuth } from '../../lib/context/AuthContext';
 import { adminSidebarIcons } from '../../lib/portalIcons';

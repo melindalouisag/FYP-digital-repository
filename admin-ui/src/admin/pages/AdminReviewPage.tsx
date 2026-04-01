@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import ShellLayout from '../../layout/ShellLayout';
+import ShellLayout from '../../ShellLayout';
 import { adminApi } from '../../lib/api/admin';
 import PortalIcon from '../../lib/components/PortalIcon';
 import { adminSidebarIcons } from '../../lib/portalIcons';
-import type { AdminStudentReviewGroup } from '../../lib/types/workflow';
+import type { AdminStudentReviewGroup } from '../../lib/workflowTypes';
 
 export default function AdminReviewPage() {
   const navigate = useNavigate();

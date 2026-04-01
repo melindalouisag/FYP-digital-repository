@@ -1,15 +1,17 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import ShellLayout from '../../layout/ShellLayout';
+import ShellLayout from '../../ShellLayout';
 import { studentApi } from '../../lib/api/student';
 import CaseTimeline from '../../lib/components/CaseTimeline';
-import type { CaseDetailPayload, CaseStatus, ChecklistResult } from '../../lib/types/workflow';
+import type { CaseDetailPayload, CaseStatus, ChecklistResult } from '../../lib/workflowTypes';
 import {
   canSubmitClearance,
   formatStageName,
   formatStatus,
   getStageIndex,
   getStageKey,
+  getWorkflowStatusPresentation,
+  getWorkflowToneClass,
   statusBadgeClass,
 } from '../../lib/workflowUi';
 
@@ -28,7 +30,7 @@ export default function StudentCaseDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!caseId) return;
     setLoading(true);
     setError('');
@@ -46,11 +48,11 @@ export default function StudentCaseDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [caseId]);
 
   useEffect(() => {
     void load();
-  }, [caseId]);
+  }, [load]);
 
   const status = detail?.case.status;
   const stageKey = useMemo(() => (status ? getStageKey(status) : null), [status]);
@@ -62,6 +64,7 @@ export default function StudentCaseDetailPage() {
   const submissionVersionLabel = versions.length === 1 ? '1 submission version' : `${versions.length} submission versions`;
   const hasFeedback = checklist.length > 0 || (detail?.comments?.length ?? 0) > 0;
   const pageTitle = detail?.case.title?.trim() ? detail.case.title : 'Untitled Publication';
+  const presentation = status ? getWorkflowStatusPresentation(status) : null;
 
   if (loading) {
     return (
@@ -113,6 +116,16 @@ export default function StudentCaseDetailPage() {
       {isRejected && (
         <div className="alert alert-danger" style={{ borderRadius: '0.75rem' }}>
           <div><strong>Rejected.</strong> Review the feedback and continue the required corrections from the registration page.</div>
+        </div>
+      )}
+
+      {presentation && (
+        <div className={`alert ${getWorkflowToneClass(detail.case.status)} border-0 mb-4`} style={{ borderRadius: '0.9rem' }}>
+          <div className="fw-semibold mb-1">Next action</div>
+          <div className="mb-2">{presentation.nextAction}</div>
+          <div className="small">
+            {presentation.description} Responsible now: {presentation.actor}.
+          </div>
         </div>
       )}
 

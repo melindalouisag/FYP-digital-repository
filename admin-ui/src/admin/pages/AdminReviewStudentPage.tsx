@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import ShellLayout from '../../layout/ShellLayout';
+import ShellLayout from '../../ShellLayout';
 import { adminApi } from '../../lib/api/admin';
-import type { AdminStudentReviewGroup } from '../../lib/types/workflow';
+import type { AdminStudentReviewGroup } from '../../lib/workflowTypes';
 import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 
 export default function AdminReviewStudentPage() {

@@ -44,6 +44,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -153,8 +154,7 @@ class StudentSubmissionIntegrationTest {
         .file(pdfFile("submission.pdf"))
         .session(session))
       .andExpect(status().isBadRequest())
-      .andExpect(result -> assertThat(result.getResponse().getErrorMessage())
-        .contains("Registration must be verified by the library before submission."));
+      .andExpect(jsonPath("$.message", containsString("Registration must be verified by the library before submission.")));
 
     assertThat(submissionVersions.findByPublicationCaseOrderByVersionNumberDesc(publicationCase)).isEmpty();
     assertThat(auditEvents.findByCaseIdOrderByCreatedAtDesc(publicationCase.getId()))
@@ -180,8 +180,7 @@ class StudentSubmissionIntegrationTest {
         ))
         .session(session))
       .andExpect(status().isBadRequest())
-      .andExpect(result -> assertThat(result.getResponse().getErrorMessage())
-        .contains("Only PDF files are accepted."));
+      .andExpect(jsonPath("$.message", containsString("Only PDF files are accepted.")));
 
     assertThat(submissionVersions.findByPublicationCaseOrderByVersionNumberDesc(publicationCase)).isEmpty();
     assertThat(cases.findById(publicationCase.getId()).orElseThrow().getStatus()).isEqualTo(CaseStatus.REGISTRATION_VERIFIED);
@@ -243,8 +242,7 @@ class StudentSubmissionIntegrationTest {
     mockMvc.perform(get("/api/student/cases/{caseId}/submissions/{submissionId}/download", publicationCase.getId(), submission.getId())
         .session(session))
       .andExpect(status().isNotFound())
-      .andExpect(result -> assertThat(result.getResponse().getErrorMessage())
-        .contains("Submission file is missing"));
+      .andExpect(jsonPath("$.message", containsString("Submission file is missing")));
   }
 
   @Test
@@ -312,8 +310,7 @@ class StudentSubmissionIntegrationTest {
     mockMvc.perform(get("/api/student/cases/{caseId}/submissions/{submissionId}/download", requestedCase.getId(), otherSubmission.getId())
         .session(session))
       .andExpect(status().isBadRequest())
-      .andExpect(result -> assertThat(result.getResponse().getErrorMessage())
-        .contains("Submission does not belong to this case"));
+      .andExpect(jsonPath("$.message", containsString("Submission does not belong to this case")));
   }
 
   private MockMultipartFile metadataPart(StudentProfile profile) {

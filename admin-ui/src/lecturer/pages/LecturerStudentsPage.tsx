@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import ShellLayout from '../../layout/ShellLayout';
+import ShellLayout from '../../ShellLayout';
 import { lecturerApi, type LecturerStudentGroup } from '../../lib/api/lecturer';
 import PortalIcon from '../../lib/components/PortalIcon';
 import { lecturerSidebarIcons } from '../../lib/portalIcons';
@@ -12,7 +12,7 @@ export default function LecturerStudentsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
@@ -23,11 +23,11 @@ export default function LecturerStudentsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [year]);
 
   useEffect(() => {
     void load();
-  }, [year]);
+  }, [load]);
 
   const yearOptions = useMemo(() => {
     const current = new Date().getFullYear();

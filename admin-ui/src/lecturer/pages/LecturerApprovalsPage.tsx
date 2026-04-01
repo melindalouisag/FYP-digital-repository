@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import ShellLayout from '../../layout/ShellLayout';
+import ShellLayout from '../../ShellLayout';
 import { lecturerApi, type LecturerApprovalQueueRow } from '../../lib/api/lecturer';
 import PortalIcon from '../../lib/components/PortalIcon';
 import { lecturerSidebarIcons } from '../../lib/portalIcons';
-import type { PagedResponse } from '../../lib/types/workflow';
+import type { PagedResponse } from '../../lib/workflowTypes';
 import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 
 const PAGE_SIZE = 10;

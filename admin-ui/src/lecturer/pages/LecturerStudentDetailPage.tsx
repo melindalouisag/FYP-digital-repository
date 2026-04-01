@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import ShellLayout from '../../layout/ShellLayout';
+import ShellLayout from '../../ShellLayout';
 import { lecturerApi, type LecturerCaseWorkItem, type LecturerStudentGroup, type LecturerSubmissionVersion } from '../../lib/api/lecturer';
 import CaseTimeline from '../../lib/components/CaseTimeline';
 import DownloadFilenameLink from '../../lib/components/DownloadFilenameLink';
 import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
-import type { TimelineItem } from '../../lib/types/workflow';
+import type { TimelineItem } from '../../lib/workflowTypes';
 
 const supervisorStatuses: Array<LecturerCaseWorkItem['status']> = [
   'UNDER_SUPERVISOR_REVIEW',
@@ -31,7 +31,7 @@ export default function LecturerStudentDetailPage() {
   const [submissions, setSubmissions] = useState<Record<number, LecturerSubmissionVersion[]>>({});
   const [submissionsOpen, setSubmissionsOpen] = useState<Record<number, boolean>>({});
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!studentId) return;
     setLoading(true);
     setError('');
@@ -45,11 +45,11 @@ export default function LecturerStudentDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [studentId, year]);
 
   useEffect(() => {
     void load();
-  }, [studentId, year]);
+  }, [load]);
 
   useEffect(() => {
     if (!group) return;

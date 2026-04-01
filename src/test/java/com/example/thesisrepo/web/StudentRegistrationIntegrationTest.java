@@ -35,6 +35,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -194,7 +195,9 @@ class StudentRegistrationIntegrationTest {
           {"permissionAccepted":false}
           """))
       .andExpect(status().isBadRequest())
-      .andExpect(result -> assertThat(result.getResponse().getErrorMessage()).contains("Permission must be accepted"));
+      .andExpect(jsonPath("$.message").value("Validation failed."))
+      .andExpect(jsonPath("$.fieldErrors[0].field").value("permissionAccepted"))
+      .andExpect(jsonPath("$.fieldErrors[0].message").value("Permission must be accepted."));
 
     PublicationCase draftCase = cases.findById(caseId).orElseThrow();
     PublicationRegistration registration = registrations.findByPublicationCase(draftCase).orElseThrow();
@@ -202,6 +205,26 @@ class StudentRegistrationIntegrationTest {
     assertThat(registration.getSubmittedAt()).isNull();
     assertThat(auditEvents.findByCaseIdOrderByCreatedAtDesc(caseId))
       .noneMatch(event -> event.getEventType() == AuditEventType.REGISTRATION_SUBMITTED);
+  }
+
+  @Test
+  void registrationValidationErrorsReturnStructuredFieldMessages() throws Exception {
+    StudentLogin studentLogin = createStudentLogin("test-only-registration-validation-password");
+
+    mockMvc.perform(post("/api/student/registrations")
+        .contentType(MediaType.APPLICATION_JSON)
+        .session(studentLogin.session())
+        .content("""
+          {
+            "type":null,
+            "title":"  ",
+            "year":1800,
+            "supervisorEmail":"%s"
+          }
+          """.formatted(lecturer.getEmail())))
+      .andExpect(status().isBadRequest())
+      .andExpect(jsonPath("$.message").value("Validation failed."))
+      .andExpect(jsonPath("$.fieldErrors[*].field", containsInAnyOrder("title", "type", "year")));
   }
 
   @Test

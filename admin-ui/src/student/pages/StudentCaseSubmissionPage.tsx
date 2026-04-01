@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import ShellLayout from '../../layout/ShellLayout';
+import ShellLayout from '../../ShellLayout';
 import { studentApi, type SubmissionMetaPayload } from '../../lib/api/student';
 import { masterApi, type Faculty } from '../../lib/api/master';
 import { ApiError } from '../../lib/api/http';
@@ -8,9 +8,13 @@ import DownloadFilenameLink from '../../lib/components/DownloadFilenameLink';
 import KeywordChipInput from '../../lib/components/KeywordChipInput';
 import { useAuth } from '../../lib/context/AuthContext';
 import { joinKeywordTokens, splitKeywordString } from '../../lib/keywords';
-import type { CaseDetailPayload, SubmissionVersion } from '../../lib/types/workflow';
-import { canUploadSubmission, formatStatus, statusBadgeClass } from '../../lib/workflowUi';
-import { getStudentCaseGuidance } from '../lib/casePresentation';
+import type { CaseDetailPayload, SubmissionVersion } from '../../lib/workflowTypes';
+import {
+  canUploadSubmission,
+  formatStatus,
+  getStudentCaseGuidance,
+  statusBadgeClass,
+} from '../../lib/workflowUi';
 
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 
@@ -37,7 +41,7 @@ export default function StudentCaseSubmissionPage() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!caseId) return;
     setLoading(true);
     setError('');
@@ -55,11 +59,11 @@ export default function StudentCaseSubmissionPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [caseId]);
 
   useEffect(() => {
     void load();
-  }, [caseId]);
+  }, [load]);
 
   useEffect(() => {
     const loadFaculties = async () => {

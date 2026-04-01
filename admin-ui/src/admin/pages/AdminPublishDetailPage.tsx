@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import ShellLayout from '../../layout/ShellLayout';
+import ShellLayout from '../../ShellLayout';
 import DownloadFilenameLink from '../../lib/components/DownloadFilenameLink';
+import { useConfirmDialog } from '../../lib/components/useConfirmDialog';
 import { adminApi } from '../../lib/api/admin';
-import type { AdminPublishDetail } from '../../lib/types/workflow';
+import type { AdminPublishDetail } from '../../lib/workflowTypes';
 
 export default function AdminPublishDetailPage() {
   const navigate = useNavigate();
@@ -14,6 +15,7 @@ export default function AdminPublishDetailPage() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [unpublishReason, setUnpublishReason] = useState('');
+  const { openConfirm, confirmDialog } = useConfirmDialog();
 
   const working = workingAction !== null;
   const isPublished = detail?.status === 'PUBLISHED';
@@ -21,7 +23,7 @@ export default function AdminPublishDetailPage() {
   const canUnpublish = isPublished && unpublishReason.trim().length >= 5 && !working;
   const latestSubmissionDownloadHref = detail ? `/api/admin/cases/${detail.caseId}/file/latest` : '';
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!caseId) return;
     setLoading(true);
     setError('');
@@ -34,11 +36,11 @@ export default function AdminPublishDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [caseId]);
 
   useEffect(() => {
     void load();
-  }, [caseId]);
+  }, [load]);
 
   const publish = async () => {
     if (!caseId) return;
@@ -63,22 +65,28 @@ export default function AdminPublishDetailPage() {
       setError('Reason is required (min 5 characters).');
       return;
     }
-    if (!window.confirm('This will remove the item from the repository and reopen the case for corrections. Continue?')) {
-      return;
-    }
-    setWorkingAction('unpublish');
-    setError('');
-    setMessage('');
-    try {
-      await adminApi.unpublish(Number(caseId), trimmed);
-      setMessage('Case removed from the repository and returned for correction.');
-      setUnpublishReason('');
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unpublish action failed.');
-    } finally {
-      setWorkingAction(null);
-    }
+    openConfirm({
+      title: 'Unpublish Repository Item',
+      message: 'This will remove the item from the repository and reopen the case for corrections. Continue?',
+      confirmLabel: 'Unpublish',
+      confirmVariant: 'danger',
+      onConfirm: async (close) => {
+        setWorkingAction('unpublish');
+        setError('');
+        setMessage('');
+        try {
+          await adminApi.unpublish(Number(caseId), trimmed);
+          setMessage('Case removed from the repository and returned for correction.');
+          setUnpublishReason('');
+          await load();
+          close();
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'Unpublish action failed.');
+        } finally {
+          setWorkingAction(null);
+        }
+      },
+    });
   };
 
   return (
@@ -240,6 +248,7 @@ export default function AdminPublishDetailPage() {
           </div>
         </div>
       )}
+      {confirmDialog}
     </ShellLayout>
   );
 }

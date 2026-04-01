@@ -138,3 +138,20 @@ If SMTP is not configured, workflow notification emails are treated as no-op and
 sh mvnw test
 cd admin-ui && npm ci && npm run build
 ```
+
+## Submission Packaging
+
+Create a clean source-only submission zip from the repository root:
+
+```bash
+bash scripts/create-submission-zip.sh
+```
+
+The generated archive excludes local/editor/build artifacts such as `.git`, `.DS_Store`, `__MACOSX`, `target`, `node_modules`, `admin-ui/dist`, nested zip files, and the generated SPA output copied into `src/main/resources/static`.
+
+Recommended pre-submission verification:
+
+```bash
+cd admin-ui && npm ci && npm run lint && npm test -- --run && npm run build
+cd .. && ./mvnw -q -DskipTests package
+```

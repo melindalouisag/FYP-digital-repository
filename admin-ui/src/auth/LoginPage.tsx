@@ -1,23 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useMemo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 
-const SSO_URL = "/oauth2/authorization/azure";
+const SSO_URL = '/oauth2/authorization/azure';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [error, setError] = useState("");
-
-  const oauthError = useMemo(() => {
+  const error = useMemo(() => {
     const params = new URLSearchParams(location.search);
     const err = params.get("error");
-    return err ? decodeURIComponent(err) : "";
+    return err ? decodeURIComponent(err) : '';
   }, [location.search]);
-
-  useEffect(() => {
-    if (oauthError) setError(oauthError);
-  }, [oauthError]);
 
   return (
     <div className="auth-shell">

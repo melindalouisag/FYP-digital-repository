@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import ShellLayout from '../../layout/ShellLayout';
+import ShellLayout from '../../ShellLayout';
 import { adminApi } from '../../lib/api/admin';
 import PortalIcon from '../../lib/components/PortalIcon';
 import { adminSidebarIcons } from '../../lib/portalIcons';
-import type { CaseSummary, PagedResponse } from '../../lib/types/workflow';
+import type { CaseSummary, PagedResponse } from '../../lib/workflowTypes';
 import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 
 const PAGE_SIZE = 10;

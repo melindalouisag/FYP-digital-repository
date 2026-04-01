@@ -53,6 +53,20 @@ public class SecurityConfig {
 
   private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
   private static final String CSRF_FAILURE_MESSAGE = "Your secure session token is missing or expired. Refresh the page and try again.";
+  private static final String[] PUBLIC_UI_ROUTES = {
+    "/",
+    "/index.html",
+    "/assets/**",
+    "/favicon.ico",
+    "/login",
+    "/register",
+    "/error"
+  };
+  private static final String[] HEALTH_ROUTES = { "/actuator/health", "/actuator/health/**", "/actuator/info" };
+  private static final String[] OAUTH_ROUTES = { "/oauth2/**", "/login/oauth2/**" };
+  private static final String[] PUBLIC_AUTH_ROUTES = { "/api/auth/**", "/auth/**" };
+  private static final List<String> ALLOWED_CORS_METHODS = List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS");
+  private static final List<String> ALLOWED_CORS_HEADERS = List.of("Authorization", "Content-Type", "X-Requested-With", "X-CSRF-TOKEN", "X-XSRF-TOKEN");
 
   private final UserDetailsServiceImpl userDetailsService;
   private final OidcProvisioningUserService oidcUserService;
@@ -113,126 +127,26 @@ public class SecurityConfig {
 
     String loginRedirect = resolveUiRoute("/login");
 
-    http
-      .cors(Customizer.withDefaults())
-      .headers(headers -> headers
-        .contentTypeOptions(Customizer.withDefaults())
-        .frameOptions(frame -> frame.deny())
-        .xssProtection(xss -> xss.headerValue(XXssProtectionHeaderWriter.HeaderValue.ENABLED_MODE_BLOCK))
-        .contentSecurityPolicy(csp -> csp.policyDirectives(contentSecurityPolicy))
-      );
-
-    if (csrfEnabled) {
-      CookieCsrfTokenRepository csrfTokenRepository = createCsrfTokenRepository();
-      http
-        .csrf(csrf -> csrf
-          .csrfTokenRepository(csrfTokenRepository)
-        )
-        .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class);
-    } else {
-      http.csrf(AbstractHttpConfigurer::disable);
-    }
+    configureHeaders(http);
+    configureCsrf(http);
 
     http
       .authenticationProvider(authenticationProvider(passwordEncoder))
-      .addFilterBefore(sessionActiveRoleFilter, AuthorizationFilter.class)
-      .authorizeHttpRequests(auth -> auth
-        // SPA + public assets
-        .requestMatchers(
-          "/",
-          "/index.html",
-          "/assets/**",
-          "/favicon.ico",
-          "/login",
-          "/register",
-          "/error"
-        ).permitAll()
+      .addFilterBefore(sessionActiveRoleFilter, AuthorizationFilter.class);
 
-        // Platform health checks
-        .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
-
-        // OAuth endpoints must be public
-        .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
-
-        // Auth endpoints public (login/register/logout/me)
-        .requestMatchers("/api/auth/**").permitAll()
-        .requestMatchers("/auth/**").permitAll()
-
-        // Public repo endpoints
-        .requestMatchers(HttpMethod.GET, "/api/public/repository/*/download").authenticated()
-        .requestMatchers("/api/public/**").permitAll()
-        .requestMatchers("/api/supervisors/**").hasAnyRole("STUDENT", "ADMIN")
-
-        // Role APIs
-        .requestMatchers("/api/student/**").hasRole("STUDENT")
-        .requestMatchers("/api/lecturer/**").hasRole("LECTURER")
-        .requestMatchers("/api/admin/**").hasRole("ADMIN")
-
-        .anyRequest().authenticated()
-      )
-      .exceptionHandling(ex -> ex.authenticationEntryPoint((request, response, authException) -> {
-        if (isApiRequest(request)) {
-          response.sendError(HttpStatus.UNAUTHORIZED.value(), HttpStatus.UNAUTHORIZED.getReasonPhrase());
-          return;
-        }
-        response.sendRedirect(loginRedirect);
-      }).accessDeniedHandler((request, response, accessDeniedException) -> {
-        if (isApiRequest(request)) {
-          logApiAccessDenied(request, accessDeniedException);
-          writeJsonError(
-            response,
-            HttpStatus.FORBIDDEN,
-            isCsrfFailure(accessDeniedException) ? CSRF_FAILURE_MESSAGE : HttpStatus.FORBIDDEN.getReasonPhrase()
-          );
-          return;
-        }
-
-        if (isCsrfFailure(accessDeniedException)) {
-          logApiAccessDenied(request, accessDeniedException);
-        }
-        response.sendError(HttpStatus.FORBIDDEN.value(), HttpStatus.FORBIDDEN.getReasonPhrase());
-      }))
-      .logout(logout -> logout
-        .logoutUrl("/logout")
-        .logoutSuccessHandler((request, response, authentication) -> {
-          request.getSession().invalidate();
-          // If ?redirect= is specified, go there (e.g. Register flow)
-          String redirectParam = request.getParameter("redirect");
-          if (redirectParam != null && redirectParam.startsWith("/")) {
-            response.sendRedirect(redirectParam);
-            return;
-          }
-          // Default: redirect to homepage
-          response.sendRedirect(resolveUiRoute("/"));
-        })
-        .invalidateHttpSession(true)
-        .deleteCookies("JSESSIONID")
-        .permitAll()
-      );
+    configureAuthorization(http);
+    configureExceptionHandling(http, loginRedirect);
+    configureLogout(http);
 
     if (localEnabled) {
-      http.formLogin(form -> form
-        .loginPage("/login")
-        .permitAll()
-      );
+      configureLocalLogin(http);
     } else {
       http.formLogin(AbstractHttpConfigurer::disable);
       http.httpBasic(AbstractHttpConfigurer::disable);
     }
 
     if (ssoEnabled && clientRegistrationRepository.getIfAvailable() != null) {
-      var resolver = new org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver(
-        clientRegistrationRepository.getIfAvailable(), "/oauth2/authorization");
-      resolver.setAuthorizationRequestCustomizer(customizer ->
-        customizer.additionalParameters(params -> params.put("prompt", "select_account")));
-
-      http.oauth2Login(oauth -> oauth
-        .loginPage("/login")
-        .authorizationEndpoint(auth -> auth.authorizationRequestResolver(resolver))
-        .userInfoEndpoint(userInfo -> userInfo.oidcUserService(oidcUserService))
-        .successHandler(successHandler)
-        .failureHandler(oauthFailureHandler())
-      );
+      configureSsoLogin(http, clientRegistrationRepository.getIfAvailable());
     }
 
     return http.build();
@@ -242,8 +156,8 @@ public class SecurityConfig {
   public CorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration configuration = new CorsConfiguration();
     configuration.setAllowedOrigins(allowedCorsOrigins);
-    configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-    configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "X-CSRF-TOKEN", "X-XSRF-TOKEN"));
+    configuration.setAllowedMethods(ALLOWED_CORS_METHODS);
+    configuration.setAllowedHeaders(ALLOWED_CORS_HEADERS);
     configuration.setExposedHeaders(List.of("Location"));
     configuration.setAllowCredentials(true);
     configuration.setMaxAge(3600L);
@@ -260,6 +174,112 @@ public class SecurityConfig {
       String encoded = URLEncoder.encode(message, StandardCharsets.UTF_8);
       response.sendRedirect(resolveUiRoute("/login") + "?error=" + encoded);
     };
+  }
+
+  private void configureHeaders(HttpSecurity http) throws Exception {
+    http
+      .cors(Customizer.withDefaults())
+      .headers(headers -> headers
+        .contentTypeOptions(Customizer.withDefaults())
+        .frameOptions(frame -> frame.deny())
+        .xssProtection(xss -> xss.headerValue(XXssProtectionHeaderWriter.HeaderValue.ENABLED_MODE_BLOCK))
+        .contentSecurityPolicy(csp -> csp.policyDirectives(contentSecurityPolicy))
+      );
+  }
+
+  private void configureCsrf(HttpSecurity http) throws Exception {
+    if (!csrfEnabled) {
+      http.csrf(AbstractHttpConfigurer::disable);
+      return;
+    }
+
+    http
+      .csrf(csrf -> csrf.csrfTokenRepository(createCsrfTokenRepository()))
+      .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class);
+  }
+
+  private void configureAuthorization(HttpSecurity http) throws Exception {
+    http.authorizeHttpRequests(auth -> auth
+      .requestMatchers(PUBLIC_UI_ROUTES).permitAll()
+      .requestMatchers(HEALTH_ROUTES).permitAll()
+      .requestMatchers(OAUTH_ROUTES).permitAll()
+      .requestMatchers(PUBLIC_AUTH_ROUTES).permitAll()
+      .requestMatchers(HttpMethod.GET, "/api/public/repository/*/download").authenticated()
+      .requestMatchers("/api/public/**").permitAll()
+      .requestMatchers("/api/supervisors/**").hasAnyRole("STUDENT", "ADMIN")
+      .requestMatchers("/api/student/**").hasRole("STUDENT")
+      .requestMatchers("/api/lecturer/**").hasRole("LECTURER")
+      .requestMatchers("/api/admin/**").hasRole("ADMIN")
+      .anyRequest().authenticated()
+    );
+  }
+
+  private void configureExceptionHandling(HttpSecurity http, String loginRedirect) throws Exception {
+    http.exceptionHandling(ex -> ex
+      .authenticationEntryPoint((request, response, authException) -> {
+        if (isApiRequest(request)) {
+          response.sendError(HttpStatus.UNAUTHORIZED.value(), HttpStatus.UNAUTHORIZED.getReasonPhrase());
+          return;
+        }
+        response.sendRedirect(loginRedirect);
+      })
+      .accessDeniedHandler((request, response, accessDeniedException) -> {
+        if (isApiRequest(request)) {
+          logApiAccessDenied(request, accessDeniedException);
+          writeJsonError(
+            response,
+            HttpStatus.FORBIDDEN,
+            isCsrfFailure(accessDeniedException) ? CSRF_FAILURE_MESSAGE : HttpStatus.FORBIDDEN.getReasonPhrase()
+          );
+          return;
+        }
+
+        if (isCsrfFailure(accessDeniedException)) {
+          logApiAccessDenied(request, accessDeniedException);
+        }
+        response.sendError(HttpStatus.FORBIDDEN.value(), HttpStatus.FORBIDDEN.getReasonPhrase());
+      })
+    );
+  }
+
+  private void configureLogout(HttpSecurity http) throws Exception {
+    http.logout(logout -> logout
+      .logoutUrl("/logout")
+      .logoutSuccessHandler((request, response, authentication) -> {
+        request.getSession().invalidate();
+        String redirectParam = request.getParameter("redirect");
+        if (redirectParam != null && redirectParam.startsWith("/")) {
+          response.sendRedirect(redirectParam);
+          return;
+        }
+        response.sendRedirect(resolveUiRoute("/"));
+      })
+      .invalidateHttpSession(true)
+      .deleteCookies("JSESSIONID")
+      .permitAll()
+    );
+  }
+
+  private static void configureLocalLogin(HttpSecurity http) throws Exception {
+    http.formLogin(form -> form
+      .loginPage("/login")
+      .permitAll()
+    );
+  }
+
+  private void configureSsoLogin(HttpSecurity http, ClientRegistrationRepository clientRegistrationRepository) throws Exception {
+    var resolver = new org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver(
+      clientRegistrationRepository, "/oauth2/authorization");
+    resolver.setAuthorizationRequestCustomizer(customizer ->
+      customizer.additionalParameters(params -> params.put("prompt", "select_account")));
+
+    http.oauth2Login(oauth -> oauth
+      .loginPage("/login")
+      .authorizationEndpoint(auth -> auth.authorizationRequestResolver(resolver))
+      .userInfoEndpoint(userInfo -> userInfo.oidcUserService(oidcUserService))
+      .successHandler(successHandler)
+      .failureHandler(oauthFailureHandler())
+    );
   }
 
   private static boolean isLocalLoginEnabled(AuthMode mode) {

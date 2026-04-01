@@ -7,6 +7,7 @@ import com.example.thesisrepo.publication.repo.AuditEventRepository;
 import com.example.thesisrepo.user.Role;
 import com.example.thesisrepo.user.User;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -14,7 +15,7 @@ import org.springframework.stereotype.Service;
 public class AuditEventService {
 
   private final AuditEventRepository auditEvents;
-  private final WorkflowNotificationService notifications;
+  private final ApplicationEventPublisher eventPublisher;
 
   public void log(
     Long caseId,
@@ -34,12 +35,12 @@ public class AuditEventService {
       .message(message)
       .build());
 
-    notifications.notifyByAuditEvent(
+    eventPublisher.publishEvent(new WorkflowNotificationRequestedEvent(
       caseId,
       submissionVersionId,
       eventType,
       actorUser != null ? actorUser.getEmail() : null
-    );
+    ));
   }
 
   public void log(Long caseId, User actorUser, Role actorRole, AuditEventType eventType, String message) {

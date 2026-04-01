@@ -1,8 +1,7 @@
 import { Navigate, useNavigate } from 'react-router-dom';
+import { defaultPath, type Role } from '../lib/api/auth';
 import { ApiError } from '../lib/api/http';
 import { useAuth } from '../lib/context/AuthContext';
-import { defaultPath } from '../lib/authUi';
-import type { Role } from '../lib/api/auth';
 import { useState } from 'react';
 
 const ROLE_LABELS: Record<Role, string> = {

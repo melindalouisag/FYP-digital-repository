@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import ShellLayout from '../../layout/ShellLayout';
+import ShellLayout from '../../ShellLayout';
 import { checklistApi, type ChecklistTemplateSummary } from '../../lib/api/checklist';
-import type { PublicationType } from '../../lib/types/workflow';
+import { useConfirmDialog } from '../../lib/components/useConfirmDialog';
+import type { PublicationType } from '../../lib/workflowTypes';
 
 type TemplateMap = Record<PublicationType, ChecklistTemplateSummary[]>;
 
@@ -19,6 +20,7 @@ export default function AdminChecklistPage() {
   const [isMutating, setIsMutating] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const { openConfirm, confirmDialog } = useConfirmDialog();
 
   const activeByType = useMemo(() => ({
     THESIS: templatesByType.THESIS.find((template) => template.active) ?? null,
@@ -80,14 +82,19 @@ export default function AdminChecklistPage() {
   };
 
   const activateTemplate = (templateId: number) => {
-    if (!window.confirm('This becomes active for future reviews. Continue?')) {
-      return;
-    }
-
-    void runMutation(async () => {
-      await checklistApi.activate(templateId);
-      await loadTemplates();
-    }, 'Template activated.');
+    openConfirm({
+      title: 'Activate Template',
+      message: 'This becomes active for future reviews. Continue?',
+      confirmLabel: 'Activate',
+      confirmVariant: 'success',
+      onConfirm: async (close) => {
+        await runMutation(async () => {
+          await checklistApi.activate(templateId);
+          await loadTemplates();
+        }, 'Template activated.');
+        close();
+      },
+    });
   };
 
   const deleteTemplate = (templateId: number) => {
@@ -96,14 +103,19 @@ export default function AdminChecklistPage() {
     const prompt = template?.active
       ? 'Delete this ACTIVE template? This cannot be undone.'
       : 'Delete this draft template version? This cannot be undone.';
-    if (!window.confirm(prompt)) {
-      return;
-    }
-
-    void runMutation(async () => {
-      await checklistApi.deleteTemplate(templateId);
-      await loadTemplates();
-    }, 'Template version deleted.');
+    openConfirm({
+      title: 'Delete Template',
+      message: prompt,
+      confirmLabel: 'Delete',
+      confirmVariant: 'danger',
+      onConfirm: async (close) => {
+        await runMutation(async () => {
+          await checklistApi.deleteTemplate(templateId);
+          await loadTemplates();
+        }, 'Template version deleted.');
+        close();
+      },
+    });
   };
 
   return (
@@ -196,6 +208,7 @@ export default function AdminChecklistPage() {
           </div>
         </div>
       ))}
+      {confirmDialog}
     </ShellLayout>
   );
 }

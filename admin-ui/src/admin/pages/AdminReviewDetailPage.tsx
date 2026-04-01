@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import ShellLayout from '../../layout/ShellLayout';
+import ShellLayout from '../../ShellLayout';
 import { adminApi } from '../../lib/api/admin';
 import CaseTimeline from '../../lib/components/CaseTimeline';
 import DownloadFilenameLink from '../../lib/components/DownloadFilenameLink';
@@ -10,7 +10,7 @@ import type {
   ChecklistTemplateResponse,
   PublicationType,
   SubmissionVersion,
-} from '../../lib/types/workflow';
+} from '../../lib/workflowTypes';
 import {
   canAdminDecide,
   canAdminSaveChecklist,
@@ -25,6 +25,9 @@ type ChecklistDraftRow = {
   pass: boolean;
   note: string;
 };
+
+const ALERT_STYLE = { borderRadius: '0.75rem' } as const;
+const PILL_BUTTON_STYLE = { borderRadius: '999px' } as const;
 
 function toChecklistMap(items: ChecklistItem[]): Record<number, ChecklistDraftRow> {
   return items.reduce<Record<number, ChecklistDraftRow>>((acc, item) => {
@@ -48,6 +51,84 @@ function resolveTemplateForSubmission(
   return templates.find((entry) => entry.template.active) ?? templates[0] ?? null;
 }
 
+function formatDateTime(value?: string | null) {
+  return value ? new Date(value).toLocaleString() : 'N/A';
+}
+
+function updateDraftRow(
+  current: Record<number, ChecklistDraftRow>,
+  itemId: number,
+  patch: Partial<ChecklistDraftRow>
+) {
+  return {
+    ...current,
+    [itemId]: {
+      checklistItemId: itemId,
+      pass: true,
+      note: '',
+      ...(current[itemId] ?? {}),
+      ...patch,
+    },
+  };
+}
+
+function decisionActionTitle(decisionAllowed: boolean, hasReason: boolean, emptyReasonMessage: string) {
+  if (!decisionAllowed) {
+    return 'Review decisions are only available during library review.';
+  }
+  return hasReason ? undefined : emptyReasonMessage;
+}
+
+function reviewStatusNotice(
+  status: string | undefined,
+  reviewStage: boolean,
+  finalized: boolean
+): { variant: 'info' | 'danger' | 'secondary'; message: string } | null {
+  if (!reviewStage && !finalized) {
+    return {
+      variant: 'info',
+      message: 'This case is not yet in library review. Wait for lecturer forwarding before continuing checklist review.',
+    };
+  }
+  if (finalized && status === 'REJECTED') {
+    return {
+      variant: 'danger',
+      message: 'This case has been rejected and is finalized for the library stage.',
+    };
+  }
+  if (finalized) {
+    return {
+      variant: 'secondary',
+      message: 'This case is already finalized for the library stage.',
+    };
+  }
+  return null;
+}
+
+function ReviewCard({
+  title,
+  description,
+  delay = 0,
+  spaced = true,
+  children,
+}: {
+  title: string;
+  description: string;
+  delay?: number;
+  spaced?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div className={`su-card fade-in${spaced ? ' mb-3' : ''}`} style={{ animationDelay: `${delay}s` }}>
+      <div className="card-body p-4">
+        <h3 className="h6 su-page-title">{title}</h3>
+        <div className="text-muted small mb-3">{description}</div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export default function AdminReviewDetailPage() {
   const { caseId } = useParams();
   const navigate = useNavigate();
@@ -62,7 +143,10 @@ export default function AdminReviewDetailPage() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
-  const submissions = detail?.submissions ?? detail?.versions ?? [];
+  const submissions = useMemo(
+    () => detail?.submissions ?? detail?.versions ?? [],
+    [detail?.submissions, detail?.versions]
+  );
   const latestSubmission = submissions[0];
   const latestSubmissionDownloadHref = detail ? `/api/admin/cases/${detail.case.id}/file/latest` : '';
 
@@ -76,7 +160,10 @@ export default function AdminReviewDetailPage() {
     [templates, selectedSubmission]
   );
 
-  const checklistItems = selectedTemplate?.items ?? [];
+  const checklistItems = useMemo(
+    () => selectedTemplate?.items ?? [],
+    [selectedTemplate?.items]
+  );
   const status = detail?.case.status;
   const reviewStage = status ? isAdminReviewStage(status) : false;
   const finalized = status ? isFinalizedForLibrary(status) : false;
@@ -87,8 +174,9 @@ export default function AdminReviewDetailPage() {
   const trimmedRevisionReason = revisionReason.trim();
   const trimmedRejectReason = rejectReason.trim();
   const checklistSaved = selectedSubmission ? selectedSubmission.status !== 'SUBMITTED' : false;
+  const statusNotice = reviewStatusNotice(status, reviewStage, finalized);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!caseId) return;
     setLoading(true);
     setError('');
@@ -114,15 +202,15 @@ export default function AdminReviewDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    void load();
   }, [caseId]);
 
   useEffect(() => {
+    void load();
+  }, [load]);
+
+  useEffect(() => {
     setDraft(toChecklistMap(checklistItems));
-  }, [selectedSubmissionId, selectedTemplate?.template.id]);
+  }, [checklistItems]);
 
   const runAction = async (action: () => Promise<void>, successMessage: string) => {
     setWorking(true);
@@ -184,26 +272,12 @@ export default function AdminReviewDetailPage() {
           <div className="text-muted">Loading case review detail...</div>
         </div>
       )}
-      {error && <div className="alert alert-danger" style={{ borderRadius: '0.75rem' }}>{error}</div>}
-      {message && <div className="alert alert-success" style={{ borderRadius: '0.75rem' }}>{message}</div>}
+      {error && <div className="alert alert-danger" style={ALERT_STYLE}>{error}</div>}
+      {message && <div className="alert alert-success" style={ALERT_STYLE}>{message}</div>}
 
       {detail && (
         <>
-          {!reviewStage && !finalized && (
-            <div className="alert alert-info">
-              This case is not yet in library review. Wait for lecturer forwarding before continuing checklist review.
-            </div>
-          )}
-          {finalized && status === 'REJECTED' && (
-            <div className="alert alert-danger">
-              This case has been rejected and is finalized for the library stage.
-            </div>
-          )}
-          {finalized && status !== 'REJECTED' && (
-            <div className="alert alert-secondary">
-              This case is already finalized for the library stage.
-            </div>
-          )}
+          {statusNotice && <div className={`alert alert-${statusNotice.variant}`}>{statusNotice.message}</div>}
           <div className="su-card mb-3 fade-in">
             <div className="card-body p-4 d-flex flex-wrap justify-content-between align-items-center gap-2">
               <div>
@@ -218,12 +292,11 @@ export default function AdminReviewDetailPage() {
             </div>
           </div>
 
-          <div className="su-card mb-3 fade-in" style={{ animationDelay: '0.05s' }}>
-            <div className="card-body p-4">
-              <h3 className="h6 su-page-title">Selected Submission</h3>
-              <div className="text-muted small mb-3">
-                Confirm the submission version and template assignment before saving checklist results or recording a decision.
-              </div>
+          <ReviewCard
+            title="Selected Submission"
+            description="Confirm the submission version and template assignment before saving checklist results or recording a decision."
+            delay={0.05}
+          >
               <div className="row g-2">
                 <div className="col-md-6">
                   <select
@@ -242,10 +315,7 @@ export default function AdminReviewDetailPage() {
                 <div className="col-md-6 text-muted small d-flex align-items-center">
                   <div>
                     <div>Checklist template: {selectedTemplate ? `v${selectedTemplate.template.version}` : 'Not available'}</div>
-                    <div>
-                      Uploaded:{' '}
-                      {selectedSubmission?.createdAt ? new Date(selectedSubmission.createdAt).toLocaleString() : 'N/A'}
-                    </div>
+                    <div>Uploaded: {formatDateTime(selectedSubmission?.createdAt)}</div>
                   </div>
                 </div>
                 {latestSubmission && (
@@ -260,15 +330,13 @@ export default function AdminReviewDetailPage() {
                   </div>
                 )}
               </div>
-            </div>
-          </div>
+          </ReviewCard>
 
-          <div className="su-card mb-3 fade-in" style={{ animationDelay: '0.1s' }}>
-            <div className="card-body p-4">
-              <h3 className="h6 mb-3 su-page-title">Checklist Review</h3>
-              <div className="text-muted small mb-3">
-                Use the active template for this publication type and save checklist results before recording the final library decision.
-              </div>
+          <ReviewCard
+            title="Checklist Review"
+            description="Use the active template for this publication type and save checklist results before recording the final library decision."
+            delay={0.1}
+          >
               {!hasActiveTemplate && (
                 <div className="alert alert-warning d-flex flex-wrap justify-content-between align-items-center gap-2">
                   <span>No active submission template exists for this publication type.</span>
@@ -316,13 +384,8 @@ export default function AdminReviewDetailPage() {
                               disabled={!checklistEditable}
                               value={draft[item.id]?.pass ? 'PASS' : 'FAIL'}
                               onChange={(event) =>
-                                setDraft((prev) => ({
-                                  ...prev,
-                                  [item.id]: {
-                                    ...(prev[item.id] ?? { checklistItemId: item.id, note: '' }),
-                                    checklistItemId: item.id,
-                                    pass: event.target.value === 'PASS',
-                                  },
+                                setDraft((prev) => updateDraftRow(prev, item.id, {
+                                  pass: event.target.value === 'PASS',
                                 }))
                               }
                             >
@@ -336,13 +399,8 @@ export default function AdminReviewDetailPage() {
                               disabled={!checklistEditable}
                               value={draft[item.id]?.note ?? ''}
                               onChange={(event) =>
-                                setDraft((prev) => ({
-                                  ...prev,
-                                  [item.id]: {
-                                    ...(prev[item.id] ?? { checklistItemId: item.id, pass: true }),
-                                    checklistItemId: item.id,
-                                    note: event.target.value,
-                                  },
+                                setDraft((prev) => updateDraftRow(prev, item.id, {
+                                  note: event.target.value,
                                 }))
                               }
                               placeholder="Optional note"
@@ -356,31 +414,27 @@ export default function AdminReviewDetailPage() {
               )}
               <button
                 className="btn btn-primary btn-sm"
-                style={{ borderRadius: '999px' }}
+                style={PILL_BUTTON_STYLE}
                 disabled={!checklistAllowed || !hasActiveTemplate || checklistItems.length === 0 || working}
                 onClick={() => void saveChecklist()}
               >
                 Save Checklist Results
               </button>
-            </div>
-          </div>
+          </ReviewCard>
 
-          <div className="su-card mb-3 fade-in" style={{ animationDelay: '0.15s' }}>
-            <div className="card-body p-4">
-              <h3 className="h6 su-page-title">Timeline</h3>
-              <div className="text-muted small mb-3">
-                Review the timeline to confirm handoff order, feedback history, and recent workflow changes before making a decision.
-              </div>
-              <CaseTimeline items={detail.timeline ?? []} />
-            </div>
-          </div>
+          <ReviewCard
+            title="Timeline"
+            description="Review the timeline to confirm handoff order, feedback history, and recent workflow changes before making a decision."
+            delay={0.15}
+          >
+            <CaseTimeline items={detail.timeline ?? []} />
+          </ReviewCard>
 
-          <div className="su-card mb-3 fade-in" style={{ animationDelay: '0.2s' }}>
-            <div className="card-body p-4">
-              <h3 className="h6 su-page-title">Review Decision</h3>
-              <div className="text-muted small mb-3">
-                Record the library decision here after reviewing the submission file, checklist results, and any existing comments.
-              </div>
+          <ReviewCard
+            title="Review Decision"
+            description="Record the library decision here after reviewing the submission file, checklist results, and any existing comments."
+            delay={0.2}
+          >
               {!decisionAllowed && (
                 <div className="alert alert-info">
                   Review decisions are available only while the case is in library review.
@@ -407,13 +461,7 @@ export default function AdminReviewDetailPage() {
                     className="btn btn-outline-warning w-100"
                     disabled={working || !decisionAllowed || trimmedRevisionReason.length === 0}
                     onClick={() => void requestRevision()}
-                    title={
-                      !decisionAllowed
-                        ? 'Review decisions are only available during library review.'
-                        : trimmedRevisionReason.length === 0
-                          ? 'Provide a revision reason to continue.'
-                          : undefined
-                    }
+                    title={decisionActionTitle(decisionAllowed, trimmedRevisionReason.length > 0, 'Provide a revision reason to continue.')}
                   >
                     Request Revision
                   </button>
@@ -434,7 +482,7 @@ export default function AdminReviewDetailPage() {
                 <div className="col-md-2 d-flex align-items-end">
                   <button
                     className="btn btn-success w-100"
-                    style={{ borderRadius: '999px' }}
+                    style={PILL_BUTTON_STYLE}
                     disabled={working || !decisionAllowed}
                     onClick={() => void approveCase()}
                   >
@@ -446,27 +494,20 @@ export default function AdminReviewDetailPage() {
                     className="btn btn-danger w-100"
                     disabled={working || !decisionAllowed || trimmedRejectReason.length === 0}
                     onClick={() => void rejectCase()}
-                    title={
-                      !decisionAllowed
-                        ? 'Review decisions are only available during library review.'
-                        : trimmedRejectReason.length === 0
-                          ? 'Provide a reject reason to continue.'
-                          : undefined
-                    }
+                    title={decisionActionTitle(decisionAllowed, trimmedRejectReason.length > 0, 'Provide a reject reason to continue.')}
                   >
                     Reject Case
                   </button>
                 </div>
               </div>
-            </div>
-          </div>
+          </ReviewCard>
 
-          <div className="su-card fade-in" style={{ animationDelay: '0.25s' }}>
-            <div className="card-body p-4">
-              <h3 className="h6 su-page-title">Comments</h3>
-              <div className="text-muted small mb-3">
-                Review comments here for supporting context from the workflow history and earlier review actions.
-              </div>
+          <ReviewCard
+            title="Comments"
+            description="Review comments here for supporting context from the workflow history and earlier review actions."
+            delay={0.25}
+            spaced={false}
+          >
               {(detail.comments || []).length === 0 ? (
                 <div className="text-muted small text-center py-3">No comments have been recorded for this case.</div>
               ) : (
@@ -479,17 +520,14 @@ export default function AdminReviewDetailPage() {
                           {comment.authorRole}
                           {comment.authorEmail ? ` — ${comment.authorEmail}` : ''}
                         </div>
-                        <div className="text-muted small">
-                          {comment.createdAt ? new Date(comment.createdAt).toLocaleString() : 'N/A'}
-                        </div>
+                        <div className="text-muted small">{formatDateTime(comment.createdAt)}</div>
                       </div>
                       <div style={{ whiteSpace: 'pre-wrap' }}>{comment.body}</div>
                     </div>
                   ))}
                 </div>
               )}
-            </div>
-          </div>
+          </ReviewCard>
         </>
       )}
     </ShellLayout>

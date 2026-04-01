@@ -27,6 +27,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -116,8 +117,7 @@ class WorkflowGateIntegrationTest {
         .file(new MockMultipartFile("file", "test.pdf", "application/pdf", "%PDF-1.4\ncontent".getBytes()))
         .session(session))
       .andExpect(status().isBadRequest())
-      .andExpect(result -> assertThat(result.getResponse().getErrorMessage())
-        .contains("Registration must be verified by the library before submission."));
+      .andExpect(jsonPath("$.message", containsString("Registration must be verified by the library before submission.")));
   }
 
   @Test
@@ -191,8 +191,7 @@ class WorkflowGateIntegrationTest {
             {"type":"THESIS","title":"Program Match Test","supervisorUserIds":[%d]}
             """.formatted(lecturer.getId())))
         .andExpect(status().isBadRequest())
-        .andExpect(result -> assertThat(result.getResponse().getErrorMessage())
-          .contains("Supervisor must be from the same study program."));
+        .andExpect(jsonPath("$.message", containsString("Supervisor must be from the same study program.")));
     } finally {
       lecturerProfile.setDepartment(originalDepartment);
       lecturerProfile.setFaculty(originalFaculty);
@@ -216,8 +215,7 @@ class WorkflowGateIntegrationTest {
           }
           """.formatted(lecturer.getEmail(), student.getEmail())))
       .andExpect(status().isBadRequest())
-      .andExpect(result -> assertThat(result.getResponse().getErrorMessage())
-        .contains("Only one supervisor is allowed."));
+      .andExpect(jsonPath("$.message", containsString("Only one supervisor is allowed.")));
   }
 
   @Test
@@ -258,8 +256,7 @@ class WorkflowGateIntegrationTest {
           {"type":"THESIS","title":"Second Thesis","supervisorEmail":"%s"}
           """.formatted(lecturer.getEmail())))
       .andExpect(status().isConflict())
-      .andExpect(result -> assertThat(result.getResponse().getErrorMessage())
-        .contains("You already have a THESIS registration case"));
+      .andExpect(jsonPath("$.message", containsString("You already have a THESIS registration case")));
   }
 
   @Test

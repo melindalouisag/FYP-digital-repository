@@ -118,16 +118,14 @@ class ChecklistManagementIntegrationTest {
     ChecklistTemplate active = ensureActiveTemplate(ChecklistScope.THESIS);
     MockHttpSession admin = loginAsAdmin();
 
-    String body = mockMvc.perform(put("/api/admin/checklists/templates/{templateId}/items", active.getId())
+    mockMvc.perform(put("/api/admin/checklists/templates/{templateId}/items", active.getId())
         .session(admin)
         .contentType(MediaType.APPLICATION_JSON)
         .content("""
           [{"orderIndex":1,"section":"S","itemText":"X","guidanceText":"G","required":true}]
           """))
       .andExpect(status().isBadRequest())
-      .andReturn().getResponse().getErrorMessage();
-
-    assertThat(body).isEqualTo("Cannot edit active template; create a new draft first.");
+      .andExpect(jsonPath("$.message").value("Cannot edit active template; create a new draft first."));
   }
 
   @Test

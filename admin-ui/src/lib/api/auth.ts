@@ -25,6 +25,13 @@ export interface OnboardingPayload {
   studentId?: string;
 }
 
+export function defaultPath(role: Role | string) {
+  if (role === 'STUDENT') return '/student/dashboard';
+  if (role === 'LECTURER') return '/lecturer/dashboard';
+  if (role === 'ADMIN') return '/admin/dashboard';
+  return '/';
+}
+
 export const authApi = {
   me(): Promise<AuthUser> {
     return getJson<AuthUser>('/api/auth/me');
