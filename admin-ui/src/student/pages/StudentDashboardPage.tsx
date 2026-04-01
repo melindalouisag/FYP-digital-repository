@@ -201,12 +201,6 @@ export default function StudentDashboardPage() {
 
   return (
     <ShellLayout title="Student Dashboard" subtitle="Monitor your recent progress">
-      <div className="d-flex justify-content-end align-items-center mb-4">
-        <button className="btn btn-outline-secondary btn-sm" onClick={() => void load()} disabled={loading}>
-          {loading ? 'Loading...' : 'Refresh'}
-        </button>
-      </div>
-
       {error && <div className="alert alert-danger">{error}</div>}
 
       <div className="su-dashboard-grid su-dashboard-grid-3 mb-4">

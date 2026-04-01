@@ -76,12 +76,6 @@ export default function StudentSubmissionsPage() {
         </>
       )}
     >
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <button className="btn btn-outline-secondary btn-sm" style={{ borderRadius: '999px' }} onClick={() => void load()} disabled={loading}>
-          {loading ? 'Loading...' : 'Refresh'}
-        </button>
-      </div>
-
       {error && <div className="alert alert-danger">{error}</div>}
 
       {!loading && submissionCases.length === 0 && (

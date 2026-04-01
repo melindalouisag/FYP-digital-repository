@@ -76,10 +76,7 @@ export default function StudentRegistrationsPage() {
         </>
       )}
     >
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <button className="btn btn-outline-secondary btn-sm" style={{ borderRadius: '999px' }} onClick={() => void load()} disabled={loading}>
-          {loading ? 'Loading...' : 'Refresh'}
-        </button>
+      <div className="d-flex justify-content-end align-items-center mb-4">
         <button className="btn btn-primary" style={{ borderRadius: '999px' }} onClick={() => navigate('/student/registrations/new')}>
           Create New Registration
         </button>
