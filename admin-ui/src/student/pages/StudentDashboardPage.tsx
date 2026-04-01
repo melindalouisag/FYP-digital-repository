@@ -440,7 +440,7 @@ export default function StudentDashboardPage() {
         </DashboardPanel>
       </div>
 
-      <DashboardPanel title="Case List">
+      <DashboardPanel title="Case List" className="su-dashboard-panel-auto-height" bodyClassName="su-dashboard-panel-body-auto-height">
         {loading ? (
           <p className="su-dashboard-empty-copy mb-0">Loading dashboard data.</p>
         ) : orderedCases.length === 0 ? (

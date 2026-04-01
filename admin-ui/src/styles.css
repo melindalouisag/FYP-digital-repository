@@ -197,6 +197,14 @@ body {
   min-height: 100%;
 }
 
+.su-dashboard-panel-auto-height {
+  height: auto !important;
+}
+
+.su-dashboard-panel-body-auto-height {
+  min-height: 0;
+}
+
 .su-dashboard-panel-button,
 .su-dashboard-item-button {
   width: 100%;
