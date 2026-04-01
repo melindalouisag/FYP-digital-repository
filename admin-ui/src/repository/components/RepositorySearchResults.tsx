@@ -49,7 +49,7 @@ export function RepositorySearchResults({
       </div>
 
       {showPublicAccessNotice && (
-        <div className="alert alert-info border-0" role="note" style={{ borderRadius: '0.9rem', background: 'rgba(13, 110, 253, 0.08)' }}>
+        <div className="alert border-0 su-repository-access-note" role="note">
           File download requires sign-in.
         </div>
       )}

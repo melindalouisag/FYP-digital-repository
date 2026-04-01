@@ -59,7 +59,7 @@ export function RepositorySearchFilters({
   onReset,
 }: RepositorySearchFiltersProps) {
   return (
-    <div className="su-card mb-4">
+    <div className="su-card su-repository-search-card mb-4">
       <div className="card-body p-4">
         <h3 className="h6 su-page-title mb-3">
           <span className="su-title-with-icon">

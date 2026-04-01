@@ -693,6 +693,10 @@ body {
 }
 
 /* ======================== HERO SECTION ======================== */
+.su-repository-page {
+  background: linear-gradient(180deg, #f0f6fa 0%, #fff 30%);
+}
+
 .su-hero {
   background: linear-gradient(135deg, #0f2f4a 0%, #174a6f 50%, #1a5c82 100%);
   color: #fff;
@@ -724,6 +728,17 @@ body {
   opacity: 0.85;
   position: relative;
   z-index: 1;
+}
+
+.su-repository-hero-divider {
+  width: 1px;
+  background: rgba(255, 255, 255, 0.2);
+  margin: 0.5rem 0;
+}
+
+.su-repository-access-note {
+  border-radius: 0.9rem;
+  background: rgba(13, 110, 253, 0.08);
 }
 
 /* ======================== STAT CARDS ======================== */
@@ -880,6 +895,82 @@ body {
   border-color: var(--su-teal);
   box-shadow: 0 4px 16px rgba(11, 117, 132, 0.1);
   transform: translateY(-1px);
+}
+
+[data-theme="dark"] .su-repository-page {
+  background: linear-gradient(180deg, #0d131a 0%, #111821 22%, var(--bg) 100%);
+}
+
+[data-theme="dark"] .su-repository-page .su-app-header {
+  border-bottom-color: rgba(156, 176, 193, 0.12);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+}
+
+[data-theme="dark"] .su-repository-hero {
+  background: linear-gradient(135deg, #131c26 0%, #172331 55%, #1a2b39 100%);
+  border: 1px solid rgba(156, 176, 193, 0.12);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.24);
+}
+
+[data-theme="dark"] .su-repository-hero::after {
+  background: radial-gradient(ellipse at 80% 18%, rgba(44, 163, 181, 0.16) 0%, transparent 62%);
+}
+
+[data-theme="dark"] .su-repository-hero p,
+[data-theme="dark"] .su-repository-footer {
+  color: var(--muted) !important;
+  opacity: 1;
+}
+
+[data-theme="dark"] .su-repository-hero-divider {
+  background: rgba(156, 176, 193, 0.18);
+}
+
+[data-theme="dark"] .su-repository-search-card {
+  background: linear-gradient(180deg, rgba(22, 29, 39, 0.98) 0%, rgba(18, 25, 34, 0.98) 100%);
+  border-color: rgba(156, 176, 193, 0.14);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.22);
+}
+
+[data-theme="dark"] .su-repository-page .form-label {
+  color: #c3d0dc;
+}
+
+[data-theme="dark"] .su-repository-page .form-control,
+[data-theme="dark"] .su-repository-page .form-select {
+  background: #111923;
+  border-color: #334253;
+}
+
+[data-theme="dark"] .su-repository-page .form-control:focus,
+[data-theme="dark"] .su-repository-page .form-select:focus {
+  background: #111923;
+  border-color: var(--primary);
+}
+
+[data-theme="dark"] .su-repository-page .su-result-card {
+  background: linear-gradient(180deg, rgba(22, 29, 39, 0.98) 0%, rgba(19, 26, 35, 0.98) 100%);
+  border-color: rgba(156, 176, 193, 0.14);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+}
+
+[data-theme="dark"] .su-repository-page .su-result-card:hover {
+  border-color: rgba(102, 197, 211, 0.45);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.24);
+}
+
+[data-theme="dark"] .su-repository-page .su-empty-state {
+  background: linear-gradient(180deg, rgba(22, 29, 39, 0.96) 0%, rgba(18, 25, 34, 0.96) 100%);
+  border-color: rgba(156, 176, 193, 0.16);
+}
+
+[data-theme="dark"] .su-repository-page .su-empty-state p {
+  color: var(--muted);
+}
+
+[data-theme="dark"] .su-repository-access-note {
+  background: rgba(44, 163, 181, 0.1);
+  color: #d6e3ee;
 }
 
 /* ======================== UTILITIES ======================== */

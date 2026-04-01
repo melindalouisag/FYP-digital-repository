@@ -16,7 +16,7 @@ export default function RepositorySearchPage() {
   const search = useRepositorySearch();
 
   return (
-    <div className="min-vh-100" style={{ background: 'linear-gradient(180deg, #f0f6fa 0%, #fff 30%)' }}>
+    <div className="min-vh-100 su-repository-page">
       <header className="su-app-header">
         <div className="container py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
           <div className="d-flex align-items-center gap-2">
@@ -71,7 +71,7 @@ export default function RepositorySearchPage() {
       </header>
 
       <div className="container py-4 fade-in">
-        <section className="su-hero mb-4">
+        <section className="su-hero su-repository-hero mb-4">
           <div className="row align-items-center">
             <div className="col-lg-7">
               <h2 className="display-6 mb-2">Discover Research &<br />Publications</h2>
@@ -81,13 +81,13 @@ export default function RepositorySearchPage() {
               </p>
             </div>
             <div className="col-lg-5 text-center mt-3 mt-lg-0">
-              <div className="d-flex justify-content-center gap-3">
-                <div className="text-center">
+              <div className="d-flex justify-content-center gap-3 su-repository-hero-stats">
+                <div className="text-center su-repository-hero-stat">
                   <div style={{ fontSize: '2.5rem', fontWeight: 800 }}>{search.pageData.totalElements}</div>
                   <div style={{ fontSize: '0.78rem', opacity: 0.7, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Publications</div>
                 </div>
-                <div style={{ width: 1, background: 'rgba(255,255,255,0.2)', margin: '0.5rem 0' }} />
-                <div className="text-center">
+                <div className="su-repository-hero-divider" />
+                <div className="text-center su-repository-hero-stat">
                   <div style={{ fontSize: '2.5rem', fontWeight: 800 }}>{search.faculties.length}</div>
                   <div style={{ fontSize: '0.78rem', opacity: 0.7, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Faculties</div>
                 </div>
@@ -141,7 +141,7 @@ export default function RepositorySearchPage() {
           onNext={() => search.setPage((current) => current + 1)}
         />
 
-        <footer className="text-center text-muted small py-4 mt-4">
+        <footer className="su-repository-footer text-center text-muted small py-4 mt-4">
           <div className="fw-semibold">Sampoerna University Library</div>
           <div>© {new Date().getFullYear()} — Digital Repository Portal</div>
         </footer>
