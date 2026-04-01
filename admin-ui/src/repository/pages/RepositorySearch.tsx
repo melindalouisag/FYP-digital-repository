@@ -10,7 +10,7 @@ import { RepositorySearchResults } from '../components/RepositorySearchResults';
 import { useRepositorySearch } from '../useRepositorySearch';
 
 export default function RepositorySearchPage() {
-  const { user, logout } = useAuth();
+  const { user, logout, loading } = useAuth();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const search = useRepositorySearch();
@@ -125,6 +125,7 @@ export default function RepositorySearchPage() {
           results={search.results}
           loading={search.loading}
           totalElements={search.pageData.totalElements}
+          showPublicAccessNotice={!loading && !user}
         />
 
         <RepositorySearchPagination

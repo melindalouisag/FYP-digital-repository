@@ -1,7 +1,5 @@
 import type { FormEvent } from 'react';
-import PortalIcon from '../../lib/components/PortalIcon';
 import KeywordChipInput from '../../lib/components/KeywordChipInput';
-import { adminSidebarIcons } from '../../lib/portalIcons';
 import type { RepositorySearchParams } from '../../lib/api/publicRepository';
 import type { Faculty, Program } from '../../lib/api/master';
 
@@ -21,6 +19,26 @@ interface RepositorySearchFiltersProps {
   onProgramChange: (value: string) => void;
   onSearch: (event: FormEvent<HTMLFormElement>) => void;
   onReset: () => void;
+}
+
+function SearchIcon({ size = 18 }: { size?: number }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      style={{ flexShrink: 0, opacity: 0.8 }}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" />
+    </svg>
+  );
 }
 
 export function RepositorySearchFilters({
@@ -45,7 +63,7 @@ export function RepositorySearchFilters({
       <div className="card-body p-4">
         <h3 className="h6 su-page-title mb-3">
           <span className="su-title-with-icon">
-            <PortalIcon src={adminSidebarIcons.search} />
+            <SearchIcon />
             <span>Search Repository</span>
           </span>
         </h3>
@@ -133,7 +151,7 @@ export function RepositorySearchFilters({
                 <><span className="su-spinner d-inline-block me-2" style={{ width: '1rem', height: '1rem', borderWidth: 2 }} /> Searching...</>
               ) : (
                 <span className="su-label-with-icon">
-                  <PortalIcon src={adminSidebarIcons.search} />
+                  <SearchIcon />
                   <span>Search Repository</span>
                 </span>
               )}

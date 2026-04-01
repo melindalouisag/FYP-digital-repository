@@ -78,7 +78,7 @@ describe('RepositorySearchPage', () => {
     });
 
     expect(
-      screen.getByText(/publication metadata is public/i)
+      screen.getByText('File download requires sign-in.')
     ).toBeInTheDocument();
   });
 });
