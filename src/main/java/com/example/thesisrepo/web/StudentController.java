@@ -103,7 +103,7 @@ public class StudentController {
   public ResponseEntity<SubmissionUploadResponse> uploadSubmission(
     @PathVariable Long caseId,
     @RequestPart("file") MultipartFile file,
-    @RequestPart(value = "meta", required = false) SubmissionUploadMetadataRequest meta
+    @Valid @RequestPart(value = "meta", required = false) SubmissionUploadMetadataRequest meta
   ) {
     User me = currentUser.requireCurrentUser();
     SubmissionUploadResponse response = submissionService.uploadStudentSubmission(me, caseId, file, meta);

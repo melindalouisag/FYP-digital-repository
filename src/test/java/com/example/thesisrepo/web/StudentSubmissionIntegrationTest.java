@@ -189,12 +189,34 @@ class StudentSubmissionIntegrationTest {
   }
 
   @Test
+  void uploadRequiresAtLeastThreeKeywords() throws Exception {
+    PublicationCase publicationCase = cases.save(PublicationCase.builder()
+      .student(student)
+      .type(PublicationType.THESIS)
+      .status(CaseStatus.REGISTRATION_VERIFIED)
+      .build());
+    StudentProfile profile = studentProfiles.findByUserId(student.getId()).orElseThrow();
+
+    MockHttpSession session = loginAsRole(Role.STUDENT);
+
+    mockMvc.perform(multipart("/api/student/cases/{caseId}/submissions", publicationCase.getId())
+        .file(pdfFile("submission.pdf"))
+        .file(metadataPart(profile, "repository, thesis"))
+        .session(session))
+      .andExpect(status().isBadRequest())
+      .andExpect(jsonPath("$.message").value("Please enter at least 3 keywords."));
+
+    assertThat(submissionVersions.findByPublicationCaseOrderByVersionNumberDesc(publicationCase)).isEmpty();
+  }
+
+  @Test
   void auditPersistenceFailureDeletesUploadedBlobAndRollsBackSubmission() throws Exception {
     PublicationCase publicationCase = cases.save(PublicationCase.builder()
       .student(student)
       .type(PublicationType.THESIS)
       .status(CaseStatus.REGISTRATION_VERIFIED)
       .build());
+    StudentProfile profile = studentProfiles.findByUserId(student.getId()).orElseThrow();
 
     MockHttpSession session = loginAsRole(Role.STUDENT);
     AtomicReference<String> storedKeyRef = new AtomicReference<>();
@@ -211,6 +233,7 @@ class StudentSubmissionIntegrationTest {
 
     mockMvc.perform(multipart("/api/student/cases/{caseId}/submissions", publicationCase.getId())
         .file(pdfFile("submission.pdf"))
+        .file(metadataPart(profile))
         .session(session))
       .andExpect(status().isInternalServerError());
 
@@ -314,6 +337,10 @@ class StudentSubmissionIntegrationTest {
   }
 
   private MockMultipartFile metadataPart(StudentProfile profile) {
+    return metadataPart(profile, "repository, thesis, archive");
+  }
+
+  private MockMultipartFile metadataPart(StudentProfile profile, String keywords) {
     return new MockMultipartFile(
       "meta",
       "",
@@ -322,13 +349,13 @@ class StudentSubmissionIntegrationTest {
         {
           "metadataTitle":"Submission Title",
           "metadataAuthors":"Student One",
-          "metadataKeywords":"repository, thesis",
+          "metadataKeywords":"%s",
           "metadataFaculty":"%s",
           "metadataStudyProgram":"%s",
           "metadataYear":2026,
           "abstractText":"Submission abstract."
         }
-        """.formatted(profile.getFaculty(), profile.getProgram()).getBytes(StandardCharsets.UTF_8)
+        """.formatted(keywords, profile.getFaculty(), profile.getProgram()).getBytes(StandardCharsets.UTF_8)
     );
   }
 

@@ -888,6 +888,9 @@ body {
   border-radius: var(--su-radius);
   padding: 1.25rem 1.5rem;
   background: #fff;
+  color: inherit;
+  display: block;
+  text-decoration: none;
   transition: all var(--su-transition);
 }
 
@@ -895,6 +898,12 @@ body {
   border-color: var(--su-teal);
   box-shadow: 0 4px 16px rgba(11, 117, 132, 0.1);
   transform: translateY(-1px);
+}
+
+.su-result-card:focus-visible {
+  border-color: var(--su-teal);
+  box-shadow: 0 0 0 0.2rem rgba(11, 117, 132, 0.18);
+  outline: none;
 }
 
 [data-theme="dark"] .su-repository-page {

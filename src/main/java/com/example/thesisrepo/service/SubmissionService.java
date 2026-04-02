@@ -68,6 +68,8 @@ public class SubmissionService {
     }
 
     try {
+      requireMinimumKeywords(metadata);
+
       SubmissionVersion version = submissionVersions.save(SubmissionVersion.builder()
         .publicationCase(publicationCase)
         .versionNumber(nextVersion)
@@ -182,6 +184,12 @@ public class SubmissionService {
     } catch (IOException cleanupException) {
       originalException.addSuppressed(cleanupException);
       log.warn("Failed to delete uploaded blob after submission persistence failure: {}", storedPath, cleanupException);
+    }
+  }
+
+  private void requireMinimumKeywords(SubmissionUploadMetadataRequest metadata) {
+    if (metadata == null || !metadata.hasMinimumKeywords()) {
+      throw new ResponseStatusException(BAD_REQUEST, "Please enter at least 3 keywords.");
     }
   }
 }

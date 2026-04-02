@@ -56,7 +56,13 @@ export function RepositorySearchResults({
 
       <div className="vstack gap-3">
         {results.map((item, index) => (
-          <div className="su-result-card fade-in" key={item.id} style={{ animationDelay: `${index * 0.04}s` }}>
+          <Link
+            to={`/repo/${item.id}`}
+            className="su-result-card fade-in d-block text-decoration-none text-reset"
+            key={item.id}
+            style={{ animationDelay: `${index * 0.04}s` }}
+            aria-label={`Open publication details for ${item.title}`}
+          >
             <div className="d-flex justify-content-between align-items-start gap-3">
               <div style={{ flex: 1 }}>
                 <h4 className="h6 mb-1 su-page-title" style={{ fontSize: '1rem' }}>{item.title}</h4>
@@ -84,11 +90,8 @@ export function RepositorySearchResults({
                   </p>
                 )}
               </div>
-              <Link to={`/repo/${item.id}`} className="btn btn-primary btn-sm" style={{ borderRadius: '999px', whiteSpace: 'nowrap' }}>
-                View Detail →
-              </Link>
             </div>
-          </div>
+          </Link>
         ))}
 
         {!loading && results.length === 0 && (

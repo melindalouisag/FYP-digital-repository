@@ -154,6 +154,7 @@ class WorkflowGateIntegrationTest {
 
     mockMvc.perform(multipart("/api/student/cases/{caseId}/submissions", caseId)
         .file(new MockMultipartFile("file", "submission.pdf", "application/pdf", "%PDF-1.4\ncontent".getBytes()))
+        .file(submissionMetadataPart(student))
         .session(studentSession))
       .andExpect(status().isOk());
 
@@ -424,6 +425,7 @@ class WorkflowGateIntegrationTest {
 
     mockMvc.perform(multipart("/api/student/cases/{caseId}/submissions", c.getId())
         .file(new MockMultipartFile("file", "revised.pdf", "application/pdf", "%PDF-1.4\ncontent".getBytes()))
+        .file(submissionMetadataPart(student))
         .session(session))
       .andExpect(status().isOk());
 
@@ -458,7 +460,7 @@ class WorkflowGateIntegrationTest {
             {
               "metadataTitle":"Submission Title",
               "metadataAuthors":"Student One",
-              "metadataKeywords":"repository, thesis",
+              "metadataKeywords":"repository, thesis, archive",
               "metadataFaculty":"%s",
               "metadataStudyProgram":"%s",
               "metadataYear":2026,
@@ -500,6 +502,26 @@ class WorkflowGateIntegrationTest {
       .guidanceText("Seed guidance")
       .isRequired(true)
       .build());
+  }
+
+  private MockMultipartFile submissionMetadataPart(User studentUser) {
+    StudentProfile profile = studentProfiles.findByUserId(studentUser.getId()).orElseThrow();
+    return new MockMultipartFile(
+      "meta",
+      "",
+      MediaType.APPLICATION_JSON_VALUE,
+      """
+        {
+          "metadataTitle":"Submission Title",
+          "metadataAuthors":"Student One",
+          "metadataKeywords":"repository, thesis, archive",
+          "metadataFaculty":"%s",
+          "metadataStudyProgram":"%s",
+          "metadataYear":2026,
+          "abstractText":"Submission abstract."
+        }
+        """.formatted(profile.getFaculty(), profile.getProgram()).getBytes(StandardCharsets.UTF_8)
+    );
   }
 
   private MockHttpSession login(String username, String password) throws Exception {

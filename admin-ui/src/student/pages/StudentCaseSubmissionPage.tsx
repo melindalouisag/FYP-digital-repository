@@ -40,6 +40,7 @@ export default function StudentCaseSubmissionPage() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [keywordTouched, setKeywordTouched] = useState(false);
 
   const load = useCallback(async () => {
     if (!caseId) return;
@@ -136,11 +137,21 @@ export default function StudentCaseSubmissionPage() {
     return '';
   };
 
+  const validateKeywords = (tokens: string[]): string => (
+    tokens.length >= 3 ? '' : 'Please enter at least 3 keywords.'
+  );
+
   const onUpload = async () => {
     if (!caseId) return;
+    setKeywordTouched(true);
     const validationError = validateFile(file);
     if (validationError) {
       setError(validationError);
+      return;
+    }
+    const keywordValidationError = validateKeywords(keywordTokens);
+    if (keywordValidationError) {
+      setError(keywordValidationError);
       return;
     }
     if (!uploadAllowed) {
@@ -166,6 +177,8 @@ export default function StudentCaseSubmissionPage() {
       setUploading(false);
     }
   };
+
+  const keywordError = keywordTouched ? validateKeywords(keywordTokens) : '';
 
   return (
     <ShellLayout
@@ -280,10 +293,20 @@ export default function StudentCaseSubmissionPage() {
               <label className="form-label">Keywords</label>
               <KeywordChipInput
                 values={keywordTokens}
-                onChange={setKeywordTokens}
+                onChange={(nextTokens) => {
+                  setKeywordTokens(nextTokens);
+                  if (error === 'Please enter at least 3 keywords.' && nextTokens.length >= 3) {
+                    setError('');
+                  }
+                }}
                 disabled={!uploadAllowed || uploading}
                 placeholder="Type one keyword and press Enter"
               />
+              {keywordError ? (
+                <div className="text-danger small mt-2">{keywordError}</div>
+              ) : (
+                <div className="form-text">Please enter at least 3 keywords.</div>
+              )}
             </div>
             <div className="col-12">
               <label className="form-label">Abstract</label>

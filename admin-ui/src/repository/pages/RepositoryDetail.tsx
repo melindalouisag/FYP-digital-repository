@@ -194,7 +194,6 @@ export default function RepositoryDetail() {
               </button>
               {!user && (
                 <div className="d-flex align-items-center gap-2">
-                  <span className="badge bg-warning-subtle text-warning-emphasis" style={{ borderRadius: '999px' }}>Login required</span>
                   <button className="btn btn-link btn-sm p-0" onClick={() => navigate('/login')}>Sign in to download</button>
                 </div>
               )}
