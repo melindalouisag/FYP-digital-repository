@@ -34,6 +34,8 @@ export default function LecturerReviewPage() {
     return [current - 1, current, current + 1];
   }, []);
 
+  const displayCaseTitle = (value?: string | null) => value?.trim() || 'Untitled submission';
+
   return (
     <ShellLayout title="Submission Review" subtitle="Review submission cases grouped by student for supervisor action">
       {error && <div className="alert alert-danger">{error}</div>}
@@ -109,7 +111,7 @@ export default function LecturerReviewPage() {
                   <div className="vstack gap-1">
                     {group.cases.map((c) => (
                       <div key={c.caseId} className="small p-2" style={{ background: '#f8fafc', borderRadius: '0.4rem' }}>
-                        {c.registrationTitle || `Case #${c.caseId}`}
+                        {displayCaseTitle(c.registrationTitle)}
                       </div>
                     ))}
                   </div>

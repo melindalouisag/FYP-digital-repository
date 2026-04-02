@@ -34,6 +34,8 @@ export default function LecturerStudentsPage() {
     return [current - 1, current, current + 1];
   }, []);
 
+  const displayCaseTitle = (value?: string | null) => value?.trim() || 'Untitled submission';
+
   return (
     <ShellLayout title="My Students" subtitle="Review supervised students and case activity for the selected year">
       <div className="d-flex flex-wrap align-items-center gap-2 mb-4">
@@ -104,7 +106,7 @@ export default function LecturerStudentsPage() {
                 <div className="vstack gap-1 mt-2">
                   {group.cases.slice(0, 3).map((c) => (
                     <div key={c.caseId} className="small p-2" style={{ background: '#f8fafc', borderRadius: '0.4rem' }}>
-                      {c.registrationTitle || `Case #${c.caseId}`}
+                      {displayCaseTitle(c.registrationTitle)}
                     </div>
                   ))}
                   {group.cases.length > 3 && (

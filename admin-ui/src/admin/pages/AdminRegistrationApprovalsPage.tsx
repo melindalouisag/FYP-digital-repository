@@ -71,6 +71,7 @@ export default function AdminRegistrationApprovalsPage() {
   };
 
   const rows = pageData.items;
+  const displayRegistrationTitle = (value?: string | null) => value?.trim() || 'Untitled registration';
   const pageStart = pageData.totalElements === 0 ? 0 : pageData.page * pageData.size + 1;
   const pageEnd = pageStart === 0 ? 0 : pageStart + rows.length - 1;
 
@@ -109,7 +110,7 @@ export default function AdminRegistrationApprovalsPage() {
             <div className="card-body p-4">
               <div className="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
                 <div>
-                  <h5 className="fw-bold mb-1">{row.title || `Case #${row.caseId}`}</h5>
+                  <h5 className="fw-bold mb-1">{displayRegistrationTitle(row.title)}</h5>
                   <div className="d-flex flex-wrap gap-2 align-items-center mb-2">
                     <span className="badge bg-dark-subtle text-dark-emphasis" style={{ borderRadius: '999px' }}>{row.type}</span>
                     <span className={`badge status-badge ${statusBadgeClass(row.status)}`}>{formatStatus(row.status)}</span>

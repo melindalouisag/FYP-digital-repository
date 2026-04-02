@@ -83,13 +83,13 @@ export default function RepositorySearchPage() {
             <div className="col-lg-5 text-center mt-3 mt-lg-0">
               <div className="d-flex justify-content-center gap-3 su-repository-hero-stats">
                 <div className="text-center su-repository-hero-stat">
-                  <div style={{ fontSize: '2.5rem', fontWeight: 800 }}>{search.pageData.totalElements}</div>
-                  <div style={{ fontSize: '0.78rem', opacity: 0.7, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Publications</div>
+                  <div className="su-repository-hero-value" style={{ fontSize: '2.5rem', fontWeight: 800 }}>{search.pageData.totalElements}</div>
+                  <div className="su-repository-hero-label" style={{ fontSize: '0.78rem', opacity: 0.7, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Publications</div>
                 </div>
                 <div className="su-repository-hero-divider" />
                 <div className="text-center su-repository-hero-stat">
-                  <div style={{ fontSize: '2.5rem', fontWeight: 800 }}>{search.faculties.length}</div>
-                  <div style={{ fontSize: '0.78rem', opacity: 0.7, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Faculties</div>
+                  <div className="su-repository-hero-value" style={{ fontSize: '2.5rem', fontWeight: 800 }}>{search.faculties.length}</div>
+                  <div className="su-repository-hero-label" style={{ fontSize: '0.78rem', opacity: 0.7, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Faculties</div>
                 </div>
               </div>
             </div>

@@ -193,6 +193,21 @@ public class AdminWorkflowController {
     PublicationCase c = getCase(caseId);
     SubmissionVersion version = submissionVersions.findTopByPublicationCaseOrderByVersionNumberDesc(c)
       .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "No submission version found"));
+    return buildDownloadResponse(version);
+  }
+
+  @GetMapping("/cases/{caseId}/submissions/{submissionId}/download")
+  public ResponseEntity<Resource> downloadSubmission(@PathVariable Long caseId, @PathVariable Long submissionId) {
+    PublicationCase publicationCase = getCase(caseId);
+    SubmissionVersion version = submissionVersions.findById(submissionId)
+      .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Submission not found"));
+    if (!version.getPublicationCase().getId().equals(publicationCase.getId())) {
+      throw new ResponseStatusException(BAD_REQUEST, "Submission does not belong to this case");
+    }
+    return buildDownloadResponse(version);
+  }
+
+  private ResponseEntity<Resource> buildDownloadResponse(SubmissionVersion version) {
     if (version.getFilePath() == null || version.getFilePath().isBlank()) {
       throw new ResponseStatusException(NOT_FOUND, "No file attached");
     }

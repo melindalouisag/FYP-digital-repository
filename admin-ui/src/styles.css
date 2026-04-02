@@ -902,8 +902,36 @@ body {
 }
 
 [data-theme="dark"] .su-repository-page .su-app-header {
+  background: linear-gradient(90deg, #0c1520 0%, #122132 100%);
   border-bottom-color: rgba(156, 176, 193, 0.12);
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+}
+
+[data-theme="dark"] .su-repository-page .su-app-header .btn-outline-light {
+  color: #dbe6ef;
+  border-color: rgba(156, 176, 193, 0.24);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+[data-theme="dark"] .su-repository-page .su-app-header .btn-outline-light:hover,
+[data-theme="dark"] .su-repository-page .su-app-header .btn-outline-light:focus {
+  color: #f6f9fb;
+  border-color: rgba(156, 176, 193, 0.34);
+  background: rgba(156, 176, 193, 0.14);
+}
+
+[data-theme="dark"] .su-repository-page .su-app-header .btn-light {
+  color: #f4f8fb;
+  background: rgba(229, 237, 245, 0.12);
+  border-color: rgba(156, 176, 193, 0.18);
+  box-shadow: none;
+}
+
+[data-theme="dark"] .su-repository-page .su-app-header .btn-light:hover,
+[data-theme="dark"] .su-repository-page .su-app-header .btn-light:focus {
+  color: #fff;
+  background: rgba(229, 237, 245, 0.2);
+  border-color: rgba(156, 176, 193, 0.28);
 }
 
 [data-theme="dark"] .su-repository-hero {
@@ -920,6 +948,27 @@ body {
 [data-theme="dark"] .su-repository-footer {
   color: var(--muted) !important;
   opacity: 1;
+}
+
+[data-theme="dark"] .su-repository-hero-stats {
+  padding: 1rem 1.25rem;
+  border-radius: 1rem;
+  background: rgba(12, 18, 26, 0.34);
+  border: 1px solid rgba(156, 176, 193, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+[data-theme="dark"] .su-repository-hero-stat {
+  min-width: 7rem;
+}
+
+[data-theme="dark"] .su-repository-hero-value {
+  color: var(--text);
+}
+
+[data-theme="dark"] .su-repository-hero-label {
+  color: var(--muted);
+  opacity: 0.92 !important;
 }
 
 [data-theme="dark"] .su-repository-hero-divider {
@@ -940,12 +989,27 @@ body {
 [data-theme="dark"] .su-repository-page .form-select {
   background: #111923;
   border-color: #334253;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
 }
 
 [data-theme="dark"] .su-repository-page .form-control:focus,
 [data-theme="dark"] .su-repository-page .form-select:focus {
   background: #111923;
   border-color: var(--primary);
+}
+
+[data-theme="dark"] .su-repository-page .form-control::placeholder {
+  color: #8ea2b4;
+}
+
+[data-theme="dark"] .su-repository-page .badge.bg-primary-subtle {
+  background: rgba(44, 163, 181, 0.16) !important;
+  color: #d8eef2 !important;
+}
+
+[data-theme="dark"] .su-repository-page .badge.bg-secondary-subtle {
+  background: rgba(156, 176, 193, 0.12) !important;
+  color: #ccd8e4 !important;
 }
 
 [data-theme="dark"] .su-repository-page .su-result-card {
@@ -971,6 +1035,7 @@ body {
 [data-theme="dark"] .su-repository-access-note {
   background: rgba(44, 163, 181, 0.1);
   color: #d6e3ee;
+  box-shadow: inset 0 0 0 1px rgba(102, 197, 211, 0.12);
 }
 
 /* ======================== UTILITIES ======================== */

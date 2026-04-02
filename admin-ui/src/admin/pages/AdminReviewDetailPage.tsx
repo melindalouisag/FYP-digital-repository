@@ -3,10 +3,10 @@ import { useNavigate, useParams } from 'react-router-dom';
 import ShellLayout from '../../ShellLayout';
 import { adminApi } from '../../lib/api/admin';
 import CaseTimeline from '../../lib/components/CaseTimeline';
-import DownloadFilenameLink from '../../lib/components/DownloadFilenameLink';
 import type {
   CaseDetailPayload,
   ChecklistItem,
+  ChecklistResult,
   ChecklistTemplateResponse,
   PublicationType,
   SubmissionVersion,
@@ -17,13 +17,16 @@ import {
   formatStatus,
   isAdminReviewStage,
   isFinalizedForLibrary,
-  statusBadgeClass,
 } from '../../lib/workflowUi';
 
 type ChecklistDraftRow = {
   checklistItemId: number;
   pass: boolean;
-  note: string;
+};
+
+type ChecklistSection = {
+  name: string;
+  items: ChecklistItem[];
 };
 
 const ALERT_STYLE = { borderRadius: '0.75rem' } as const;
@@ -34,10 +37,58 @@ function toChecklistMap(items: ChecklistItem[]): Record<number, ChecklistDraftRo
     acc[item.id] = {
       checklistItemId: item.id,
       pass: true,
-      note: '',
     };
     return acc;
   }, {});
+}
+
+function sectionName(value?: string | null) {
+  return value?.trim() || 'General';
+}
+
+function groupChecklistItems(items: ChecklistItem[]): ChecklistSection[] {
+  const sections = new Map<string, ChecklistItem[]>();
+
+  items.forEach((item) => {
+    const name = sectionName(item.section);
+    if (!sections.has(name)) {
+      sections.set(name, []);
+    }
+    sections.get(name)?.push(item);
+  });
+
+  return Array.from(sections.entries()).map(([name, groupedItems]) => ({
+    name,
+    items: groupedItems,
+  }));
+}
+
+function buildChecklistState(
+  items: ChecklistItem[],
+  results: ChecklistResult[]
+): {
+  draft: Record<number, ChecklistDraftRow>;
+  sectionNotes: Record<string, string>;
+} {
+  const resultByItemId = new Map(results.map((result) => [result.checklistItem.id, result]));
+  const draft = toChecklistMap(items);
+  const sectionNotes: Record<string, string> = {};
+
+  items.forEach((item) => {
+    const saved = resultByItemId.get(item.id);
+    const name = sectionName(item.section);
+    if (saved) {
+      draft[item.id] = {
+        checklistItemId: item.id,
+        pass: saved.passFail === 'PASS',
+      };
+      if (!sectionNotes[name] && saved.note?.trim()) {
+        sectionNotes[name] = saved.note.trim();
+      }
+    }
+  });
+
+  return { draft, sectionNotes };
 }
 
 function resolveTemplateForSubmission(
@@ -55,6 +106,10 @@ function formatDateTime(value?: string | null) {
   return value ? new Date(value).toLocaleString() : 'N/A';
 }
 
+function displayCaseTitle(title?: string | null) {
+  return title?.trim() || 'Untitled submission';
+}
+
 function updateDraftRow(
   current: Record<number, ChecklistDraftRow>,
   itemId: number,
@@ -65,7 +120,6 @@ function updateDraftRow(
     [itemId]: {
       checklistItemId: itemId,
       pass: true,
-      note: '',
       ...(current[itemId] ?? {}),
       ...patch,
     },
@@ -136,8 +190,10 @@ export default function AdminReviewDetailPage() {
   const [templates, setTemplates] = useState<ChecklistTemplateResponse[]>([]);
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<number | null>(null);
   const [draft, setDraft] = useState<Record<number, ChecklistDraftRow>>({});
+  const [sectionNotes, setSectionNotes] = useState<Record<string, string>>({});
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
   const [revisionReason, setRevisionReason] = useState('');
-  const [rejectReason, setRejectReason] = useState('');
+  const [timelineOpen, setTimelineOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState('');
@@ -148,12 +204,15 @@ export default function AdminReviewDetailPage() {
     [detail?.submissions, detail?.versions]
   );
   const latestSubmission = submissions[0];
-  const latestSubmissionDownloadHref = detail ? `/api/admin/cases/${detail.case.id}/file/latest` : '';
 
   const selectedSubmission = useMemo(
     () => submissions.find((submission) => submission.id === selectedSubmissionId) ?? submissions[0],
     [selectedSubmissionId, submissions]
   );
+
+  const selectedSubmissionDownloadHref = detail && selectedSubmission
+    ? `/api/admin/cases/${detail.case.id}/submissions/${selectedSubmission.id}/download`
+    : '';
 
   const selectedTemplate = useMemo(
     () => resolveTemplateForSubmission(templates, selectedSubmission),
@@ -164,6 +223,10 @@ export default function AdminReviewDetailPage() {
     () => selectedTemplate?.items ?? [],
     [selectedTemplate?.items]
   );
+  const checklistSections = useMemo(
+    () => groupChecklistItems(checklistItems),
+    [checklistItems]
+  );
   const status = detail?.case.status;
   const reviewStage = status ? isAdminReviewStage(status) : false;
   const finalized = status ? isFinalizedForLibrary(status) : false;
@@ -172,9 +235,12 @@ export default function AdminReviewDetailPage() {
   const checklistEditable = checklistAllowed && hasActiveTemplate && checklistItems.length > 0 && !working;
   const decisionAllowed = status ? canAdminDecide(status) : false;
   const trimmedRevisionReason = revisionReason.trim();
-  const trimmedRejectReason = rejectReason.trim();
   const checklistSaved = selectedSubmission ? selectedSubmission.status !== 'SUBMITTED' : false;
   const statusNotice = reviewStatusNotice(status, reviewStage, finalized);
+  const selectedSubmissionResults = useMemo(
+    () => (selectedSubmission?.id === latestSubmission?.id ? detail?.checklistResults ?? [] : []),
+    [detail?.checklistResults, latestSubmission?.id, selectedSubmission?.id]
+  );
 
   const load = useCallback(async () => {
     if (!caseId) return;
@@ -193,12 +259,16 @@ export default function AdminReviewDetailPage() {
         setSelectedSubmissionId(submission.id);
       }
       const template = resolveTemplateForSubmission(templateRows, submission);
-      setDraft(toChecklistMap(template?.items ?? []));
+      const nextChecklistItems = template?.items ?? [];
+      const { draft: nextDraft, sectionNotes: nextSectionNotes } = buildChecklistState(nextChecklistItems, payload.checklistResults ?? []);
+      setDraft(nextDraft);
+      setSectionNotes(nextSectionNotes);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load review detail.');
       setDetail(null);
       setTemplates([]);
       setDraft({});
+      setSectionNotes({});
     } finally {
       setLoading(false);
     }
@@ -209,8 +279,20 @@ export default function AdminReviewDetailPage() {
   }, [load]);
 
   useEffect(() => {
-    setDraft(toChecklistMap(checklistItems));
-  }, [checklistItems]);
+    const { draft: nextDraft, sectionNotes: nextSectionNotes } = buildChecklistState(checklistItems, selectedSubmissionResults);
+    setDraft(nextDraft);
+    setSectionNotes(nextSectionNotes);
+  }, [checklistItems, selectedSubmissionResults]);
+
+  useEffect(() => {
+    setOpenSections((prev) => {
+      const next: Record<string, boolean> = {};
+      checklistSections.forEach((section, index) => {
+        next[section.name] = prev[section.name] ?? index === 0;
+      });
+      return next;
+    });
+  }, [checklistSections]);
 
   const runAction = async (action: () => Promise<void>, successMessage: string) => {
     setWorking(true);
@@ -229,7 +311,11 @@ export default function AdminReviewDetailPage() {
 
   const saveChecklist = () => {
     if (!caseId || !selectedSubmission) return;
-    const results = checklistItems.map((item) => draft[item.id] ?? { checklistItemId: item.id, pass: true, note: '' });
+    const results = checklistItems.map((item) => ({
+      checklistItemId: item.id,
+      pass: draft[item.id]?.pass ?? true,
+      note: sectionNotes[sectionName(item.section)]?.trim() || undefined,
+    }));
     return runAction(
       () => adminApi.saveChecklistResults(Number(caseId), selectedSubmission.id, results),
       'Checklist results saved.'
@@ -252,20 +338,8 @@ export default function AdminReviewDetailPage() {
     );
   };
 
-  const rejectCase = () => {
-    if (!caseId) return;
-    if (!rejectReason.trim()) {
-      setError('Reject reason is required.');
-      return;
-    }
-    return runAction(
-      () => adminApi.rejectCase(Number(caseId), rejectReason.trim()),
-      'Case rejected.'
-    );
-  };
-
   return (
-    <ShellLayout title={`Submission Review Detail - Case #${caseId}`} subtitle="Review the selected submission, save checklist results, and record the final library decision">
+    <ShellLayout title="Submission Review Detail" subtitle="Review the submission, complete the checklist, and record the final library decision">
       {loading && (
         <div className="text-center py-5">
           <div className="su-spinner mx-auto mb-3" />
@@ -279,26 +353,15 @@ export default function AdminReviewDetailPage() {
         <>
           {statusNotice && <div className={`alert alert-${statusNotice.variant}`}>{statusNotice.message}</div>}
           <div className="su-card mb-3 fade-in">
-            <div className="card-body p-4 d-flex flex-wrap justify-content-between align-items-center gap-2">
-              <div>
-                <div className="fw-bold" style={{ fontSize: '1.1rem' }}>{detail.case.title || `Case #${detail.case.id}`}</div>
-                <div className="d-flex gap-2 align-items-center mt-1">
-                  <span className="badge bg-dark-subtle text-dark-emphasis" style={{ borderRadius: '999px' }}>{detail.case.type}</span>
-                  <span className={`badge status-badge ${statusBadgeClass(detail.case.status)}`}>
-                    {formatStatus(detail.case.status)}
-                  </span>
-                </div>
+            <div className="card-body p-4">
+              <div className="fw-bold" style={{ fontSize: '1.1rem' }}>{displayCaseTitle(detail.case.title)}</div>
+              <div className="text-muted small mt-1">
+                {detail.case.type} • {formatStatus(detail.case.status)}
               </div>
-            </div>
-          </div>
 
-          <ReviewCard
-            title="Selected Submission"
-            description="Confirm the submission version and template assignment before saving checklist results or recording a decision."
-            delay={0.05}
-          >
-              <div className="row g-2">
-                <div className="col-md-6">
+              <div className="d-flex flex-wrap align-items-end gap-2 mt-3">
+                <div style={{ minWidth: 280, flex: '1 1 320px' }}>
+                  <label className="form-label mb-1">Submission version</label>
                   <select
                     className="form-select"
                     value={selectedSubmission?.id ?? ''}
@@ -306,31 +369,30 @@ export default function AdminReviewDetailPage() {
                   >
                     {submissions.map((submission) => (
                       <option key={submission.id} value={submission.id}>
-                        v{submission.versionNumber} - {submission.originalFilename} ({submission.status}){' '}
-                        {submission.createdAt ? `- ${new Date(submission.createdAt).toLocaleString()}` : ''}
+                        v{submission.versionNumber} ({submission.status})
+                        {submission.createdAt ? ` • ${new Date(submission.createdAt).toLocaleString()}` : ''}
                       </option>
                     ))}
                   </select>
                 </div>
-                <div className="col-md-6 text-muted small d-flex align-items-center">
-                  <div>
-                    <div>Checklist template: {selectedTemplate ? `v${selectedTemplate.template.version}` : 'Not available'}</div>
-                    <div>Uploaded: {formatDateTime(selectedSubmission?.createdAt)}</div>
-                  </div>
-                </div>
-                {latestSubmission && (
-                  <div className="col-12">
-                    <div className="mt-3 pt-3" style={{ borderTop: '1px solid #f0f0f0' }}>
-                      <div className="text-muted small mb-1">Latest file</div>
-                      <DownloadFilenameLink
-                        href={latestSubmissionDownloadHref}
-                        filename={latestSubmission.originalFilename || `Submission v${latestSubmission.versionNumber}`}
-                      />
-                    </div>
-                  </div>
+                {selectedSubmissionDownloadHref && (
+                  <a
+                    className="btn btn-outline-primary btn-sm"
+                    href={selectedSubmissionDownloadHref}
+                    style={PILL_BUTTON_STYLE}
+                  >
+                    Download file
+                  </a>
                 )}
               </div>
-          </ReviewCard>
+
+              <div className="text-muted small mt-2">
+                Checklist template: {selectedTemplate ? `v${selectedTemplate.template.version}` : 'Not available'}
+                {' • '}
+                Uploaded: {formatDateTime(selectedSubmission?.createdAt)}
+              </div>
+            </div>
+          </div>
 
           <ReviewCard
             title="Checklist Review"
@@ -359,67 +421,90 @@ export default function AdminReviewDetailPage() {
                   No checklist items found for this submission/template. Confirm template setup first.
                 </div>
               )}
-              {checklistItems.length > 0 && (
-                <div className="table-responsive">
-                  <table className="table table-sm align-middle">
-                    <thead>
-                      <tr>
-                        <th>Section</th>
-                        <th>Item</th>
-                        <th style={{ width: 170 }}>Result</th>
-                        <th>Note</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {checklistItems.map((item) => (
-                        <tr key={item.id}>
-                          <td>{item.section || 'General'}</td>
-                          <td>
-                            <div>{item.itemText}</div>
-                            {item.guidanceText && <div className="small text-muted">{item.guidanceText}</div>}
-                          </td>
-                          <td>
-                            <select
-                              className="form-select form-select-sm"
-                              disabled={!checklistEditable}
-                              value={draft[item.id]?.pass ? 'PASS' : 'FAIL'}
-                              onChange={(event) =>
-                                setDraft((prev) => updateDraftRow(prev, item.id, {
-                                  pass: event.target.value === 'PASS',
-                                }))
-                              }
-                            >
-                              <option value="PASS">PASS</option>
-                              <option value="FAIL">FAIL</option>
-                            </select>
-                          </td>
-                          <td>
-                            <input
-                              className="form-control form-control-sm"
-                              disabled={!checklistEditable}
-                              value={draft[item.id]?.note ?? ''}
-                              onChange={(event) =>
-                                setDraft((prev) => updateDraftRow(prev, item.id, {
-                                  note: event.target.value,
-                                }))
-                              }
-                              placeholder="Optional note"
-                            />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              {checklistSections.length > 0 && (
+                <div className="vstack gap-3">
+                  {checklistSections.map((section) => {
+                    const checkedCount = section.items.filter((item) => draft[item.id]?.pass ?? true).length;
+                    const isOpen = openSections[section.name] ?? false;
+
+                    return (
+                      <div key={section.name} className="border rounded-3 overflow-hidden">
+                        <button
+                          type="button"
+                          className="w-100 text-start d-flex justify-content-between align-items-center gap-3 p-3 bg-transparent border-0"
+                          onClick={() => setOpenSections((prev) => ({ ...prev, [section.name]: !isOpen }))}
+                        >
+                          <div>
+                            <div className="fw-semibold">{section.name}</div>
+                            <div className="text-muted small">{checkedCount}/{section.items.length} checked</div>
+                          </div>
+                          <span className="text-muted" aria-hidden="true">{isOpen ? '−' : '+'}</span>
+                        </button>
+
+                        {isOpen && (
+                          <div className="px-3 pb-3">
+                            <div className="vstack gap-2">
+                              {section.items.map((item) => (
+                                <label
+                                  key={item.id}
+                                  className="d-flex align-items-start gap-3 p-3 rounded-3"
+                                  style={{ background: '#f8fafc', border: '1px solid #e8eff5', cursor: checklistEditable ? 'pointer' : 'default' }}
+                                >
+                                  <input
+                                    className="form-check-input mt-1"
+                                    type="checkbox"
+                                    checked={draft[item.id]?.pass ?? true}
+                                    disabled={!checklistEditable}
+                                    onChange={(event) =>
+                                      setDraft((prev) => updateDraftRow(prev, item.id, {
+                                        pass: event.target.checked,
+                                      }))
+                                    }
+                                  />
+                                  <div>
+                                    <div className="fw-semibold" style={{ fontSize: '0.95rem' }}>{item.itemText}</div>
+                                    {item.guidanceText && (
+                                      <div className="small text-muted mt-1">{item.guidanceText}</div>
+                                    )}
+                                  </div>
+                                </label>
+                              ))}
+                            </div>
+
+                            <div className="mt-3">
+                              <label className="form-label">Notes</label>
+                              <textarea
+                                className="form-control"
+                                rows={3}
+                                disabled={!checklistEditable}
+                                value={sectionNotes[section.name] ?? ''}
+                                onChange={(event) =>
+                                  setSectionNotes((prev) => ({
+                                    ...prev,
+                                    [section.name]: event.target.value,
+                                  }))
+                                }
+                                placeholder="Add notes for this checklist section"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  <div>
+                    <button
+                      className="btn btn-primary btn-sm"
+                      style={PILL_BUTTON_STYLE}
+                      disabled={!checklistAllowed || !hasActiveTemplate || checklistItems.length === 0 || working}
+                      onClick={() => void saveChecklist()}
+                    >
+                      Save Checklist Results
+                    </button>
+                  </div>
                 </div>
               )}
-              <button
-                className="btn btn-primary btn-sm"
-                style={PILL_BUTTON_STYLE}
-                disabled={!checklistAllowed || !hasActiveTemplate || checklistItems.length === 0 || working}
-                onClick={() => void saveChecklist()}
-              >
-                Save Checklist Results
-              </button>
           </ReviewCard>
 
           <ReviewCard
@@ -427,7 +512,15 @@ export default function AdminReviewDetailPage() {
             description="Review the timeline to confirm handoff order, feedback history, and recent workflow changes before making a decision."
             delay={0.15}
           >
-            <CaseTimeline items={detail.timeline ?? []} />
+            <button
+              type="button"
+              className="btn btn-outline-secondary btn-sm mb-3"
+              style={PILL_BUTTON_STYLE}
+              onClick={() => setTimelineOpen((current) => !current)}
+            >
+              {timelineOpen ? 'Hide Timeline' : 'Show Timeline'}
+            </button>
+            {timelineOpen && <CaseTimeline items={detail.timeline ?? []} />}
           </ReviewCard>
 
           <ReviewCard
@@ -445,60 +538,35 @@ export default function AdminReviewDetailPage() {
                   Checklist results have not been saved yet. You can still approve the case, but saving the checklist first is recommended.
                 </div>
               )}
-              <div className="row g-2 mb-3">
-                <div className="col-md-8">
+              <div className="mb-3">
                   <label className="form-label">Reason for revision request</label>
-                  <input
+                  <textarea
                     className="form-control"
+                    rows={3}
                     value={revisionReason}
                     onChange={(event) => setRevisionReason(event.target.value)}
                     placeholder="Explain what must be revised"
                     disabled={!decisionAllowed || working}
                   />
-                </div>
-                <div className="col-md-4 d-flex align-items-end">
-                  <button
-                    className="btn btn-outline-warning w-100"
-                    disabled={working || !decisionAllowed || trimmedRevisionReason.length === 0}
-                    onClick={() => void requestRevision()}
-                    title={decisionActionTitle(decisionAllowed, trimmedRevisionReason.length > 0, 'Provide a revision reason to continue.')}
-                  >
-                    Request Revision
-                  </button>
-                </div>
               </div>
 
-              <div className="row g-2">
-                <div className="col-md-8">
-                  <label className="form-label">Reason for rejection</label>
-                  <input
-                    className="form-control"
-                    value={rejectReason}
-                    onChange={(event) => setRejectReason(event.target.value)}
-                    placeholder="Enter rejection reason"
-                    disabled={!decisionAllowed || working}
-                  />
-                </div>
-                <div className="col-md-2 d-flex align-items-end">
-                  <button
-                    className="btn btn-success w-100"
-                    style={PILL_BUTTON_STYLE}
-                    disabled={working || !decisionAllowed}
-                    onClick={() => void approveCase()}
-                  >
-                    Approve for Clearance
-                  </button>
-                </div>
-                <div className="col-md-2 d-flex align-items-end">
-                  <button
-                    className="btn btn-danger w-100"
-                    disabled={working || !decisionAllowed || trimmedRejectReason.length === 0}
-                    onClick={() => void rejectCase()}
-                    title={decisionActionTitle(decisionAllowed, trimmedRejectReason.length > 0, 'Provide a reject reason to continue.')}
-                  >
-                    Reject Case
-                  </button>
-                </div>
+              <div className="d-flex flex-wrap gap-2">
+                <button
+                  className="btn btn-outline-warning"
+                  disabled={working || !decisionAllowed || trimmedRevisionReason.length === 0}
+                  onClick={() => void requestRevision()}
+                  title={decisionActionTitle(decisionAllowed, trimmedRevisionReason.length > 0, 'Provide a revision reason to continue.')}
+                >
+                  Request Revision
+                </button>
+                <button
+                  className="btn btn-success"
+                  style={PILL_BUTTON_STYLE}
+                  disabled={working || !decisionAllowed}
+                  onClick={() => void approveCase()}
+                >
+                  Approve for Clearance
+                </button>
               </div>
           </ReviewCard>
 

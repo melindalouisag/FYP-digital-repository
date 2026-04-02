@@ -56,7 +56,7 @@ export default function AdminPublishPage() {
     setMessage('');
     try {
       await adminApi.publish(caseId);
-      setMessage(`Case #${caseId} published to repository.`);
+      setMessage('Submission published to repository.');
       await load(page);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Publish action failed.');
@@ -68,6 +68,7 @@ export default function AdminPublishPage() {
   const cases = pageData.items;
   const pageStart = pageData.totalElements === 0 ? 0 : pageData.page * pageData.size + 1;
   const pageEnd = pageStart === 0 ? 0 : pageStart + cases.length - 1;
+  const displayCaseTitle = (value?: string | null) => value?.trim() || 'Untitled submission';
 
   return (
     <ShellLayout title="Publishing" subtitle="Review cases that are ready for repository release and publish them when metadata is complete">
@@ -111,7 +112,7 @@ export default function AdminPublishPage() {
             <div className="card-body p-4">
               <div className="d-flex flex-wrap justify-content-between align-items-center gap-2">
                 <div>
-                  <h5 className="fw-bold mb-1">{c.title || `Case #${c.caseId}`}</h5>
+                  <h5 className="fw-bold mb-1">{displayCaseTitle(c.title)}</h5>
                   <div className="d-flex flex-wrap gap-2 align-items-center">
                     <span className="badge bg-dark-subtle text-dark-emphasis" style={{ borderRadius: '999px' }}>{c.type}</span>
                     <span className={`badge status-badge ${statusBadgeClass(c.status)}`}>{formatStatus(c.status)}</span>

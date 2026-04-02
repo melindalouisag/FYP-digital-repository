@@ -64,6 +64,7 @@ export default function AdminClearancePage() {
   const cases = pageData.items;
   const pageStart = pageData.totalElements === 0 ? 0 : pageData.page * pageData.size + 1;
   const pageEnd = pageStart === 0 ? 0 : pageStart + cases.length - 1;
+  const displayCaseTitle = (value?: string | null) => value?.trim() || 'Untitled submission';
 
   return (
     <ShellLayout title="Clearance" subtitle="Review submitted clearance forms and either approve them or return them for correction">
@@ -102,7 +103,7 @@ export default function AdminClearancePage() {
               <div className="card-body p-4">
                 <div className="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
                   <div>
-                    <h5 className="fw-bold mb-1">{c.title || `Case #${c.id}`}</h5>
+                    <h5 className="fw-bold mb-1">{displayCaseTitle(c.title)}</h5>
                     <div className="d-flex gap-2 align-items-center">
                       <span className={`badge status-badge ${statusBadgeClass(c.status)}`}>{formatStatus(c.status)}</span>
                       <span className="text-muted small">{c.updatedAt ? new Date(c.updatedAt).toLocaleString() : ''}</span>

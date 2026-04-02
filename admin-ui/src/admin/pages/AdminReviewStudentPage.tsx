@@ -41,6 +41,8 @@ export default function AdminReviewStudentPage() {
     }, null as string | null);
   }, [group]);
 
+  const displayCaseTitle = (value?: string | null) => value?.trim() || 'Untitled submission';
+
   return (
     <ShellLayout title="Student Cases in Review" subtitle="Library review cases for the selected student">
       <button className="btn btn-outline-secondary btn-sm mb-4" style={{ borderRadius: '999px' }} onClick={() => navigate('/admin/review')}>
@@ -100,7 +102,7 @@ export default function AdminReviewStudentPage() {
                 <div className="card-body p-4">
                   <div className="d-flex flex-wrap justify-content-between align-items-center gap-2">
                     <div>
-                      <h5 className="fw-bold mb-1">{c.title || `Case #${c.caseId}`}</h5>
+                      <h5 className="fw-bold mb-1">{displayCaseTitle(c.title)}</h5>
                       <div className="d-flex flex-wrap gap-2 align-items-center">
                         <span className="badge bg-dark-subtle text-dark-emphasis" style={{ borderRadius: '999px' }}>{c.type}</span>
                         <span className={`badge status-badge ${statusBadgeClass(c.status)}`}>{formatStatus(c.status)}</span>

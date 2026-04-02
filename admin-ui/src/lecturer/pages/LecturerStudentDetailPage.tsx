@@ -24,7 +24,6 @@ export default function LecturerStudentDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [workingCaseId, setWorkingCaseId] = useState<number | null>(null);
-  const [commentDrafts, setCommentDrafts] = useState<Record<number, string>>({});
   const [revisionDrafts, setRevisionDrafts] = useState<Record<number, string>>({});
   const [timelines, setTimelines] = useState<Record<number, TimelineItem[]>>({});
   const [timelineOpen, setTimelineOpen] = useState<Record<number, boolean>>({});
@@ -122,6 +121,7 @@ export default function LecturerStudentDetailPage() {
   };
 
   const renderTimestamp = (value?: string | null) => (value ? new Date(value).toLocaleString() : 'N/A');
+  const displayCaseTitle = (value?: string | null) => value?.trim() || 'Untitled submission';
 
   return (
     <ShellLayout title="Student Cases" subtitle="Review case history, submission files, and supervisor decisions for the selected student">
@@ -192,12 +192,13 @@ export default function LecturerStudentDetailPage() {
               const canAct = tab !== 'library' && supervisorStatuses.includes(c.status);
               const busy = workingCaseId === c.caseId;
               const latestSubmission = submissions[c.caseId]?.[0];
+              const revisionReason = revisionDrafts[c.caseId]?.trim() ?? '';
               return (
                 <div key={c.caseId} className="su-card fade-in" style={{ animationDelay: `${index * 0.06}s` }}>
                   <div className="card-body p-4">
                     <div className="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
                       <div>
-                        <h4 className="h6 fw-bold mb-1">{c.registrationTitle || `Case #${c.caseId}`}</h4>
+                        <h4 className="h6 fw-bold mb-1">{displayCaseTitle(c.registrationTitle)}</h4>
                         <div className="d-flex flex-wrap gap-2 align-items-center">
                           <span className="badge bg-dark-subtle text-dark-emphasis" style={{ borderRadius: '999px' }}>{c.type}</span>
                           <span className={`badge status-badge ${statusBadgeClass(c.status)}`}>{formatStatus(c.status)}</span>
@@ -299,42 +300,14 @@ export default function LecturerStudentDetailPage() {
                       <div className="p-3" style={{ background: '#f0f9ff', borderRadius: '0.6rem', border: '1px solid #bae6fd' }}>
                         <h6 className="fw-bold mb-2">Supervisor Actions</h6>
                         <div className="text-muted small mb-3">
-                          Record comments for the student, request correction when needed, or approve the case for library review.
+                          Request revision when the submission needs changes, or approve it for library review.
                         </div>
-                        <div className="mb-2">
+                        <div className="mb-3">
+                          <label className="form-label">Reason for revision request</label>
                           <textarea
-                            className="form-control form-control-sm mb-1"
-                            rows={2}
-                            placeholder="Enter case comment"
-                            value={commentDrafts[c.caseId] ?? ''}
-                            onChange={(event) =>
-                              setCommentDrafts((prev) => ({ ...prev, [c.caseId]: event.target.value }))
-                            }
-                            disabled={busy}
-                            style={{ borderRadius: '0.5rem' }}
-                          />
-                          <button
-                            className="btn btn-outline-primary btn-sm"
-                            style={{ borderRadius: '999px' }}
-                            disabled={busy}
-                            onClick={() =>
-                              void runAction(c.caseId, () => {
-                                const body = commentDrafts[c.caseId]?.trim();
-                                if (!body) { setError('Comment body is required.'); return Promise.resolve(); }
-                                return lecturerApi.comment(c.caseId, body).then(() => {
-                                  setCommentDrafts((prev) => ({ ...prev, [c.caseId]: '' }));
-                                });
-                              })
-                            }
-                          >
-                            Add Comment
-                          </button>
-                        </div>
-                        <div className="mb-2">
-                          <textarea
-                            className="form-control form-control-sm mb-1"
-                            rows={2}
-                            placeholder="Enter correction reason"
+                            className="form-control"
+                            rows={3}
+                            placeholder="Explain what must be revised"
                             value={revisionDrafts[c.caseId] ?? ''}
                             onChange={(event) =>
                               setRevisionDrafts((prev) => ({ ...prev, [c.caseId]: event.target.value }))
@@ -342,31 +315,29 @@ export default function LecturerStudentDetailPage() {
                             disabled={busy}
                             style={{ borderRadius: '0.5rem' }}
                           />
+                        </div>
+                        <div className="d-flex flex-wrap gap-2">
                           <button
                             className="btn btn-warning btn-sm"
                             style={{ borderRadius: '999px' }}
-                            disabled={busy}
+                            disabled={busy || revisionReason.length === 0}
                             onClick={() =>
-                              void runAction(c.caseId, () => {
-                                const reason = revisionDrafts[c.caseId]?.trim();
-                                if (!reason) { setError('Revision reason is required.'); return Promise.resolve(); }
-                                return lecturerApi.requestRevision(c.caseId, reason).then(() => {
-                                  setRevisionDrafts((prev) => ({ ...prev, [c.caseId]: '' }));
-                                });
-                              })
+                              void runAction(c.caseId, () => lecturerApi.requestRevision(c.caseId, revisionReason).then(() => {
+                                setRevisionDrafts((prev) => ({ ...prev, [c.caseId]: '' }));
+                              }))
                             }
                           >
-                            Request Correction
+                            Request Revision
+                          </button>
+                          <button
+                            className="btn btn-success"
+                            style={{ borderRadius: '999px' }}
+                            disabled={busy}
+                            onClick={() => void runAction(c.caseId, () => lecturerApi.approveAndForward(c.caseId).then(() => undefined))}
+                          >
+                            Approve and Forward to Library
                           </button>
                         </div>
-                        <button
-                          className="btn btn-success"
-                          style={{ borderRadius: '999px' }}
-                          disabled={busy}
-                          onClick={() => void runAction(c.caseId, () => lecturerApi.approveAndForward(c.caseId).then(() => undefined))}
-                        >
-                          Approve and Forward to Library
-                        </button>
                       </div>
                     )}
                   </div>

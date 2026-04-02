@@ -22,6 +22,7 @@ export default function AdminPublishDetailPage() {
   const isReadyToPublish = detail?.status === 'READY_TO_PUBLISH';
   const canUnpublish = isPublished && unpublishReason.trim().length >= 5 && !working;
   const latestSubmissionDownloadHref = detail ? `/api/admin/cases/${detail.caseId}/file/latest` : '';
+  const displayCaseTitle = (value?: string | null) => value?.trim() || 'Untitled submission';
 
   const load = useCallback(async () => {
     if (!caseId) return;
@@ -116,7 +117,7 @@ export default function AdminPublishDetailPage() {
                   Confirm the case status and current repository readiness before publishing or unpublishing.
                 </div>
                 {[
-                  { label: 'Title', value: detail.title || `Case #${detail.caseId}` },
+                  { label: 'Title', value: displayCaseTitle(detail.title) },
                   { label: 'Type', value: detail.type },
                   { label: 'Status', value: detail.status },
                   { label: 'Updated', value: detail.updatedAt ? new Date(detail.updatedAt).toLocaleString() : 'N/A' },
