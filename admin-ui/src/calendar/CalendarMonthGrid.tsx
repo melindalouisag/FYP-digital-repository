@@ -25,11 +25,20 @@ export function CalendarMonthGrid({
     });
     return counts;
   }, [events]);
+  const deadlineDates = useMemo(() => {
+    const values = new Set<string>();
+    events.forEach((event) => {
+      if (event.eventType === 'DEADLINE') {
+        values.add(event.eventDate);
+      }
+    });
+    return values;
+  }, [events]);
   const eventPreviewByDate = useMemo(() => {
     const previews = new Map<string, CalendarEvent[]>();
     events.forEach((event) => {
       const bucket = previews.get(event.eventDate) ?? [];
-      if (bucket.length < 2) {
+      if (bucket.length < 3) {
         bucket.push(event);
       }
       previews.set(event.eventDate, bucket);
@@ -50,6 +59,7 @@ export function CalendarMonthGrid({
         {days.map((day) => {
           const count = eventCountByDate.get(day.iso) ?? 0;
           const previews = eventPreviewByDate.get(day.iso) ?? [];
+          const hasDeadline = deadlineDates.has(day.iso);
           return (
             <button
               key={day.iso}
@@ -64,7 +74,17 @@ export function CalendarMonthGrid({
             >
               <span className="su-calendar-day-number">{day.dateNumber}</span>
               {compact ? (
-                count > 0 ? <span className="su-calendar-day-count">{count}</span> : <span className="su-calendar-day-dot" aria-hidden="true" />
+                <span className="su-calendar-day-mini-events">
+                  {count > 0 ? (
+                    <>
+                      <span
+                        className={`su-calendar-day-dot${hasDeadline ? ' is-deadline' : ''}`}
+                        aria-hidden="true"
+                      />
+                      {count > 1 ? <span className="su-calendar-day-count">{count}</span> : null}
+                    </>
+                  ) : null}
+                </span>
               ) : (
                 <span className="su-calendar-day-events">
                   {previews.map((event) => (

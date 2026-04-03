@@ -3,31 +3,28 @@ import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ShellLayout from '../../ShellLayout';
 import { useAuth } from '../../lib/context/AuthContext';
-import type { PublicationType } from '../../lib/workflowTypes';
+import { CalendarEventModal } from '../CalendarEventModal';
 import { CalendarMonthGrid } from '../CalendarMonthGrid';
 import {
   describeCalendarEvent,
   formatCalendarDateLabel,
   formatCalendarEventSchedule,
   formatMonthLabel,
-  getDeadlineActionLabel,
-  getPublicationTypeLabel,
+  getCalendarEventBadgeLabel,
+  getCalendarEventDetailsText,
+  getCalendarEventFrequencyLabel,
+  getCalendarEventLocation,
   shiftMonth,
   startOfMonth,
+  toDateInputValue,
 } from '../calendarUtils';
 import { createDefaultCalendarForm, useCalendarEvents } from '../useCalendarEvents';
-
-const PUBLICATION_TYPES: PublicationType[] = ['THESIS', 'ARTICLE', 'INTERNSHIP_REPORT', 'OTHER'];
 
 function readInitialDate(value: string | null): string {
   if (value && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
     return value;
   }
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, '0');
-  const day = String(today.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  return toDateInputValue(new Date());
 }
 
 export default function PortalCalendarPage() {
@@ -35,6 +32,7 @@ export default function PortalCalendarPage() {
   const [searchParams] = useSearchParams();
   const calendar = useCalendarEvents();
   const initialDate = readInitialDate(searchParams.get('date'));
+  const todayValue = toDateInputValue(new Date());
   const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date(`${initialDate}T00:00:00`)));
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [showComposer, setShowComposer] = useState(searchParams.get('new') === '1');
@@ -42,17 +40,20 @@ export default function PortalCalendarPage() {
   const isAdmin = user?.role === 'ADMIN';
 
   const subtitle = isAdmin
-    ? 'Create personal events, publish library deadlines, and keep every portal aligned to the same schedule.'
-    : 'Track your personal schedule in one place and keep an eye on library deadlines that affect your workflow.';
+    ? 'Create personal events, publish library deadlines, and keep every portal aligned to the same academic schedule.'
+    : 'Review your academic schedule, personal reminders, and library deadlines in one quiet monthly workspace.';
 
   const selectedEvents = useMemo(
     () => calendar.events.filter((event) => event.eventDate === selectedDate),
     [calendar.events, selectedDate]
   );
 
-  const openDate = (dateValue: string) => {
+  const selectDate = (dateValue: string) => {
     setSelectedDate(dateValue);
     setCurrentMonth(startOfMonth(new Date(`${dateValue}T00:00:00`)));
+  };
+
+  const openComposer = (dateValue = selectedDate) => {
     setShowComposer(true);
     setForm((current) => ({
       ...current,
@@ -61,15 +62,18 @@ export default function PortalCalendarPage() {
     calendar.clearActionError();
   };
 
-  const resetFormForDate = (dateValue: string) => {
-    setForm(createDefaultCalendarForm(dateValue));
+  const closeComposer = () => {
+    setShowComposer(false);
+    setForm(createDefaultCalendarForm(selectedDate));
+    calendar.clearActionError();
   };
 
   const submitEvent = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const saved = await calendar.createEvent(form);
     if (saved) {
-      resetFormForDate(form.eventDate);
+      selectDate(form.eventDate);
+      setForm(createDefaultCalendarForm(form.eventDate));
       setShowComposer(false);
     }
   };
@@ -84,31 +88,42 @@ export default function PortalCalendarPage() {
   return (
     <ShellLayout title="Calendar" subtitle={subtitle}>
       {calendar.error && <div className="alert alert-danger">{calendar.error}</div>}
-      {calendar.actionError && <div className="alert alert-danger">{calendar.actionError}</div>}
+      {calendar.actionError && !showComposer ? <div className="alert alert-danger">{calendar.actionError}</div> : null}
 
-      <div className="row g-3">
-        <div className="col-12 col-xl-8">
-          <div className="su-card">
-            <div className="card-body p-4">
-              <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+      <div className="su-calendar-page-layout">
+        <section className="su-calendar-main-column">
+          <div className="su-card su-calendar-surface">
+            <div className="card-body p-4 p-xl-4">
+              <div className="su-calendar-toolbar">
                 <div>
-                  <h3 className="h5 mb-1 su-page-title">{formatMonthLabel(currentMonth)}</h3>
-                  <div className="text-muted small">Select a date to create an event.</div>
+                  <div className="su-calendar-panel-kicker">Academic month view</div>
+                  <h3 className="su-page-title mb-1">{formatMonthLabel(currentMonth)}</h3>
+                  <div className="text-muted small">Select a date to review events or open the add modal.</div>
                 </div>
-                <div className="d-flex gap-2">
+
+                <div className="su-calendar-toolbar-actions">
                   <button
                     className="btn btn-outline-secondary btn-sm"
                     type="button"
-                    onClick={() => setCurrentMonth((current) => shiftMonth(current, -1))}
+                    onClick={() => selectDate(todayValue)}
                   >
-                    Previous
+                    Today
                   </button>
                   <button
-                    className="btn btn-outline-secondary btn-sm"
+                    className="su-calendar-chevron-button"
                     type="button"
+                    aria-label="Previous month"
+                    onClick={() => setCurrentMonth((current) => shiftMonth(current, -1))}
+                  >
+                    ‹
+                  </button>
+                  <button
+                    className="su-calendar-chevron-button"
+                    type="button"
+                    aria-label="Next month"
                     onClick={() => setCurrentMonth((current) => shiftMonth(current, 1))}
                   >
-                    Next
+                    ›
                   </button>
                 </div>
               </div>
@@ -117,175 +132,124 @@ export default function PortalCalendarPage() {
                 currentMonth={currentMonth}
                 events={calendar.events}
                 selectedDate={selectedDate}
-                onSelectDate={openDate}
+                onSelectDate={selectDate}
               />
             </div>
           </div>
-        </div>
+        </section>
 
-        <div className="col-12 col-xl-4">
-          <div className="su-card mb-3">
+        <aside className="su-calendar-sidebar-column">
+          <div className="su-card su-calendar-sidebar-card">
+            <div className="card-body p-3">
+              <div className="su-calendar-mini-toolbar">
+                <button
+                  className="su-calendar-chevron-button"
+                  type="button"
+                  aria-label="Previous month"
+                  onClick={() => setCurrentMonth((current) => shiftMonth(current, -1))}
+                >
+                  ‹
+                </button>
+                <div className="su-calendar-mini-title">{formatMonthLabel(currentMonth)}</div>
+                <button
+                  className="su-calendar-chevron-button"
+                  type="button"
+                  aria-label="Next month"
+                  onClick={() => setCurrentMonth((current) => shiftMonth(current, 1))}
+                >
+                  ›
+                </button>
+              </div>
+
+              <CalendarMonthGrid
+                currentMonth={currentMonth}
+                events={calendar.events}
+                selectedDate={selectedDate}
+                compact
+                onSelectDate={selectDate}
+              />
+            </div>
+          </div>
+
+          <div className="su-card su-calendar-sidebar-card">
             <div className="card-body p-4">
-              <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
-                <div>
+              <div className="su-calendar-selected-header">
+                <div className="min-w-0">
+                  <div className="su-calendar-panel-kicker">Selected date</div>
                   <h3 className="h6 mb-1 su-page-title">{formatCalendarDateLabel(selectedDate)}</h3>
-                  <div className="text-muted small">Visible events for the selected date.</div>
+                  <div className="text-muted small">Visible events scheduled for this date.</div>
                 </div>
                 <button
-                  className="btn btn-primary btn-sm"
+                  className="su-calendar-add-button"
                   type="button"
-                  onClick={() => {
-                    setShowComposer(true);
-                    setForm((current) => ({ ...current, eventDate: selectedDate }));
-                  }}
+                  aria-label={`Add event for ${formatCalendarDateLabel(selectedDate)}`}
+                  onClick={() => openComposer(selectedDate)}
                 >
-                  Add Event
+                  +
                 </button>
               </div>
 
               {selectedEvents.length > 0 ? (
                 <div className="su-calendar-event-list">
-                  {selectedEvents.map((event) => (
-                    <div className="su-calendar-event-card" key={event.id}>
-                      <div className="d-flex justify-content-between gap-2 align-items-start">
-                        <div className="min-w-0">
-                          <div className="su-dashboard-item-title">{event.title}</div>
-                          <div className="su-dashboard-item-support">{describeCalendarEvent(event)}</div>
-                          <div className="su-dashboard-item-meta">{formatCalendarEventSchedule(event)}</div>
-                          {event.description ? (
-                            <div className="small text-muted mt-2">{event.description}</div>
+                  {selectedEvents.map((event) => {
+                    const detailText = getCalendarEventDetailsText(event);
+                    const location = getCalendarEventLocation(event);
+                    const repeatLabel = getCalendarEventFrequencyLabel(event);
+
+                    return (
+                      <div className="su-calendar-event-card" key={event.id}>
+                        <div className="d-flex justify-content-between gap-2 align-items-start">
+                          <div className="min-w-0">
+                            <div className="d-flex flex-wrap align-items-center gap-2 mb-2">
+                              <div className="su-dashboard-item-title">{event.title}</div>
+                              <span className={`su-calendar-tag${event.eventType === 'DEADLINE' ? ' is-deadline' : ''}`}>
+                                {getCalendarEventBadgeLabel(event)}
+                              </span>
+                            </div>
+                            <div className="su-dashboard-item-support">{describeCalendarEvent(event)}</div>
+                            <div className="su-dashboard-item-meta">
+                              {formatCalendarEventSchedule(event, { includeDate: false })}
+                            </div>
+                            {location ? <div className="su-calendar-event-inline-meta">Location: {location}</div> : null}
+                            {repeatLabel ? <div className="su-calendar-event-inline-meta">Frequency: {repeatLabel}</div> : null}
+                            {detailText ? (
+                              <div className="small text-muted mt-2">{detailText}</div>
+                            ) : null}
+                          </div>
+
+                          {event.canManage ? (
+                            <button
+                              className="btn btn-outline-danger btn-sm"
+                              type="button"
+                              disabled={calendar.deletingId === event.id}
+                              onClick={() => void deleteEvent(event.id, event.title)}
+                            >
+                              {calendar.deletingId === event.id ? 'Deleting...' : 'Delete'}
+                            </button>
                           ) : null}
                         </div>
-                        {event.canManage ? (
-                          <button
-                            className="btn btn-outline-danger btn-sm"
-                            type="button"
-                            disabled={calendar.deletingId === event.id}
-                            onClick={() => void deleteEvent(event.id, event.title)}
-                          >
-                            {calendar.deletingId === event.id ? 'Deleting...' : 'Delete'}
-                          </button>
-                        ) : null}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="text-muted small mb-0">No events scheduled for this date.</p>
               )}
             </div>
           </div>
-
-          {showComposer ? (
-            <div className="su-card">
-              <div className="card-body p-4">
-                <h3 className="h6 mb-3 su-page-title">Add Event</h3>
-                <form className="row g-3" onSubmit={(event) => void submitEvent(event)}>
-                  <div className="col-12">
-                    <label className="form-label">Title</label>
-                    <input
-                      className="form-control"
-                      value={form.title}
-                      maxLength={160}
-                      onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
-                      required
-                    />
-                  </div>
-
-                  {isAdmin ? (
-                    <div className="col-12">
-                      <label className="form-label">Event Type</label>
-                      <select
-                        className="form-select"
-                        value={form.mode}
-                        onChange={(event) => setForm((current) => ({
-                          ...current,
-                          mode: event.target.value as typeof current.mode,
-                        }))}
-                      >
-                        <option value="PERSONAL">Personal event</option>
-                        <option value="REGISTRATION_DEADLINE">Registration deadline</option>
-                        <option value="SUBMISSION_DEADLINE">Submission deadline</option>
-                      </select>
-                    </div>
-                  ) : null}
-
-                  <div className="col-sm-6">
-                    <label className="form-label">Date</label>
-                    <input
-                      className="form-control"
-                      type="date"
-                      value={form.eventDate}
-                      onChange={(event) => setForm((current) => ({ ...current, eventDate: event.target.value }))}
-                      required
-                    />
-                  </div>
-
-                  <div className="col-sm-6">
-                    <label className="form-label">Time</label>
-                    <input
-                      className="form-control"
-                      type="time"
-                      value={form.eventTime}
-                      onChange={(event) => setForm((current) => ({ ...current, eventTime: event.target.value }))}
-                      required
-                    />
-                  </div>
-
-                  {form.mode !== 'PERSONAL' ? (
-                    <div className="col-12">
-                      <label className="form-label">{getDeadlineActionLabel(form.mode)} for</label>
-                      <select
-                        className="form-select"
-                        value={form.publicationType}
-                        onChange={(event) => setForm((current) => ({
-                          ...current,
-                          publicationType: event.target.value as PublicationType,
-                        }))}
-                      >
-                        {PUBLICATION_TYPES.map((type) => (
-                          <option key={type} value={type}>
-                            {getPublicationTypeLabel(type)}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  ) : null}
-
-                  <div className="col-12">
-                    <label className="form-label">Details</label>
-                    <textarea
-                      className="form-control"
-                      rows={4}
-                      value={form.description}
-                      onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
-                      placeholder="Add notes or a short description."
-                    />
-                  </div>
-
-                  <div className="col-12 d-flex flex-wrap gap-2">
-                    <button className="btn btn-primary" type="submit" disabled={calendar.submitting}>
-                      {calendar.submitting ? 'Saving...' : 'Save Event'}
-                    </button>
-                    <button
-                      className="btn btn-outline-secondary"
-                      type="button"
-                      onClick={() => {
-                        resetFormForDate(selectedDate);
-                        setShowComposer(false);
-                        calendar.clearActionError();
-                      }}
-                      disabled={calendar.submitting}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          ) : null}
-        </div>
+        </aside>
       </div>
+
+      <CalendarEventModal
+        open={showComposer}
+        isAdmin={isAdmin}
+        form={form}
+        submitting={calendar.submitting}
+        actionError={calendar.actionError}
+        onClose={closeComposer}
+        onSubmit={submitEvent}
+        onChange={setForm}
+      />
     </ShellLayout>
   );
 }
