@@ -11,6 +11,11 @@ import com.example.thesisrepo.publication.PublicationCase;
 import com.example.thesisrepo.publication.PublicationRegistration;
 import com.example.thesisrepo.publication.PublicationType;
 import com.example.thesisrepo.publication.WorkflowComment;
+import com.example.thesisrepo.reminder.CalendarEventType;
+import com.example.thesisrepo.reminder.DeadlineActionType;
+import com.example.thesisrepo.reminder.ReminderStatus;
+import com.example.thesisrepo.reminder.StudentDashboardReminder;
+import com.example.thesisrepo.reminder.StudentDashboardReminderRepository;
 import com.example.thesisrepo.publication.repo.AuditEventRepository;
 import com.example.thesisrepo.publication.repo.CaseSupervisorRepository;
 import com.example.thesisrepo.publication.repo.ClearanceFormRepository;
@@ -31,6 +36,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.Set;
 import java.util.UUID;
 
@@ -56,6 +63,7 @@ class StudentRegistrationIntegrationTest {
   @Autowired private WorkflowCommentRepository comments;
   @Autowired private ClearanceFormRepository clearances;
   @Autowired private AuditEventRepository auditEvents;
+  @Autowired private StudentDashboardReminderRepository reminders;
   @Autowired private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
   @Autowired private TransactionTemplate transactionTemplate;
 
@@ -64,6 +72,7 @@ class StudentRegistrationIntegrationTest {
 
   @BeforeEach
   void setUp() {
+    reminders.deleteAll();
     lecturer = requireUser(Role.LECTURER);
     User seedStudent = requireUser(Role.STUDENT);
     seedStudentProfile = studentProfiles.findByUserId(seedStudent.getId()).orElseThrow();
@@ -228,6 +237,50 @@ class StudentRegistrationIntegrationTest {
   }
 
   @Test
+  void registrationDeadlineBlocksCreatingAndSubmittingThesisRegistrations() throws Exception {
+    StudentLogin studentLogin = createStudentLogin("test-only-registration-deadline-password");
+    savePastDeadline(requireUser(Role.ADMIN), PublicationType.THESIS, DeadlineActionType.REGISTRATION_DEADLINE);
+
+    mockMvc.perform(post("/api/student/registrations")
+        .contentType(MediaType.APPLICATION_JSON)
+        .session(studentLogin.session())
+        .content("""
+          {
+            "type":"THESIS",
+            "title":"Deadline Blocked Registration",
+            "faculty":"%s",
+            "authorName":"Student One",
+            "studentIdNumber":"S-4004",
+            "supervisorEmail":"%s"
+          }
+          """.formatted(seedStudentProfile.getFaculty(), lecturer.getEmail())))
+      .andExpect(status().isBadRequest())
+      .andExpect(jsonPath("$.message").value("The registration deadline has passed."));
+
+    PublicationCase draftCase = cases.save(PublicationCase.builder()
+      .student(studentLogin.user())
+      .type(PublicationType.THESIS)
+      .status(CaseStatus.REGISTRATION_DRAFT)
+      .build());
+    registrations.save(PublicationRegistration.builder()
+      .publicationCase(draftCase)
+      .title("Existing Draft Registration")
+      .faculty(seedStudentProfile.getFaculty())
+      .authorName("Student One")
+      .studentIdNumber("S-4004")
+      .build());
+
+    mockMvc.perform(post("/api/student/registrations/{caseId}/submit", draftCase.getId())
+        .contentType(MediaType.APPLICATION_JSON)
+        .session(studentLogin.session())
+        .content("""
+          {"permissionAccepted":true}
+          """))
+      .andExpect(status().isBadRequest())
+      .andExpect(jsonPath("$.message").value("The registration deadline has passed."));
+  }
+
+  @Test
   void studentCannotAccessAnotherStudentsTouchedRegistrationEndpoints() throws Exception {
     StudentLogin ownerLogin = createStudentLogin("test-only-registration-owner-password");
     MockHttpSession ownerSession = ownerLogin.session();
@@ -320,6 +373,19 @@ class StudentRegistrationIntegrationTest {
     return users.findByRole(role).stream()
       .findFirst()
       .orElseThrow(() -> new IllegalStateException("No seeded user found for role " + role));
+  }
+
+  private void savePastDeadline(User admin, PublicationType publicationType, DeadlineActionType deadlineAction) {
+    reminders.save(StudentDashboardReminder.builder()
+      .user(admin)
+      .title("Past deadline")
+      .reminderDate(LocalDate.now().minusDays(1))
+      .reminderTime(LocalTime.of(12, 0))
+      .eventType(CalendarEventType.DEADLINE)
+      .deadlineAction(deadlineAction)
+      .publicationType(publicationType)
+      .status(ReminderStatus.ACTIVE)
+      .build());
   }
 
   private record StudentLogin(User user, MockHttpSession session) {

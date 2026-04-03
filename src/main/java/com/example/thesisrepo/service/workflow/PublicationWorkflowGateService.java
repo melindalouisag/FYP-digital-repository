@@ -27,13 +27,13 @@ public class PublicationWorkflowGateService {
 
   public PublicationCase requireCase(Long caseId) {
     return cases.findById(caseId)
-      .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Case not found"));
+      .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Publication not found"));
   }
 
   public PublicationCase requireOwnedCase(User student, Long caseId) {
     PublicationCase c = requireCase(caseId);
     if (!c.getStudent().getId().equals(student.getId())) {
-      throw new ResponseStatusException(FORBIDDEN, "You do not own this case");
+      throw new ResponseStatusException(FORBIDDEN, "You do not own this publication");
     }
     return c;
   }
@@ -41,7 +41,7 @@ public class PublicationWorkflowGateService {
   public PublicationCase requireSupervisedCase(User lecturer, Long caseId) {
     PublicationCase c = requireCase(caseId);
     if (!caseSupervisors.existsByPublicationCaseAndLecturer(c, lecturer)) {
-      throw new ResponseStatusException(FORBIDDEN, "You are not assigned supervisor for this case");
+      throw new ResponseStatusException(FORBIDDEN, "You are not assigned supervisor for this publication");
     }
     return c;
   }
@@ -86,16 +86,16 @@ public class PublicationWorkflowGateService {
 
   public void ensureClearanceSubmittable(PublicationCase c) {
     if (c.getStatus() != CaseStatus.APPROVED_FOR_CLEARANCE) {
-      throw new ResponseStatusException(CONFLICT, "Case is not ready for clearance");
+      throw new ResponseStatusException(CONFLICT, "This publication is not ready for clearance");
     }
   }
 
   // Gate 2: Lecturer must be assigned supervisor and case must be pending.
   public CaseSupervisor ensureLecturerCanApproveRegistration(User lecturer, PublicationCase c) {
     CaseSupervisor supervisor = caseSupervisors.findByPublicationCaseAndLecturer(c, lecturer)
-      .orElseThrow(() -> new ResponseStatusException(FORBIDDEN, "You are not assigned supervisor for this case"));
+      .orElseThrow(() -> new ResponseStatusException(FORBIDDEN, "You are not assigned supervisor for this publication"));
     if (c.getStatus() != CaseStatus.REGISTRATION_PENDING) {
-      throw new ResponseStatusException(CONFLICT, "Case is not pending supervisor approval");
+      throw new ResponseStatusException(CONFLICT, "This registration is not pending supervisor approval");
     }
     if (!supervisor.isPendingDecision()) {
       throw new ResponseStatusException(CONFLICT, "You have already decided on this registration");
@@ -105,41 +105,41 @@ public class PublicationWorkflowGateService {
 
   public void ensureAdminCanApproveRegistration(PublicationCase c) {
     if (c.getStatus() != CaseStatus.REGISTRATION_APPROVED) {
-      throw new ResponseStatusException(CONFLICT, "Case is not pending library registration approval");
+      throw new ResponseStatusException(CONFLICT, "This registration is not pending library registration approval");
     }
   }
 
   public void ensureAdminCanRejectRegistration(PublicationCase c) {
     if (c.getStatus() != CaseStatus.REGISTRATION_APPROVED) {
-      throw new ResponseStatusException(CONFLICT, "Case is not pending library registration approval");
+      throw new ResponseStatusException(CONFLICT, "This registration is not pending library registration approval");
     }
   }
 
   // Gate 3: Lecturer forward requires READY_TO_FORWARD.
   public void ensureLecturerCanForward(User lecturer, PublicationCase c) {
     if (!caseSupervisors.existsByPublicationCaseAndLecturer(c, lecturer)) {
-      throw new ResponseStatusException(FORBIDDEN, "You are not assigned supervisor for this case");
+      throw new ResponseStatusException(FORBIDDEN, "You are not assigned supervisor for this publication");
     }
     if (c.getStatus() != CaseStatus.READY_TO_FORWARD) {
-      throw new ResponseStatusException(CONFLICT, "Case must be READY_TO_FORWARD first");
+      throw new ResponseStatusException(CONFLICT, "This publication must be READY_TO_FORWARD first");
     }
   }
 
   public void ensureLecturerCanMarkReady(User lecturer, PublicationCase c) {
     if (!caseSupervisors.existsByPublicationCaseAndLecturer(c, lecturer)) {
-      throw new ResponseStatusException(FORBIDDEN, "You are not assigned supervisor for this case");
+      throw new ResponseStatusException(FORBIDDEN, "You are not assigned supervisor for this publication");
     }
     if (c.getStatus() != CaseStatus.UNDER_SUPERVISOR_REVIEW) {
-      throw new ResponseStatusException(CONFLICT, "Case must be under supervisor review");
+      throw new ResponseStatusException(CONFLICT, "This publication must be under supervisor review");
     }
   }
 
   public void ensureLecturerCanRequestRevision(User lecturer, PublicationCase c) {
     if (!caseSupervisors.existsByPublicationCaseAndLecturer(c, lecturer)) {
-      throw new ResponseStatusException(FORBIDDEN, "You are not assigned supervisor for this case");
+      throw new ResponseStatusException(FORBIDDEN, "You are not assigned supervisor for this publication");
     }
     if (c.getStatus() != CaseStatus.UNDER_SUPERVISOR_REVIEW) {
-      throw new ResponseStatusException(CONFLICT, "Case must be under supervisor review");
+      throw new ResponseStatusException(CONFLICT, "This publication must be under supervisor review");
     }
   }
 
@@ -170,7 +170,7 @@ public class PublicationWorkflowGateService {
   // Gate 4: Publish requires approved clearance and approved latest submission.
   public SubmissionVersion ensureAdminCanPublish(PublicationCase c) {
     if (c.getStatus() != CaseStatus.READY_TO_PUBLISH) {
-      throw new ResponseStatusException(CONFLICT, "Case is not ready to publish");
+      throw new ResponseStatusException(CONFLICT, "This publication is not ready to publish");
     }
 
     ClearanceForm form = clearances.findByPublicationCase(c)
@@ -186,7 +186,7 @@ public class PublicationWorkflowGateService {
     }
 
     if (publishedItems.existsByPublicationCase_Id(c.getId())) {
-      throw new ResponseStatusException(CONFLICT, "Case already published");
+      throw new ResponseStatusException(CONFLICT, "This publication has already been published");
     }
 
     return latest;
@@ -194,7 +194,7 @@ public class PublicationWorkflowGateService {
 
   public void ensureAdminCanUnpublish(PublicationCase c) {
     if (c.getStatus() != CaseStatus.PUBLISHED) {
-      throw new ResponseStatusException(CONFLICT, "Case is not published.");
+      throw new ResponseStatusException(CONFLICT, "This publication is not published.");
     }
   }
 
@@ -206,7 +206,7 @@ public class PublicationWorkflowGateService {
 
   public void ensureSubmissionBelongsToCase(SubmissionVersion version, PublicationCase c) {
     if (!version.getPublicationCase().getId().equals(c.getId())) {
-      throw new ResponseStatusException(BAD_REQUEST, "Submission does not belong to case");
+      throw new ResponseStatusException(BAD_REQUEST, "Submission does not belong to this publication");
     }
   }
 
@@ -232,13 +232,13 @@ public class PublicationWorkflowGateService {
     if (!(c.getStatus() == CaseStatus.FORWARDED_TO_LIBRARY
       || c.getStatus() == CaseStatus.UNDER_LIBRARY_REVIEW
       || c.getStatus() == CaseStatus.NEEDS_REVISION_LIBRARY)) {
-      throw new ResponseStatusException(CONFLICT, "Case is not in library review stage");
+      throw new ResponseStatusException(CONFLICT, "This publication is not in the library review stage");
     }
   }
 
   private void ensureClearanceQueueStage(PublicationCase c) {
     if (c.getStatus() != CaseStatus.CLEARANCE_SUBMITTED) {
-      throw new ResponseStatusException(CONFLICT, "Case is not in clearance queue");
+      throw new ResponseStatusException(CONFLICT, "This publication is not in the clearance queue");
     }
   }
 }

@@ -65,7 +65,7 @@ export default function StudentSubmissionsPage() {
         <>
           How to use this page:
           <br />
-          1. Open a case that is ready for submission.
+          1. Open a publication that is ready for submission.
           <br />
           2. Upload the required submission file.
           <br />
@@ -82,8 +82,8 @@ export default function StudentSubmissionsPage() {
           <div className="su-empty-icon">
             <PortalIcon src={studentSidebarIcons.submission} size={40} />
           </div>
-          <h5>No Submission-Stage Cases Yet</h5>
-          <p className="text-muted">Cases will appear here after registration verification and remain here while submission review is still in progress.</p>
+          <h5>No Submission-Stage Publications Yet</h5>
+          <p className="text-muted">Publications will appear here after registration verification and remain here while submission review is still in progress.</p>
         </div>
       )}
 
@@ -92,7 +92,7 @@ export default function StudentSubmissionsPage() {
           <table className="table table-hover align-middle mb-0">
             <thead>
               <tr>
-                <th>Case</th>
+                <th>Publication</th>
                 <th>Type</th>
                 <th>Status</th>
                 <th>Updated</th>

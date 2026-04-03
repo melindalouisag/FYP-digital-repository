@@ -48,6 +48,53 @@ body {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
+.su-account-menu {
+  position: relative;
+}
+
+.su-account-button {
+  border: 0;
+  background: transparent;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0;
+}
+
+.su-account-name {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.su-account-meta {
+  color: #708496;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.su-account-popover {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.75rem);
+  min-width: 240px;
+  background: #fff;
+  color: var(--su-text);
+  border: 1px solid #dce6ee;
+  border-radius: 0.85rem;
+  box-shadow: 0 16px 36px rgba(15, 47, 74, 0.16);
+  padding: 1rem;
+  z-index: 20;
+}
+
+.su-account-popover-header {
+  padding-bottom: 0.75rem;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid #edf2f6;
+}
+
 /* ======================== SIDEBAR ======================== */
 .su-sidebar {
   background: #fff;
@@ -79,6 +126,18 @@ body {
   color: #fff;
   box-shadow: 0 4px 12px rgba(11, 117, 132, 0.3);
   font-weight: 600;
+}
+
+.su-sidebar-link-bullet {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: rgba(15, 47, 74, 0.22);
+  flex-shrink: 0;
+}
+
+.su-sidebar a.active .su-sidebar-link-bullet {
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .su-sidebar-icon {
@@ -336,6 +395,185 @@ body {
   padding-left: 0.75rem;
 }
 
+.su-publication-card-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.su-publication-card {
+  border: 1px solid #e2e9f0;
+  border-radius: 0.9rem;
+  background: linear-gradient(180deg, #f8fbfc 0%, #fff 100%);
+  padding: 1rem;
+  text-align: left;
+  transition: transform var(--su-transition), box-shadow var(--su-transition), border-color var(--su-transition);
+}
+
+.su-publication-card:hover,
+.su-publication-card:focus-visible {
+  transform: translateY(-2px);
+  border-color: rgba(11, 117, 132, 0.35);
+  box-shadow: 0 12px 28px rgba(15, 47, 74, 0.1);
+  outline: none;
+}
+
+.su-publication-card-title {
+  color: var(--su-navy);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.su-publication-card-detail {
+  color: var(--su-text);
+  font-size: 0.92rem;
+  font-weight: 600;
+  margin-top: 0.85rem;
+}
+
+.su-publication-card-support {
+  color: #5d7387;
+  font-size: 0.83rem;
+  line-height: 1.5;
+  margin-top: 0.5rem;
+}
+
+.su-publication-card-meta {
+  color: #7a8e9f;
+  font-size: 0.78rem;
+  margin-top: 0.5rem;
+}
+
+.su-calendar-grid-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.su-calendar-grid-wrapper.is-compact {
+  gap: 0.5rem;
+}
+
+.su-calendar-weekdays,
+.su-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+.su-calendar-grid.is-compact {
+  gap: 0.3rem;
+}
+
+.su-calendar-weekday {
+  color: #708496;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.su-calendar-day {
+  min-height: 108px;
+  border: 1px solid #e2e9f0;
+  border-radius: 0.85rem;
+  background: #fff;
+  padding: 0.65rem;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  transition: border-color var(--su-transition), transform var(--su-transition), box-shadow var(--su-transition);
+}
+
+.su-calendar-grid.is-compact .su-calendar-day {
+  min-height: 54px;
+  padding: 0.45rem;
+}
+
+.su-calendar-day:hover,
+.su-calendar-day:focus-visible {
+  border-color: rgba(11, 117, 132, 0.35);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(15, 47, 74, 0.08);
+  outline: none;
+}
+
+.su-calendar-day.is-selected {
+  border-color: var(--su-teal);
+  background: #f4fbfc;
+}
+
+.su-calendar-day.is-today {
+  box-shadow: inset 0 0 0 1px rgba(11, 117, 132, 0.25);
+}
+
+.su-calendar-day.is-outside {
+  background: #f8fafc;
+  color: #9aa9b5;
+}
+
+.su-calendar-day-number {
+  color: var(--su-navy);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.su-calendar-day-events {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.su-calendar-day-event,
+.su-calendar-day-more,
+.su-calendar-day-count {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.su-calendar-day-event {
+  background: #eef6f9;
+  color: #1a6170;
+}
+
+.su-calendar-day-event.is-deadline {
+  background: #fff3e8;
+  color: #9a4c10;
+}
+
+.su-calendar-day-more,
+.su-calendar-day-count {
+  background: #edf2f6;
+  color: #607282;
+}
+
+.su-calendar-day-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.su-calendar-event-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.su-calendar-event-card {
+  border: 1px solid #edf2f6;
+  border-radius: 0.85rem;
+  padding: 0.85rem;
+  background: #fbfdff;
+}
+
 .su-dashboard-bars {
   display: flex;
   flex-direction: column;
@@ -414,7 +652,11 @@ body {
 [data-theme="dark"] .su-dashboard-panel-title,
 [data-theme="dark"] .su-dashboard-progress-value,
 [data-theme="dark"] .su-dashboard-item-title,
-[data-theme="dark"] .su-dashboard-bar-label {
+[data-theme="dark"] .su-dashboard-bar-label,
+[data-theme="dark"] .su-publication-card-title,
+[data-theme="dark"] .su-publication-card-detail,
+[data-theme="dark"] .su-calendar-day-number,
+[data-theme="dark"] .su-account-name {
   color: var(--text);
 }
 
@@ -423,7 +665,11 @@ body {
 [data-theme="dark"] .su-dashboard-item-support,
 [data-theme="dark"] .su-dashboard-item-meta,
 [data-theme="dark"] .su-dashboard-subtitle,
-[data-theme="dark"] .su-dashboard-bar-value {
+[data-theme="dark"] .su-dashboard-bar-value,
+[data-theme="dark"] .su-publication-card-support,
+[data-theme="dark"] .su-publication-card-meta,
+[data-theme="dark"] .su-account-meta,
+[data-theme="dark"] .su-calendar-weekday {
   color: var(--muted) !important;
 }
 
@@ -439,6 +685,25 @@ body {
 
 [data-theme="dark"] .su-dashboard-list-item {
   border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .su-account-popover,
+[data-theme="dark"] .su-publication-card,
+[data-theme="dark"] .su-calendar-day,
+[data-theme="dark"] .su-calendar-event-card {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: var(--border, #2d3947);
+}
+
+[data-theme="dark"] .su-calendar-day.is-outside {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+[data-theme="dark"] .su-calendar-day-event,
+[data-theme="dark"] .su-calendar-day-more,
+[data-theme="dark"] .su-calendar-day-count {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
 }
 
 /* ======================== BADGES ======================== */

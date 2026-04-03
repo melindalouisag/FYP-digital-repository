@@ -1,6 +1,7 @@
 package com.example.thesisrepo.reminder;
 
 import com.example.thesisrepo.publication.PublicationCase;
+import com.example.thesisrepo.publication.PublicationType;
 import com.example.thesisrepo.user.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -34,11 +35,27 @@ public class StudentDashboardReminder {
   @Column(nullable = false, length = 160)
   private String title;
 
+  @Column(columnDefinition = "TEXT")
+  private String description;
+
   @Column(name = "reminder_date", nullable = false)
   private LocalDate reminderDate;
 
   @Column(name = "reminder_time", nullable = false)
   private LocalTime reminderTime;
+
+  @Builder.Default
+  @Enumerated(EnumType.STRING)
+  @Column(name = "event_type", nullable = false, length = 24)
+  private CalendarEventType eventType = CalendarEventType.PERSONAL;
+
+  @Enumerated(EnumType.STRING)
+  @Column(name = "deadline_action", length = 32)
+  private DeadlineActionType deadlineAction;
+
+  @Enumerated(EnumType.STRING)
+  @Column(name = "publication_type", length = 32)
+  private PublicationType publicationType;
 
   @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 16)

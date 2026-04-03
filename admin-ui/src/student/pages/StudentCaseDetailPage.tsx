@@ -1,9 +1,15 @@
+import { calendarApi } from '../../lib/api/calendar';
+import {
+  findLatestDeadline,
+  formatCalendarEventSchedule,
+  isDeadlinePassed,
+} from '../../calendar/calendarUtils';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ShellLayout from '../../ShellLayout';
 import { studentApi } from '../../lib/api/student';
 import CaseTimeline from '../../lib/components/CaseTimeline';
-import type { CaseDetailPayload, CaseStatus, ChecklistResult } from '../../lib/workflowTypes';
+import type { CalendarEvent, CaseDetailPayload, CaseStatus, ChecklistResult } from '../../lib/workflowTypes';
 import {
   canSubmitClearance,
   formatStageName,
@@ -26,6 +32,7 @@ export default function StudentCaseDetailPage() {
   const navigate = useNavigate();
 
   const [detail, setDetail] = useState<CaseDetailPayload | null>(null);
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [checklist, setChecklist] = useState<ChecklistResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -42,7 +49,7 @@ export default function StudentCaseDetailPage() {
       setDetail(caseDetail);
       setChecklist(checklistResults);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load case detail.');
+      setError(err instanceof Error ? err.message : 'Failed to load publication detail.');
       setDetail(null);
       setChecklist([]);
     } finally {
@@ -53,6 +60,17 @@ export default function StudentCaseDetailPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    const loadCalendar = async () => {
+      try {
+        setCalendarEvents(await calendarApi.listEvents());
+      } catch {
+        setCalendarEvents([]);
+      }
+    };
+    void loadCalendar();
+  }, []);
 
   const status = detail?.case.status;
   const stageKey = useMemo(() => (status ? getStageKey(status) : null), [status]);
@@ -65,13 +83,18 @@ export default function StudentCaseDetailPage() {
   const hasFeedback = checklist.length > 0 || (detail?.comments?.length ?? 0) > 0;
   const pageTitle = detail?.case.title?.trim() ? detail.case.title : 'Untitled Publication';
   const presentation = status ? getWorkflowStatusPresentation(status) : null;
+  const submissionDeadline = useMemo(
+    () => (detail ? findLatestDeadline(calendarEvents, detail.case.type, 'SUBMISSION_DEADLINE') : null),
+    [calendarEvents, detail]
+  );
+  const submissionDeadlinePassed = isDeadlinePassed(submissionDeadline);
 
   if (loading) {
     return (
-      <ShellLayout title="Case Detail">
+      <ShellLayout title="Publication Detail">
         <div className="text-center py-5">
           <div className="su-spinner mx-auto mb-3" />
-          <div className="text-muted">Loading case details...</div>
+          <div className="text-muted">Loading publication details...</div>
         </div>
       </ShellLayout>
     );
@@ -79,8 +102,8 @@ export default function StudentCaseDetailPage() {
 
   if (error || !detail) {
     return (
-      <ShellLayout title="Case Detail">
-        <div className="alert alert-danger">{error || 'Case detail is unavailable.'}</div>
+      <ShellLayout title="Publication Detail">
+        <div className="alert alert-danger">{error || 'Publication detail is unavailable.'}</div>
       </ShellLayout>
     );
   }
@@ -158,13 +181,16 @@ export default function StudentCaseDetailPage() {
               <div>
                 <div className="fw-semibold">Open submission page</div>
                 <div className="small text-muted">
-                  Upload the current PDF and confirm the repository metadata for this publication.
+                  {submissionDeadlinePassed && submissionDeadline
+                    ? `The submission deadline passed on ${formatCalendarEventSchedule(submissionDeadline)}.`
+                    : 'Upload the current PDF and confirm the repository metadata for this publication.'}
                 </div>
               </div>
               <button
                 className="btn btn-primary btn-sm"
                 style={{ borderRadius: '999px' }}
                 onClick={() => navigate(`/student/cases/${detail.case.id}/submission`)}
+                disabled={submissionDeadlinePassed}
               >
                 Open submission page
               </button>
@@ -189,7 +215,7 @@ export default function StudentCaseDetailPage() {
               <div>
                 <div className="fw-semibold">Feedback</div>
                 <div className="small text-muted">
-                  Review comments, checklist outcomes, and revision notes that apply to this case.
+                  Review comments, checklist outcomes, and revision notes that apply to this publication.
                 </div>
               </div>
               {hasFeedback ? (
@@ -211,7 +237,7 @@ export default function StudentCaseDetailPage() {
         <div className="card-body">
           <h3 className="h6 mb-3 su-page-title">Activity Timeline</h3>
           <div className="small text-muted mb-3">
-            This timeline shows the case history so you can confirm what has already been completed.
+            This timeline shows the publication history so you can confirm what has already been completed.
           </div>
           <CaseTimeline items={detail.timeline ?? []} />
         </div>

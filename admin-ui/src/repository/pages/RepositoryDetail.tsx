@@ -113,10 +113,7 @@ export default function RepositoryDetail() {
                           : '/admin/dashboard'
                     )}
                   >
-                    <span className="su-label-with-icon">
-                      <PortalIcon src={adminSidebarIcons.dashboard} />
-                      <span>Dashboard</span>
-                    </span>
+                    Dashboard
                   </button>
                   <button type="button" className="btn btn-light btn-sm" style={{ borderRadius: '999px' }} onClick={() => void logout()}>
                     Logout

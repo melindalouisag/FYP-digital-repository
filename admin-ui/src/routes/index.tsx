@@ -10,6 +10,7 @@ const OnboardingPage = lazy(() => import('../auth/OnboardingPage'));
 const RolePickerPage = lazy(() => import('../auth/RolePickerPage'));
 const RepositorySearchPage = lazy(() => import('../repository/pages/RepositorySearch'));
 const RepositoryDetailPage = lazy(() => import('../repository/pages/RepositoryDetail'));
+const PortalCalendarPage = lazy(() => import('../calendar/pages/PortalCalendarPage'));
 
 const StudentDashboardPage = lazy(() => import('../student/pages/StudentDashboardPage'));
 const StudentRegistrationsPage = lazy(() => import('../student/pages/StudentRegistrationsPage'));
@@ -101,6 +102,7 @@ export function AppRoutes() {
 
   const studentRoutes: RouteConfig[] = [
     { path: '/student/dashboard', element: withSuspense(protectedElement(<StudentDashboardPage />, ['STUDENT'])) },
+    { path: '/student/calendar', element: withSuspense(protectedElement(<PortalCalendarPage />, ['STUDENT'])) },
     { path: '/student/registrations', element: withSuspense(protectedElement(<StudentRegistrationsPage />, ['STUDENT'])) },
     { path: '/student/registrations/new', element: withSuspense(protectedElement(<StudentRegistrationNewPage />, ['STUDENT'])) },
     { path: '/student/registrations/:caseId/edit', element: withSuspense(protectedElement(<StudentRegistrationNewPage />, ['STUDENT'])) },
@@ -114,6 +116,7 @@ export function AppRoutes() {
 
   const lecturerRoutes: RouteConfig[] = [
     { path: '/lecturer/dashboard', element: withSuspense(protectedElement(<LecturerDashboardPage />, ['LECTURER'])) },
+    { path: '/lecturer/calendar', element: withSuspense(protectedElement(<PortalCalendarPage />, ['LECTURER'])) },
     { path: '/lecturer/approvals', element: withSuspense(protectedElement(<LecturerApprovalsPage />, ['LECTURER'])) },
     { path: ROUTE_PATHS.LECTURER_REVIEW, element: withSuspense(protectedElement(<LecturerReviewPage />, ['LECTURER'])) },
     { path: '/lecturer/library', element: withSuspense(protectedElement(<LecturerLibraryTrackingPage />, ['LECTURER'])) },
@@ -123,6 +126,7 @@ export function AppRoutes() {
 
   const adminRoutes: RouteConfig[] = [
     { path: '/admin/dashboard', element: withSuspense(protectedElement(<AdminDashboardPage />, ['ADMIN'])) },
+    { path: '/admin/calendar', element: withSuspense(protectedElement(<PortalCalendarPage />, ['ADMIN'])) },
     {
       path: '/admin',
       element: withSuspense(

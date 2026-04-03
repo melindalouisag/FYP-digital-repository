@@ -102,7 +102,7 @@ export default function LecturerApprovalsPage() {
       {!loading && rows.length > 0 && (
         <div className="mb-3">
           <p className="text-muted small mb-0">
-            Review the submitted registration details first, then either approve the case or return it with a clear reason for the student.
+            Review the submitted registration details first, then either approve the registration or return it with a clear reason for the student.
           </p>
         </div>
       )}

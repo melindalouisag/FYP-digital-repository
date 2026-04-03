@@ -104,7 +104,7 @@ public class StudentReminderService {
       return null;
     }
     return cases.findByIdAndStudent(caseId, student)
-      .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Related case not found"));
+      .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Related publication not found"));
   }
 
   private String resolveCaseTitle(PublicationCase publicationCase) {

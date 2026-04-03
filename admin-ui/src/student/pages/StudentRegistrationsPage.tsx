@@ -65,13 +65,13 @@ export default function StudentRegistrationsPage() {
         <>
           How to use this page:
           <br />
-          1. Click "Create New Registration" to start a new case.
+          1. Click "Create New Registration" to start a new publication registration.
           <br />
           2. Fill in the registration form completely.
           <br />
           3. Submit the registration for approval.
           <br />
-          4. Return to this page to track the status or reopen returned cases.
+          4. Return to this page to track the status or reopen returned registrations.
         </>
       )}
     >
@@ -88,8 +88,8 @@ export default function StudentRegistrationsPage() {
           <div className="su-empty-icon">
             <PortalIcon src={studentSidebarIcons.registration} size={40} />
           </div>
-          <h5>No Registration Cases to Work On</h5>
-          <p className="text-muted">Draft registrations, returned cases, and registrations still in approval will appear here.</p>
+          <h5>No Registration Records to Work On</h5>
+          <p className="text-muted">Draft registrations, returned registrations, and registrations still in approval will appear here.</p>
           <button className="btn btn-primary" onClick={() => navigate('/student/registrations/new')}>
             Create First Registration
           </button>
@@ -101,7 +101,7 @@ export default function StudentRegistrationsPage() {
           <table className="table table-hover align-middle mb-0">
             <thead>
               <tr>
-                <th>Case</th>
+                <th>Publication</th>
                 <th>Type</th>
                 <th>Status</th>
                 <th>Updated</th>

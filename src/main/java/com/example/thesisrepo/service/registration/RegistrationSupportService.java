@@ -68,13 +68,13 @@ public class RegistrationSupportService {
     if (canonical != null) {
       throw new ResponseStatusException(
         CONFLICT,
-        "You already have a THESIS registration case (case #" + canonical.getId() + "). Edit the existing case instead of creating a new one."
+        "You already have a THESIS registration in progress. Edit the existing registration instead of creating a new one."
       );
     }
 
     throw new ResponseStatusException(
       CONFLICT,
-      "You already have THESIS registration cases. Use an existing case instead of creating a new one."
+      "You already have THESIS registrations in progress. Use an existing registration instead of creating a new one."
     );
   }
 

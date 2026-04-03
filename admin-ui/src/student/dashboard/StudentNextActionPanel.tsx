@@ -19,7 +19,7 @@ export function StudentNextActionPanel({
       {loading ? (
         <p className="su-dashboard-empty-copy mb-0">Loading dashboard data.</p>
       ) : nextStepCases.length === 0 ? (
-        <p className="su-dashboard-empty-copy mb-0">No active cases yet.</p>
+        <p className="su-dashboard-empty-copy mb-0">No active publications yet.</p>
       ) : (
         <div className="su-dashboard-list">
           {nextStepCases.map((caseSummary) => {

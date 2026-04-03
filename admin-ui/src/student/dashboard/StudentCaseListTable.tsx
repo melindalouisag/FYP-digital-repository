@@ -1,7 +1,8 @@
 import DashboardPanel from '../../lib/components/DashboardPanel';
+import { getPublicationTypeLabel } from '../../calendar/calendarUtils';
 import { formatStatus, getWorkflowNextAction, statusBadgeClass } from '../../lib/workflowUi';
 import type { CaseSummary } from '../../lib/workflowTypes';
-import { isNavigationActivationKey, resolveStudentCaseNavigation } from '../caseNavigation';
+import { resolveStudentCaseNavigation } from '../caseNavigation';
 
 interface StudentCaseListTableProps {
   loading: boolean;
@@ -14,64 +15,61 @@ export function StudentCaseListTable({
   orderedCases,
   onNavigate,
 }: StudentCaseListTableProps) {
+  const publicationGroups = orderedCases.reduce<Array<{
+    type: CaseSummary['type'];
+    items: CaseSummary[];
+  }>>((groups, caseSummary) => {
+    const existingGroup = groups.find((group) => group.type === caseSummary.type);
+    if (existingGroup) {
+      existingGroup.items.push(caseSummary);
+      return groups;
+    }
+    groups.push({ type: caseSummary.type, items: [caseSummary] });
+    return groups;
+  }, []);
+
   return (
-    <DashboardPanel title="Case List" className="su-dashboard-panel-auto-height" bodyClassName="su-dashboard-panel-body-auto-height">
+    <DashboardPanel title="My Publications" className="su-dashboard-panel-auto-height" bodyClassName="su-dashboard-panel-body-auto-height">
       {loading ? (
         <p className="su-dashboard-empty-copy mb-0">Loading dashboard data.</p>
-      ) : orderedCases.length === 0 ? (
-        <p className="su-dashboard-empty-copy mb-0">No cases yet.</p>
+      ) : publicationGroups.length === 0 ? (
+        <p className="su-dashboard-empty-copy mb-0">No publications yet.</p>
       ) : (
-        <div className="table-responsive">
-          <table className="table table-hover align-middle mb-0">
-            <thead>
-              <tr>
-                <th>Title</th>
-                <th>Type</th>
-                <th>Status</th>
-                <th>Updated</th>
-                <th>Recommended next step</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orderedCases.map((caseSummary) => {
-                const navigationTarget = resolveStudentCaseNavigation(caseSummary, 'dashboard');
-                return (
-                  <tr
-                    key={caseSummary.id}
-                    className="su-table-row-clickable"
-                    tabIndex={0}
-                    aria-label={`${navigationTarget.label}: ${caseSummary.title || 'Untitled Publication'}`}
-                    onClick={() => onNavigate(navigationTarget.path)}
-                    onKeyDown={(event) => {
-                      if (!isNavigationActivationKey(event)) return;
-                      event.preventDefault();
-                      onNavigate(navigationTarget.path);
-                    }}
-                  >
-                    <td>
-                      <div className="fw-semibold">{caseSummary.title || 'Untitled Publication'}</div>
-                    </td>
-                    <td>
-                      <span className="badge bg-dark-subtle text-dark-emphasis" style={{ borderRadius: '999px' }}>
-                        {caseSummary.type}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`badge status-badge ${statusBadgeClass(caseSummary.status)}`}>
-                        {formatStatus(caseSummary.status)}
-                      </span>
-                    </td>
-                    <td className="text-muted small">
-                      {caseSummary.updatedAt ? new Date(caseSummary.updatedAt).toLocaleString() : 'N/A'}
-                    </td>
-                    <td>
-                      <div className="small fw-semibold text-body-secondary">{getWorkflowNextAction(caseSummary.status)}</div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className="su-publication-card-grid">
+          {publicationGroups.map((group) => {
+            const latestItem = group.items[0];
+            const navigationTarget = resolveStudentCaseNavigation(latestItem, 'dashboard');
+            const lastUpdated = latestItem.updatedAt ?? latestItem.createdAt;
+            return (
+              <button
+                key={group.type}
+                type="button"
+                className="su-publication-card"
+                onClick={() => onNavigate(navigationTarget.path)}
+              >
+                <div className="d-flex justify-content-between align-items-start gap-3">
+                  <div>
+                    <div className="su-publication-card-title">{getPublicationTypeLabel(group.type)}</div>
+                    <div className="su-publication-card-meta">
+                      {group.items.length === 1 ? '1 record' : `${group.items.length} records`}
+                    </div>
+                  </div>
+                  <span className={`badge status-badge ${statusBadgeClass(latestItem.status)}`}>
+                    {formatStatus(latestItem.status)}
+                  </span>
+                </div>
+                <div className="su-publication-card-detail">
+                  {latestItem.title || 'Untitled publication'}
+                </div>
+                <div className="su-publication-card-support">
+                  {getWorkflowNextAction(latestItem.status)}
+                </div>
+                <div className="su-publication-card-meta">
+                  {lastUpdated ? `Updated ${new Date(lastUpdated).toLocaleString()}` : 'No recent updates'}
+                </div>
+              </button>
+            );
+          })}
         </div>
       )}
     </DashboardPanel>

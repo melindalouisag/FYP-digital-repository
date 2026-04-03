@@ -99,7 +99,7 @@ export default function AdminRegistrationApprovalsPage() {
       {!loading && rows.length > 0 && (
         <div className="mb-3">
           <p className="text-muted small mb-0">
-            Use this queue to confirm registration readiness before submission opens, or return the case with a clear reason for correction.
+            Use this queue to confirm registration readiness before submission opens, or return the registration with a clear reason for correction.
           </p>
         </div>
       )}

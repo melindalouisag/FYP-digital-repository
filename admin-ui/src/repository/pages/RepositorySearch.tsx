@@ -1,8 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import ThemeSwitch from '../../theme/ThemeSwitch';
-import PortalIcon from '../../lib/components/PortalIcon';
 import { useAuth } from '../../lib/context/AuthContext';
-import { adminSidebarIcons } from '../../lib/portalIcons';
 import { useTheme } from '../../theme/ThemeContext';
 import { RepositorySearchFilters } from '../components/RepositorySearchFilters';
 import { RepositorySearchPagination } from '../components/RepositorySearchPagination';
@@ -46,10 +44,7 @@ export default function RepositorySearchPage() {
                           : '/admin/dashboard'
                     )}
                   >
-                    <span className="su-label-with-icon">
-                      <PortalIcon src={adminSidebarIcons.dashboard} />
-                      <span>Dashboard</span>
-                    </span>
+                    Dashboard
                   </button>
                   <button type="button" className="btn btn-light btn-sm" style={{ borderRadius: '999px' }} onClick={() => void logout()}>
                     Logout

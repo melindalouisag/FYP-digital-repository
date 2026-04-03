@@ -6,6 +6,7 @@ import com.example.thesisrepo.publication.PublicationCase;
 import com.example.thesisrepo.publication.PublicationRegistration;
 import com.example.thesisrepo.publication.repo.PublicationCaseRepository;
 import com.example.thesisrepo.publication.repo.PublicationRegistrationRepository;
+import com.example.thesisrepo.service.CalendarDeadlineService;
 import com.example.thesisrepo.service.workflow.AuditEventService;
 import com.example.thesisrepo.service.workflow.PublicationWorkflowGateService;
 import com.example.thesisrepo.user.Role;
@@ -28,6 +29,7 @@ public class RegistrationSubmissionService {
 
   private final PublicationCaseRepository cases;
   private final PublicationRegistrationRepository registrations;
+  private final CalendarDeadlineService calendarDeadlineService;
   private final PublicationWorkflowGateService workflowGates;
   private final RegistrationSupportService registrationSupportService;
   private final AuditEventService auditEvents;
@@ -37,6 +39,7 @@ public class RegistrationSubmissionService {
   public CaseStatusResponse submitStudentRegistration(User student, Long caseId, boolean permissionAccepted) {
     PublicationCase publicationCase = workflowGates.requireOwnedCase(student, caseId);
     workflowGates.ensureRegistrationSubmittable(publicationCase);
+    calendarDeadlineService.ensureRegistrationOpen(publicationCase.getType());
 
     PublicationRegistration registration = registrations.findByPublicationCase(publicationCase)
       .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Registration not found"));

@@ -141,19 +141,19 @@ function reviewStatusNotice(
   if (!reviewStage && !finalized) {
     return {
       variant: 'info',
-      message: 'This case is not yet in library review. Wait for lecturer forwarding before continuing checklist review.',
+      message: 'This publication is not yet in library review. Wait for lecturer forwarding before continuing checklist review.',
     };
   }
   if (finalized && status === 'REJECTED') {
     return {
       variant: 'danger',
-      message: 'This case has been rejected and is finalized for the library stage.',
+      message: 'This publication has been rejected and is finalized for the library stage.',
     };
   }
   if (finalized) {
     return {
       variant: 'secondary',
-      message: 'This case is already finalized for the library stage.',
+      message: 'This publication is already finalized for the library stage.',
     };
   }
   return null;
@@ -334,7 +334,7 @@ export default function AdminReviewDetailPage() {
     if (!caseId) return;
     return runAction(
       () => adminApi.approveCase(Number(caseId)),
-      'Case approved for clearance.'
+      'Publication approved for clearance.'
     );
   };
 
@@ -343,7 +343,7 @@ export default function AdminReviewDetailPage() {
       {loading && (
         <div className="text-center py-5">
           <div className="su-spinner mx-auto mb-3" />
-          <div className="text-muted">Loading case review detail...</div>
+          <div className="text-muted">Loading publication review detail...</div>
         </div>
       )}
       {error && <div className="alert alert-danger" style={ALERT_STYLE}>{error}</div>}
@@ -413,7 +413,7 @@ export default function AdminReviewDetailPage() {
               )}
               {!reviewStage && (
                 <div className="alert alert-info mb-3">
-                  Checklist review becomes available when the case enters library review.
+                  Checklist review becomes available when the publication enters library review.
                 </div>
               )}
               {checklistItems.length === 0 && (
@@ -530,12 +530,12 @@ export default function AdminReviewDetailPage() {
           >
               {!decisionAllowed && (
                 <div className="alert alert-info">
-                  Review decisions are available only while the case is in library review.
+                  Review decisions are available only while the publication is in library review.
                 </div>
               )}
               {decisionAllowed && !checklistSaved && (
                 <div className="alert alert-warning">
-                  Checklist results have not been saved yet. You can still approve the case, but saving the checklist first is recommended.
+                  Checklist results have not been saved yet. You can still approve the publication, but saving the checklist first is recommended.
                 </div>
               )}
               <div className="mb-3">
@@ -577,7 +577,7 @@ export default function AdminReviewDetailPage() {
             spaced={false}
           >
               {(detail.comments || []).length === 0 ? (
-                <div className="text-muted small text-center py-3">No comments have been recorded for this case.</div>
+                <div className="text-muted small text-center py-3">No comments have been recorded for this publication.</div>
               ) : (
                 <div className="vstack gap-2">
                   {(detail.comments || []).map((comment) => (

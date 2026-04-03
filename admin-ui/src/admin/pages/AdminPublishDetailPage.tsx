@@ -50,7 +50,7 @@ export default function AdminPublishDetailPage() {
     setMessage('');
     try {
       await adminApi.publish(Number(caseId));
-      setMessage('Case published to repository.');
+      setMessage('Publication published to repository.');
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Publish action failed.');
@@ -68,7 +68,7 @@ export default function AdminPublishDetailPage() {
     }
     openConfirm({
       title: 'Unpublish Repository Item',
-      message: 'This will remove the item from the repository and reopen the case for corrections. Continue?',
+      message: 'This will remove the item from the repository and reopen the publication for corrections. Continue?',
       confirmLabel: 'Unpublish',
       confirmVariant: 'danger',
       onConfirm: async (close) => {
@@ -77,7 +77,7 @@ export default function AdminPublishDetailPage() {
         setMessage('');
         try {
           await adminApi.unpublish(Number(caseId), trimmed);
-          setMessage('Case removed from the repository and returned for correction.');
+          setMessage('Publication removed from the repository and returned for correction.');
           setUnpublishReason('');
           await load();
           close();
@@ -112,9 +112,9 @@ export default function AdminPublishDetailPage() {
           <div className="col-lg-6">
             <div className="su-card h-100">
               <div className="card-body p-4">
-                <h3 className="h6 mb-3 su-page-title">Case Summary</h3>
+                <h3 className="h6 mb-3 su-page-title">Publication Summary</h3>
                 <div className="text-muted small mb-3">
-                  Confirm the case status and current repository readiness before publishing or unpublishing.
+                  Confirm the publication status and current repository readiness before publishing or unpublishing.
                 </div>
                 {[
                   { label: 'Title', value: displayCaseTitle(detail.title) },
@@ -161,7 +161,7 @@ export default function AdminPublishDetailPage() {
                     ))}
                   </>
                 ) : (
-                  <div className="text-muted">No submission file is available for this case.</div>
+                  <div className="text-muted">No submission file is available for this publication.</div>
                 )}
               </div>
             </div>
@@ -216,7 +216,7 @@ export default function AdminPublishDetailPage() {
                         <strong style={{ color: '#dc3545' }}>Unpublish</strong>
                       </div>
                       <p className="small text-muted mb-2">
-                        This will remove the item from the repository and reopen the case for correction.
+                        This will remove the item from the repository and reopen the publication for correction.
                       </p>
                       <textarea
                         className="form-control mb-2"
@@ -240,7 +240,7 @@ export default function AdminPublishDetailPage() {
 
                   {!isReadyToPublish && !isPublished && (
                     <div className="text-muted p-3" style={{ background: '#f8fafc', borderRadius: '0.5rem' }}>
-                      This case is not currently ready for publication.
+                      This publication is not currently ready for publication.
                     </div>
                   )}
                 </div>

@@ -1,9 +1,9 @@
+import { CalendarDashboardPanel } from '../../calendar/CalendarDashboardPanel';
 import { useNavigate } from 'react-router-dom';
 import ShellLayout from '../../ShellLayout';
 import { StudentCaseListTable } from '../dashboard/StudentCaseListTable';
 import { StudentNextActionPanel } from '../dashboard/StudentNextActionPanel';
 import { StudentProgressOverview } from '../dashboard/StudentProgressOverview';
-import { StudentReminderPanel } from '../dashboard/StudentReminderPanel';
 import { useStudentDashboard } from '../dashboard/useStudentDashboard';
 
 export default function StudentDashboardPage() {
@@ -25,7 +25,7 @@ export default function StudentDashboardPage() {
           nextStepCases={dashboard.nextStepCases}
           onNavigate={navigate}
         />
-        <StudentReminderPanel dashboard={dashboard} />
+        <CalendarDashboardPanel navigatePath="/student/calendar" />
       </div>
 
       <StudentCaseListTable

@@ -35,6 +35,7 @@ import static org.springframework.http.HttpStatus.BAD_REQUEST;
 @Slf4j
 public class SubmissionService {
 
+  private final CalendarDeadlineService calendarDeadlineService;
   private final PublicationWorkflowGateService workflowGates;
   private final SubmissionVersionRepository submissionVersions;
   private final PublicationCaseRepository cases;
@@ -51,6 +52,7 @@ public class SubmissionService {
   ) {
     PublicationCase publicationCase = workflowGates.requireOwnedCase(student, caseId);
     workflowGates.ensureStudentCanUploadSubmission(publicationCase);
+    calendarDeadlineService.ensureSubmissionOpen(publicationCase.getType());
     CaseStatus previousStatus = publicationCase.getStatus();
 
     int nextVersion = workflowGates.nextSubmissionVersion(publicationCase);

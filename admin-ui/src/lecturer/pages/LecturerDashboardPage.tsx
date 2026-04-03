@@ -1,3 +1,4 @@
+import { CalendarDashboardPanel } from '../../calendar/CalendarDashboardPanel';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ShellLayout from '../../ShellLayout';
@@ -71,7 +72,7 @@ export default function LecturerDashboardPage() {
   ];
 
   return (
-    <ShellLayout title="Lecturer Dashboard" subtitle="Monitor registration approvals, submission review, and supervised case activity">
+    <ShellLayout title="Lecturer Dashboard" subtitle="Monitor registration approvals, submission review, and supervised publication activity">
       {error && <div className="alert alert-danger">{error}</div>}
 
       <div className="d-flex flex-wrap align-items-center gap-2 mb-4">
@@ -98,8 +99,8 @@ export default function LecturerDashboardPage() {
             {loading
               ? 'Loading dashboard data.'
               : dashboard.activeSupervisedCaseCount > 0
-                ? 'Based on active supervised cases'
-                : 'No active supervised cases.'}
+                ? 'Based on active supervised publications'
+                : 'No active supervised publications.'}
           </p>
         </DashboardPanel>
 
@@ -113,13 +114,17 @@ export default function LecturerDashboardPage() {
         ))}
       </div>
 
+      <div className="mb-4">
+        <CalendarDashboardPanel navigatePath="/lecturer/calendar" />
+      </div>
+
       <div className="row g-3">
         <div className="col-12 col-xl-5 d-flex">
           <DashboardPanel title="Stage Distribution" className="w-100">
             {loading ? (
               <p className="su-dashboard-empty-copy mb-0">Loading dashboard data.</p>
             ) : dashboard.stageDistribution.length === 0 ? (
-              <p className="su-dashboard-empty-copy mb-0">No supervised cases available for this view.</p>
+              <p className="su-dashboard-empty-copy mb-0">No supervised publications available for this view.</p>
             ) : (
               <div className="su-dashboard-bars">
                 {dashboard.stageDistribution.map((item) => (

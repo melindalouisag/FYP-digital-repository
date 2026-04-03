@@ -37,7 +37,7 @@ export default function LecturerStudentsPage() {
   const displayCaseTitle = (value?: string | null) => value?.trim() || 'Untitled submission';
 
   return (
-    <ShellLayout title="My Students" subtitle="Review supervised students and case activity for the selected year">
+    <ShellLayout title="My Students" subtitle="Review supervised students and publication activity for the selected year">
       <div className="d-flex flex-wrap align-items-center gap-2 mb-4">
         <label className="form-label mb-0 fw-semibold small">Year:</label>
         <select
@@ -77,7 +77,7 @@ export default function LecturerStudentsPage() {
       {!loading && groups.length > 0 && (
         <div className="mb-3">
           <p className="text-muted small mb-0">
-            Select a student to review case status, submission history, and any pending supervisor actions.
+            Select a student to review publication status, submission history, and any pending supervisor actions.
           </p>
         </div>
       )}
@@ -100,7 +100,7 @@ export default function LecturerStudentsPage() {
                     </div>
                   </div>
                   <span className="badge bg-primary-subtle text-primary-emphasis" style={{ borderRadius: '999px' }}>
-                    {group.cases.length} case{group.cases.length > 1 ? 's' : ''}
+                    {group.cases.length} publication{group.cases.length > 1 ? 's' : ''}
                   </span>
                 </div>
                 <div className="vstack gap-1 mt-2">
@@ -110,7 +110,7 @@ export default function LecturerStudentsPage() {
                     </div>
                   ))}
                   {group.cases.length > 3 && (
-                    <div className="small text-muted">+ {group.cases.length - 3} more case(s)</div>
+                    <div className="small text-muted">+ {group.cases.length - 3} more publication(s)</div>
                   )}
                 </div>
               </div>

@@ -12,6 +12,11 @@ import com.example.thesisrepo.publication.PublicationRegistration;
 import com.example.thesisrepo.publication.PublicationType;
 import com.example.thesisrepo.publication.SubmissionStatus;
 import com.example.thesisrepo.publication.SubmissionVersion;
+import com.example.thesisrepo.reminder.CalendarEventType;
+import com.example.thesisrepo.reminder.DeadlineActionType;
+import com.example.thesisrepo.reminder.ReminderStatus;
+import com.example.thesisrepo.reminder.StudentDashboardReminder;
+import com.example.thesisrepo.reminder.StudentDashboardReminderRepository;
 import com.example.thesisrepo.publication.repo.AuditEventRepository;
 import com.example.thesisrepo.publication.repo.ChecklistItemV2Repository;
 import com.example.thesisrepo.publication.repo.ChecklistTemplateRepository;
@@ -38,6 +43,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.nio.charset.StandardCharsets;
 import java.util.Set;
 import java.util.UUID;
@@ -70,6 +77,7 @@ class StudentSubmissionIntegrationTest {
   @Autowired private ChecklistTemplateRepository checklistTemplates;
   @Autowired private ChecklistItemV2Repository checklistItems;
   @Autowired private AuditEventRepository auditEvents;
+  @Autowired private StudentDashboardReminderRepository reminders;
   @Autowired private PasswordEncoder passwordEncoder;
   @Autowired private TransactionTemplate transactionTemplate;
 
@@ -83,6 +91,7 @@ class StudentSubmissionIntegrationTest {
 
   @BeforeEach
   void setUp() {
+    reminders.deleteAll();
     student = requireUser(Role.STUDENT);
     ensureActiveTemplate(ChecklistScope.THESIS);
   }
@@ -205,6 +214,28 @@ class StudentSubmissionIntegrationTest {
         .session(session))
       .andExpect(status().isBadRequest())
       .andExpect(jsonPath("$.message").value("Please enter at least 3 keywords."));
+
+    assertThat(submissionVersions.findByPublicationCaseOrderByVersionNumberDesc(publicationCase)).isEmpty();
+  }
+
+  @Test
+  void submissionDeadlineBlocksStudentUploads() throws Exception {
+    PublicationCase publicationCase = cases.save(PublicationCase.builder()
+      .student(student)
+      .type(PublicationType.THESIS)
+      .status(CaseStatus.REGISTRATION_VERIFIED)
+      .build());
+    StudentProfile profile = studentProfiles.findByUserId(student.getId()).orElseThrow();
+    savePastDeadline(requireUser(Role.ADMIN), PublicationType.THESIS, DeadlineActionType.SUBMISSION_DEADLINE);
+
+    MockHttpSession session = loginAsRole(Role.STUDENT);
+
+    mockMvc.perform(multipart("/api/student/cases/{caseId}/submissions", publicationCase.getId())
+        .file(pdfFile("submission.pdf"))
+        .file(metadataPart(profile))
+        .session(session))
+      .andExpect(status().isBadRequest())
+      .andExpect(jsonPath("$.message").value("The submission deadline has passed."));
 
     assertThat(submissionVersions.findByPublicationCaseOrderByVersionNumberDesc(publicationCase)).isEmpty();
   }
@@ -333,7 +364,7 @@ class StudentSubmissionIntegrationTest {
     mockMvc.perform(get("/api/student/cases/{caseId}/submissions/{submissionId}/download", requestedCase.getId(), otherSubmission.getId())
         .session(session))
       .andExpect(status().isBadRequest())
-      .andExpect(jsonPath("$.message", containsString("Submission does not belong to this case")));
+      .andExpect(jsonPath("$.message", containsString("Submission does not belong to this publication")));
   }
 
   private MockMultipartFile metadataPart(StudentProfile profile) {
@@ -444,6 +475,19 @@ class StudentSubmissionIntegrationTest {
       case LECTURER -> "test-only-lecturer-password";
       case ADMIN -> "test-only-admin-password";
     };
+  }
+
+  private void savePastDeadline(User admin, PublicationType publicationType, DeadlineActionType deadlineAction) {
+    reminders.save(StudentDashboardReminder.builder()
+      .user(admin)
+      .title("Past deadline")
+      .reminderDate(LocalDate.now().minusDays(1))
+      .reminderTime(LocalTime.of(12, 0))
+      .eventType(CalendarEventType.DEADLINE)
+      .deadlineAction(deadlineAction)
+      .publicationType(publicationType)
+      .status(ReminderStatus.ACTIVE)
+      .build());
   }
 
   private record StudentLogin(User user, MockHttpSession session) {

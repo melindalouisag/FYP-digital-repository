@@ -44,7 +44,7 @@ export default function AdminReviewStudentPage() {
   const displayCaseTitle = (value?: string | null) => value?.trim() || 'Untitled submission';
 
   return (
-    <ShellLayout title="Student Cases in Review" subtitle="Library review cases for the selected student">
+    <ShellLayout title="Student Publications in Review" subtitle="Library review publications for the selected student">
       <button className="btn btn-outline-secondary btn-sm mb-4" style={{ borderRadius: '999px' }} onClick={() => navigate('/admin/review')}>
         Return to Submission Review
       </button>
@@ -83,13 +83,13 @@ export default function AdminReviewStudentPage() {
                     <strong>Student ID:</strong> {group.studentIdNumber || 'N/A'} / {group.faculty || 'N/A'} {group.program ? ` / ${group.program}` : ''}
                   </div>
                   <div className="text-muted small mt-1">
-                    {group.cases.length} case{group.cases.length > 1 ? 's' : ''} in review / Latest activity:{' '}
+                    {group.cases.length} publication{group.cases.length > 1 ? 's' : ''} in review / Latest activity:{' '}
                     {latestActivity ? new Date(latestActivity).toLocaleString() : 'N/A'}
                   </div>
                 </div>
               </div>
               <p className="text-muted small mb-0 mt-3">
-                Open a case below to continue checklist review, inspect comments, and record the final library decision.
+                Open a publication below to continue checklist review, inspect comments, and record the final library decision.
               </p>
             </div>
           </div>

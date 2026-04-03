@@ -28,6 +28,8 @@ export type SubmissionStatus =
   | 'REJECTED';
 
 export type ReminderStatus = 'ACTIVE' | 'DONE';
+export type CalendarEventType = 'PERSONAL' | 'DEADLINE';
+export type DeadlineActionType = 'REGISTRATION_DEADLINE' | 'SUBMISSION_DEADLINE';
 
 export type DashboardQueueKey = 'registration' | 'review' | 'clearance' | 'publishing';
 
@@ -240,6 +242,21 @@ export interface StudentReminder {
   reminderDate: string;
   reminderTime: string;
   status: ReminderStatus;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CalendarEvent {
+  id: number;
+  ownerUserId: number;
+  title: string;
+  description?: string | null;
+  eventDate: string;
+  eventTime: string;
+  eventType: CalendarEventType;
+  deadlineAction?: DeadlineActionType | null;
+  publicationType?: PublicationType | null;
+  canManage: boolean;
   createdAt?: string;
   updatedAt?: string;
 }

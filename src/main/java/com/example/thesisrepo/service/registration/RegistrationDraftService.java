@@ -7,6 +7,7 @@ import com.example.thesisrepo.publication.PublicationRegistration;
 import com.example.thesisrepo.publication.repo.CaseSupervisorRepository;
 import com.example.thesisrepo.publication.repo.PublicationCaseRepository;
 import com.example.thesisrepo.publication.repo.PublicationRegistrationRepository;
+import com.example.thesisrepo.service.CalendarDeadlineService;
 import com.example.thesisrepo.service.RegistrationService.CreateRegistrationCommand;
 import com.example.thesisrepo.service.RegistrationService.UpdateRegistrationCommand;
 import com.example.thesisrepo.service.workflow.AuditEventService;
@@ -29,6 +30,7 @@ public class RegistrationDraftService {
   private final PublicationCaseRepository cases;
   private final PublicationRegistrationRepository registrations;
   private final CaseSupervisorRepository caseSupervisors;
+  private final CalendarDeadlineService calendarDeadlineService;
   private final PublicationWorkflowGateService workflowGates;
   private final RegistrationSupportService registrationSupportService;
   private final AuditEventService auditEvents;
@@ -36,6 +38,7 @@ public class RegistrationDraftService {
 
   @Transactional
   public CaseStatusResponse createStudentRegistration(User student, CreateRegistrationCommand command) {
+    calendarDeadlineService.ensureRegistrationOpen(command.type());
     registrationSupportService.ensureStudentCanCreateRegistration(student, command.type());
 
     String studentProgram = registrationSupportService.requireStudentProgram(student);
@@ -84,6 +87,7 @@ public class RegistrationDraftService {
   public CaseStatusResponse updateStudentRegistration(User student, Long caseId, UpdateRegistrationCommand command) {
     PublicationCase publicationCase = workflowGates.requireOwnedCase(student, caseId);
     workflowGates.ensureRegistrationEditable(publicationCase);
+    calendarDeadlineService.ensureRegistrationOpen(publicationCase.getType());
 
     String studentProgram = registrationSupportService.requireStudentProgram(student);
     PublicationRegistration registration = registrations.findByPublicationCase(publicationCase)

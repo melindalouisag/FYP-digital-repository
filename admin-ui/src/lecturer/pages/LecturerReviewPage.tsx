@@ -37,7 +37,7 @@ export default function LecturerReviewPage() {
   const displayCaseTitle = (value?: string | null) => value?.trim() || 'Untitled submission';
 
   return (
-    <ShellLayout title="Submission Review" subtitle="Review submission cases grouped by student for supervisor action">
+    <ShellLayout title="Submission Review" subtitle="Review submission records grouped by student for supervisor action">
       {error && <div className="alert alert-danger">{error}</div>}
 
       <div className="d-flex flex-wrap align-items-center gap-2 mb-4">
@@ -66,15 +66,15 @@ export default function LecturerReviewPage() {
           <div className="su-empty-icon">
             <PortalIcon src={lecturerSidebarIcons.review} size={40} />
           </div>
-          <h5>No Cases Awaiting Supervisor Review</h5>
-          <p className="text-muted">No cases are waiting for supervisor review for {year}.</p>
+          <h5>No Publications Awaiting Supervisor Review</h5>
+          <p className="text-muted">No publications are waiting for supervisor review for {year}.</p>
         </div>
       )}
 
       {!loading && groups.length > 0 && (
         <div className="mb-3">
           <p className="text-muted small mb-0">
-            Select a student record to open case history, submission files, and the supervisor actions for each case.
+            Select a student record to open publication history, submission files, and the supervisor actions for each publication.
           </p>
         </div>
       )}
@@ -102,7 +102,7 @@ export default function LecturerReviewPage() {
                       </div>
                     </div>
                     <span className="badge bg-primary-subtle text-primary-emphasis" style={{ borderRadius: '999px' }}>
-                      {group.cases.length} case{group.cases.length > 1 ? 's' : ''}
+                      {group.cases.length} publication{group.cases.length > 1 ? 's' : ''}
                     </span>
                   </div>
                   <div className="text-muted small mb-2">

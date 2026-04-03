@@ -124,7 +124,7 @@ export default function LecturerStudentDetailPage() {
   const displayCaseTitle = (value?: string | null) => value?.trim() || 'Untitled submission';
 
   return (
-    <ShellLayout title="Student Cases" subtitle="Review case history, submission files, and supervisor decisions for the selected student">
+    <ShellLayout title="Student Publications" subtitle="Review publication history, submission files, and supervisor decisions for the selected student">
       {error && <div className="alert alert-danger" style={{ borderRadius: '0.75rem' }}>{error}</div>}
 
       <div className="d-flex flex-wrap align-items-center gap-2 mb-4">
@@ -177,11 +177,11 @@ export default function LecturerStudentDetailPage() {
                   </div>
                 </div>
                 <span className="badge bg-primary-subtle text-primary-emphasis ms-auto" style={{ borderRadius: '999px', fontSize: '0.8rem' }}>
-                  {group.cases.length} case{group.cases.length > 1 ? 's' : ''}
+                  {group.cases.length} publication{group.cases.length > 1 ? 's' : ''}
                 </span>
               </div>
               <p className="text-muted small mb-0 mt-3">
-                Use the case cards below to review case history, open submission files, and complete supervisor decisions when they are available.
+                Use the publication cards below to review publication history, open submission files, and complete supervisor decisions when they are available.
               </p>
             </div>
           </div>
@@ -266,7 +266,7 @@ export default function LecturerStudentDetailPage() {
                       <div className="mb-3 p-3" style={{ background: '#f8fafc', borderRadius: '0.6rem' }}>
                         <h6 className="fw-bold mb-2">Submission History</h6>
                         <div className="text-muted small mb-2">
-                          Review the uploaded versions here before recording feedback or forwarding the case to library review.
+                          Review the uploaded versions here before recording feedback or forwarding the publication to library review.
                         </div>
                         {(submissions[c.caseId] ?? []).length === 0 ? (
                           <div className="text-muted small">No submission versions are available.</div>
@@ -348,8 +348,8 @@ export default function LecturerStudentDetailPage() {
 
           {group.cases.length === 0 && (
             <div className="su-empty-state mt-3">
-              <h5>No Cases for This Student</h5>
-              <p className="text-muted">No cases are available for this student in the selected year.</p>
+              <h5>No Publications for This Student</h5>
+              <p className="text-muted">No publications are available for this student in the selected year.</p>
             </div>
           )}
         </>

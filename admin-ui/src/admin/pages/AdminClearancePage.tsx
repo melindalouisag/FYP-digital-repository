@@ -90,7 +90,7 @@ export default function AdminClearancePage() {
       {!loading && cases.length > 0 && (
         <div className="mb-3">
           <p className="text-muted small mb-0">
-            Use this queue to confirm final student clearance before publishing, or return the case with a clear correction reason.
+            Use this queue to confirm final student clearance before publishing, or return the publication with a clear correction reason.
           </p>
         </div>
       )}

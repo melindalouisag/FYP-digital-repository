@@ -175,7 +175,7 @@ public class AdminDashboardService {
       case LIBRARY_APPROVED_REGISTRATION -> "Registration verified";
       case LIBRARY_CHECKLIST_REVIEWED -> "Checklist review completed";
       case CLEARANCE_APPROVED -> "Clearance approved";
-      case PUBLISHED -> "Case published";
+      case PUBLISHED -> "Publication published";
       default -> "Workflow updated";
     };
   }

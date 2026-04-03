@@ -23,7 +23,7 @@ export default function StudentClearanceDetailPage() {
       const payload = await studentApi.caseDetail(Number(caseId));
       setDetail(payload);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load clearance case.');
+      setError(err instanceof Error ? err.message : 'Failed to load clearance record.');
       setDetail(null);
     } finally {
       setLoading(false);
@@ -37,7 +37,7 @@ export default function StudentClearanceDetailPage() {
   const onSubmit = async () => {
     if (!caseId || !detail) return;
     if (!canSubmitClearance(detail.case.status)) {
-      setError('Clearance submission is gated until case is APPROVED_FOR_CLEARANCE.');
+      setError('Clearance submission is gated until the publication is APPROVED_FOR_CLEARANCE.');
       return;
     }
 
@@ -73,7 +73,7 @@ export default function StudentClearanceDetailPage() {
               <span className={`badge status-badge ${statusBadgeClass(detail.case.status)}`} style={{ fontSize: '0.85rem', padding: '0.4rem 0.9rem' }}>
                 {formatStatus(detail.case.status)}
               </span>
-              <span className="text-muted small">Current case status</span>
+              <span className="text-muted small">Current publication status</span>
             </div>
 
             <div className="p-3 mb-4" style={{ background: '#f0f6fa', borderRadius: '0.75rem', border: '1px solid #d5e3ed' }}>
@@ -112,7 +112,7 @@ export default function StudentClearanceDetailPage() {
                 style={{ borderRadius: '999px' }}
                 onClick={() => navigate(`/student/cases/${caseId}`)}
               >
-                Return to Case Detail
+                Return to Publication Detail
               </button>
             </div>
           </div>

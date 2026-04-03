@@ -6,6 +6,7 @@ import com.example.thesisrepo.profile.StudentProfile;
 import com.example.thesisrepo.profile.StudentProfileRepository;
 import com.example.thesisrepo.publication.*;
 import com.example.thesisrepo.publication.repo.*;
+import com.example.thesisrepo.reminder.StudentDashboardReminderRepository;
 import com.example.thesisrepo.user.Role;
 import com.example.thesisrepo.user.User;
 import com.example.thesisrepo.user.UserRepository;
@@ -54,6 +55,7 @@ class WorkflowGateIntegrationTest {
   @Autowired private AuditEventRepository auditEvents;
   @Autowired private LecturerProfileRepository lecturerProfiles;
   @Autowired private StudentProfileRepository studentProfiles;
+  @Autowired private StudentDashboardReminderRepository reminders;
   @Autowired private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
   @Autowired private com.example.thesisrepo.service.workflow.PublicationWorkflowGateService workflowGates;
   @Autowired private TransactionTemplate transactionTemplate;
@@ -63,6 +65,7 @@ class WorkflowGateIntegrationTest {
 
   @BeforeEach
   void setup() {
+    reminders.deleteAll();
     student = requireUser(Role.STUDENT);
     lecturer = requireUser(Role.LECTURER);
     ensureActiveTemplate(ChecklistScope.THESIS);
@@ -253,11 +256,11 @@ class WorkflowGateIntegrationTest {
     mockMvc.perform(post("/api/student/registrations")
         .contentType(MediaType.APPLICATION_JSON)
         .session(studentSession)
-        .content("""
+      .content("""
           {"type":"THESIS","title":"Second Thesis","supervisorEmail":"%s"}
           """.formatted(lecturer.getEmail())))
       .andExpect(status().isConflict())
-      .andExpect(jsonPath("$.message", containsString("You already have a THESIS registration case")));
+      .andExpect(jsonPath("$.message", containsString("You already have a THESIS registration in progress")));
   }
 
   @Test

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import ThemeSwitch from './theme/ThemeSwitch';
 import { useAuth } from './lib/context/AuthContext';
@@ -13,13 +13,14 @@ interface ShellLayoutProps {
 type LinkItem = {
   label: string;
   path: string;
-  icon: string; // path to PNG icon in /public/icons/
+  icon?: string; // path to PNG icon in /public/icons/
 };
 
 function roleLinks(role?: string): LinkItem[] {
   if (role === 'STUDENT') {
     return [
       { label: 'Dashboard', path: '/student/dashboard', icon: '/icons/student/dashboard.png' },
+      { label: 'Calendar', path: '/student/calendar' },
       { label: 'Publication Registration', path: '/student/registrations', icon: '/icons/student/registration.png' },
       { label: 'Submission', path: '/student/submissions', icon: '/icons/student/submission.png' },
       { label: 'Repository Search', path: '/', icon: '/icons/admin/search.png' },
@@ -28,6 +29,7 @@ function roleLinks(role?: string): LinkItem[] {
   if (role === 'LECTURER') {
     return [
       { label: 'Dashboard', path: '/lecturer/dashboard', icon: '/icons/lecturer/dashboard.png' },
+      { label: 'Calendar', path: '/lecturer/calendar' },
       { label: 'Registration Approval', path: '/lecturer/approvals', icon: '/icons/lecturer/maps-and-flags.png' },
       { label: 'Submission Review', path: '/lecturer/review', icon: '/icons/lecturer/submission.png' },
       { label: 'My Students', path: '/lecturer/students', icon: '/icons/lecturer/students.png' },
@@ -37,6 +39,7 @@ function roleLinks(role?: string): LinkItem[] {
   if (role === 'ADMIN') {
     return [
       { label: 'Dashboard', path: '/admin/dashboard', icon: '/icons/admin/dashboard.png' },
+      { label: 'Calendar', path: '/admin/calendar' },
       { label: 'Registration', path: '/admin/registration-approvals', icon: '/icons/admin/registration.png' },
       { label: 'Submission Review', path: '/admin/review', icon: '/icons/admin/submission.png' },
       { label: 'Clearance', path: '/admin/clearance', icon: '/icons/admin/clearance.png' },
@@ -51,12 +54,30 @@ function roleLinks(role?: string): LinkItem[] {
 export default function ShellLayout({ title, subtitle, children }: ShellLayoutProps) {
   const { user, logout } = useAuth();
   const { theme, setTheme } = useTheme();
+  const [accountOpen, setAccountOpen] = useState(false);
+  const accountRef = useRef<HTMLDivElement | null>(null);
   const links = roleLinks(user?.role);
   const roleLabel = user?.role ? user.role.charAt(0) + user.role.slice(1).toLowerCase() : 'Guest';
   const currentYear = new Date().getFullYear();
   const initials = user?.fullName
     ? user.fullName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
     : user?.email?.slice(0, 2).toUpperCase() ?? 'G';
+  const availableRoles = user?.availableRoles ?? (user?.role ? [user.role] : []);
+
+  useEffect(() => {
+    if (!accountOpen) {
+      return undefined;
+    }
+
+    const onPointerDown = (event: MouseEvent) => {
+      if (accountRef.current && !accountRef.current.contains(event.target as Node)) {
+        setAccountOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', onPointerDown);
+    return () => document.removeEventListener('mousedown', onPointerDown);
+  }, [accountOpen]);
 
   return (
     <div className="min-vh-100 d-flex flex-column">
@@ -77,34 +98,55 @@ export default function ShellLayout({ title, subtitle, children }: ShellLayoutPr
                 onChange={(checked) => setTheme(checked ? 'dark' : 'light')}
               />
             </div>
-            <div className="d-flex align-items-center gap-2">
-              <div
-                className="rounded-circle d-inline-flex align-items-center justify-content-center"
-                style={{
-                  width: '2rem', height: '2rem',
-                  background: 'rgba(255,255,255,0.2)',
-                  color: '#fff',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  border: '1.5px solid rgba(255,255,255,0.3)',
-                }}
+            <div className="su-account-menu" ref={accountRef}>
+              <button
+                className="su-account-button"
+                type="button"
+                onClick={() => setAccountOpen((current) => !current)}
+                aria-expanded={accountOpen}
               >
-                {initials}
-              </div>
-              <div className="d-none d-md-block">
-                <div className="text-white" style={{ fontSize: '0.82rem', fontWeight: 500, lineHeight: 1.2 }}>
-                  {user?.fullName || user?.email || 'Guest'}
+                <span
+                  className="rounded-circle d-inline-flex align-items-center justify-content-center"
+                  style={{
+                    width: '2rem', height: '2rem',
+                    background: 'rgba(255,255,255,0.2)',
+                    color: '#fff',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    border: '1.5px solid rgba(255,255,255,0.3)',
+                  }}
+                >
+                  {initials}
+                </span>
+                <span className="text-start">
+                  <span className="su-account-name">
+                    {user?.fullName || user?.email || 'Guest'}
+                  </span>
+                </span>
+              </button>
+
+              {accountOpen ? (
+                <div className="su-account-popover">
+                  <div className="su-account-popover-header">
+                    <div className="su-account-name text-body">{user?.fullName || user?.email || 'Guest'}</div>
+                    <div className="su-account-meta">{user?.email || 'No email available'}</div>
+                  </div>
+                  <div className="su-account-meta">Current role: {roleLabel}</div>
+                  {availableRoles.length > 0 ? (
+                    <div className="su-account-meta">
+                      Available access: {availableRoles.join(', ')}
+                    </div>
+                  ) : null}
+                  <button
+                    className="btn btn-outline-secondary btn-sm mt-3"
+                    type="button"
+                    onClick={() => void logout()}
+                  >
+                    Logout
+                  </button>
                 </div>
-                <span className="badge su-badge-role">{roleLabel}</span>
-              </div>
+              ) : null}
             </div>
-            <button
-              className="btn btn-outline-light btn-sm"
-              style={{ borderRadius: '999px', padding: '0.3rem 1rem', fontSize: '0.8rem' }}
-              onClick={() => void logout()}
-            >
-              Logout
-            </button>
           </div>
         </div>
       </header>
@@ -120,18 +162,22 @@ export default function ShellLayout({ title, subtitle, children }: ShellLayoutPr
                   end={link.path === '/'}
                   className={({ isActive }) => `nav-link text-start d-flex align-items-center gap-2 ${isActive ? 'active' : ''}`}
                 >
-                  <img
-                    src={link.icon}
-                    alt=""
-                    className="su-sidebar-icon-img"
-                    style={{
-                      width: '20px',
-                      height: '20px',
-                      objectFit: 'contain',
-                      opacity: 0.7,
-                      filter: theme === 'dark' ? 'invert(1)' : 'none',
-                    }}
-                  />
+                  {link.icon ? (
+                    <img
+                      src={link.icon}
+                      alt=""
+                      className="su-sidebar-icon-img"
+                      style={{
+                        width: '20px',
+                        height: '20px',
+                        objectFit: 'contain',
+                        opacity: 0.7,
+                        filter: theme === 'dark' ? 'invert(1)' : 'none',
+                      }}
+                    />
+                  ) : (
+                    <span className="su-sidebar-link-bullet" aria-hidden="true" />
+                  )}
                   {link.label}
                 </NavLink>
               ))}

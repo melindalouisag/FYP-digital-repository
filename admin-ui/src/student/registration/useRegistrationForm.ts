@@ -1,9 +1,18 @@
+import { calendarApi } from '../../lib/api/calendar';
+import {
+  findLatestDeadline,
+  formatCalendarEventSchedule,
+  getDeadlineActionLabel,
+  getDeadlineBlockMessage,
+  getPublicationTypeLabel,
+  isDeadlinePassed,
+} from '../../calendar/calendarUtils';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { masterApi, type Faculty } from '../../lib/api/master';
 import { studentApi, type SupervisorRow } from '../../lib/api/student';
 import { useAuth } from '../../lib/context/AuthContext';
-import type { CaseSummary, PublicationType } from '../../lib/workflowTypes';
+import type { CalendarEvent, CaseSummary, PublicationType } from '../../lib/workflowTypes';
 
 export type FormErrors = {
   title?: string;
@@ -41,6 +50,8 @@ export interface UseRegistrationFormResult {
   permissionChecklistOneAccepted: boolean;
   permissionChecklistTwoAccepted: boolean;
   thesisBlocked: boolean;
+  registrationDeadlinePassed: boolean;
+  registrationDeadlineLabel: string;
   preferredThesisCase: CaseSummary | null;
   setTitle: (value: string) => void;
   setYear: (value?: number) => void;
@@ -107,6 +118,7 @@ export function useRegistrationForm(): UseRegistrationFormResult {
   const [studentIdNumber, setStudentIdNumberState] = useState(user?.studentId ?? '');
   const [supervisors, setSupervisors] = useState<SupervisorRow[]>([]);
   const [existingCases, setExistingCases] = useState<CaseSummary[]>([]);
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [selectedSupervisorEmail, setSelectedSupervisorEmailState] = useState('');
   const [permissionChecklistOneAccepted, setPermissionChecklistOneAcceptedState] = useState(false);
   const [permissionChecklistTwoAccepted, setPermissionChecklistTwoAcceptedState] = useState(false);
@@ -122,6 +134,14 @@ export function useRegistrationForm(): UseRegistrationFormResult {
     [editCaseId, existingCases]
   );
   const thesisBlocked = !isEditMode && type === 'THESIS' && externalThesisCases.length > 0;
+  const registrationDeadline = useMemo(
+    () => findLatestDeadline(calendarEvents, type, 'REGISTRATION_DEADLINE'),
+    [calendarEvents, type]
+  );
+  const registrationDeadlinePassed = isDeadlinePassed(registrationDeadline);
+  const registrationDeadlineLabel = registrationDeadline
+    ? `${getPublicationTypeLabel(type)} ${getDeadlineActionLabel('REGISTRATION_DEADLINE')} • ${formatCalendarEventSchedule(registrationDeadline)}`
+    : '';
   const preferredThesisCase = useMemo(() => (
     externalThesisCases
       .slice()
@@ -163,7 +183,7 @@ export function useRegistrationForm(): UseRegistrationFormResult {
       nextErrors.title = 'Title is required.';
     }
     if (thesisBlocked) {
-      nextErrors.publicationType = 'You already have a THESIS registration case.';
+      nextErrors.publicationType = 'You already have a THESIS registration in progress.';
     }
     if (!selectedSupervisorEmail.trim()) {
       nextErrors.supervisorIds = 'Please select a supervisor.';
@@ -239,6 +259,17 @@ export function useRegistrationForm(): UseRegistrationFormResult {
   }, []);
 
   useEffect(() => {
+    const loadCalendar = async () => {
+      try {
+        setCalendarEvents(await calendarApi.listEvents());
+      } catch {
+        setCalendarEvents([]);
+      }
+    };
+    void loadCalendar();
+  }, []);
+
+  useEffect(() => {
     const loadEditCase = async () => {
       if (!isEditMode || !editCaseId) {
         setLoadingPage(false);
@@ -294,6 +325,10 @@ export function useRegistrationForm(): UseRegistrationFormResult {
 
   const submit = async (submitForApproval: boolean) => {
     setServerError('');
+    if (registrationDeadlinePassed) {
+      setServerError(getDeadlineBlockMessage('REGISTRATION_DEADLINE'));
+      return;
+    }
     const nextErrors = validate(submitForApproval);
     if (Object.values(nextErrors).some(Boolean)) {
       setErrors(nextErrors);
@@ -355,6 +390,8 @@ export function useRegistrationForm(): UseRegistrationFormResult {
     permissionChecklistOneAccepted,
     permissionChecklistTwoAccepted,
     thesisBlocked,
+    registrationDeadlinePassed,
+    registrationDeadlineLabel,
     preferredThesisCase,
     setTitle: (value) => {
       setTitleState(value);

@@ -67,7 +67,7 @@ export default function LecturerLibraryTrackingPage() {
   const summaries = useMemo(() => summarizeLibraryStatuses(groups), [groups]);
 
   return (
-    <ShellLayout title="Library Tracking" subtitle="Review cases that have been forwarded to library review">
+    <ShellLayout title="Library Tracking" subtitle="Review publications that have been forwarded to library review">
       {error && <div className="alert alert-danger">{error}</div>}
 
       <div className="d-flex flex-wrap align-items-center gap-2 mb-4">
@@ -96,8 +96,8 @@ export default function LecturerLibraryTrackingPage() {
           <div className="su-empty-icon">
             <PortalIcon src={lecturerSidebarIcons.library} size={40} />
           </div>
-          <h5>No Cases in Library Review</h5>
-          <p className="text-muted">No cases are currently in library review for {year}.</p>
+          <h5>No Publications in Library Review</h5>
+          <p className="text-muted">No publications are currently in library review for {year}.</p>
         </div>
       )}
 
@@ -129,7 +129,7 @@ export default function LecturerLibraryTrackingPage() {
                       </div>
                     </div>
                     <span className="badge bg-primary-subtle text-primary-emphasis" style={{ borderRadius: '999px' }}>
-                      {group.cases.length} case{group.cases.length > 1 ? 's' : ''}
+                      {group.cases.length} publication{group.cases.length > 1 ? 's' : ''}
                     </span>
                   </div>
                   <div className="d-flex gap-2 flex-wrap mt-2">

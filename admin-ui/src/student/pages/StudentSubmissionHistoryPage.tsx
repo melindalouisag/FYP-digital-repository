@@ -46,7 +46,7 @@ export default function StudentSubmissionHistoryPage() {
         style={{ borderRadius: '999px' }}
         onClick={() => navigate(caseId ? `/student/cases/${caseId}` : '/student/submissions')}
       >
-        Return to Case Detail
+        Return to Publication Detail
       </button>
 
       {loading && (
@@ -61,7 +61,7 @@ export default function StudentSubmissionHistoryPage() {
         <div className="su-card">
           <div className="card-body p-4">
             <h3 className="h6 su-page-title mb-2">Submission History</h3>
-            <p className="text-muted small mb-0">No submission versions have been uploaded for this case.</p>
+            <p className="text-muted small mb-0">No submission versions have been uploaded for this publication.</p>
           </div>
         </div>
       )}

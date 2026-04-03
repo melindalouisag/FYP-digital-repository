@@ -1,3 +1,4 @@
+import { CalendarDashboardPanel } from '../../calendar/CalendarDashboardPanel';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ShellLayout from '../../ShellLayout';
@@ -56,7 +57,7 @@ export default function AdminDashboardPage() {
     {
       title: 'Submission Review Queue',
       value: dashboard.submissionReviewQueueCount,
-      detail: 'Cases awaiting library checklist review',
+      detail: 'Publications awaiting library checklist review',
       onClick: () => navigate('/admin/review'),
     },
     {
@@ -68,7 +69,7 @@ export default function AdminDashboardPage() {
     {
       title: 'Publishing Queue',
       value: dashboard.publishingQueueCount,
-      detail: 'Cases ready for repository release',
+      detail: 'Publications ready for repository release',
       onClick: () => navigate('/admin/publish'),
     },
   ];
@@ -87,8 +88,8 @@ export default function AdminDashboardPage() {
             {loading
               ? 'Loading dashboard data.'
               : dashboard.activeCaseCount > 0
-                ? 'Based on active repository workflow cases'
-                : 'No active repository workflow cases.'}
+                ? 'Based on active repository workflow records'
+                : 'No active repository workflow records.'}
           </p>
         </DashboardPanel>
 
@@ -100,6 +101,10 @@ export default function AdminDashboardPage() {
             </button>
           </DashboardPanel>
         ))}
+      </div>
+
+      <div className="mb-4">
+        <CalendarDashboardPanel navigatePath="/admin/calendar" />
       </div>
 
       <div className="row g-3">
@@ -145,7 +150,7 @@ export default function AdminDashboardPage() {
             {loading ? (
               <p className="su-dashboard-empty-copy mb-0">Loading dashboard data.</p>
             ) : dashboard.stageDistribution.length === 0 ? (
-              <p className="su-dashboard-empty-copy mb-0">No workflow cases available.</p>
+              <p className="su-dashboard-empty-copy mb-0">No workflow records available.</p>
             ) : (
               <div className="su-dashboard-bars">
                 {dashboard.stageDistribution.map((item) => (

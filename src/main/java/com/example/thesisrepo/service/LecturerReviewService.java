@@ -220,7 +220,7 @@ public class LecturerReviewService {
       lecturer,
       Role.LECTURER,
       AuditEventType.SUPERVISOR_FORWARDED_TO_LIBRARY,
-      "Supervisor approved and forwarded case to library"
+      "Supervisor approved and forwarded publication to library"
     );
 
     entityManager.flush();

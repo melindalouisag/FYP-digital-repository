@@ -35,7 +35,7 @@ export function RegistrationForm({ form }: RegistrationFormProps) {
         </select>
         <div className="form-text">
           {form.isEditMode
-            ? 'Publication type cannot be changed for an existing case.'
+            ? 'Publication type cannot be changed for an existing registration.'
             : 'Only THESIS and ARTICLE are currently enabled.'}
         </div>
         {form.errors.publicationType && <div className="text-danger small mt-1">{form.errors.publicationType}</div>}
@@ -159,13 +159,13 @@ export function RegistrationForm({ form }: RegistrationFormProps) {
       )}
 
       <div className="col-12 d-flex flex-wrap gap-2">
-        <button className="btn btn-outline-primary" type="submit" disabled={form.saving || form.loadingSupervisors || form.loadingPage} style={{ borderRadius: '999px', padding: '0.5rem 1.5rem' }}>
+        <button className="btn btn-outline-primary" type="submit" disabled={form.saving || form.loadingSupervisors || form.loadingPage || form.registrationDeadlinePassed} style={{ borderRadius: '999px', padding: '0.5rem 1.5rem' }}>
           {form.saving ? 'Saving...' : (form.isEditMode ? 'Save Changes' : 'Save Draft')}
         </button>
         <button
           className="btn btn-primary"
           type="button"
-          disabled={form.saving || form.loadingSupervisors || form.loadingPage}
+          disabled={form.saving || form.loadingSupervisors || form.loadingPage || form.registrationDeadlinePassed}
           onClick={() => void form.submitForApproval()}
           style={{ borderRadius: '999px', padding: '0.5rem 1.5rem' }}
         >

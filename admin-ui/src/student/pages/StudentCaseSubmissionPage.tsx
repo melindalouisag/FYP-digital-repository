@@ -1,3 +1,10 @@
+import { calendarApi } from '../../lib/api/calendar';
+import {
+  findLatestDeadline,
+  formatCalendarEventSchedule,
+  getDeadlineBlockMessage,
+  isDeadlinePassed,
+} from '../../calendar/calendarUtils';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import ShellLayout from '../../ShellLayout';
@@ -8,7 +15,7 @@ import DownloadFilenameLink from '../../lib/components/DownloadFilenameLink';
 import KeywordChipInput from '../../lib/components/KeywordChipInput';
 import { useAuth } from '../../lib/context/AuthContext';
 import { joinKeywordTokens, splitKeywordString } from '../../lib/keywords';
-import type { CaseDetailPayload, SubmissionVersion } from '../../lib/workflowTypes';
+import type { CalendarEvent, CaseDetailPayload, SubmissionVersion } from '../../lib/workflowTypes';
 import {
   canUploadSubmission,
   formatStatus,
@@ -23,6 +30,7 @@ export default function StudentCaseSubmissionPage() {
   const { user } = useAuth();
   const [detail, setDetail] = useState<CaseDetailPayload | null>(null);
   const [versions, setVersions] = useState<SubmissionVersion[]>([]);
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [meta, setMeta] = useState<SubmissionMetaPayload>({
     metadataTitle: '',
@@ -65,6 +73,17 @@ export default function StudentCaseSubmissionPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    const loadCalendar = async () => {
+      try {
+        setCalendarEvents(await calendarApi.listEvents());
+      } catch {
+        setCalendarEvents([]);
+      }
+    };
+    void loadCalendar();
+  }, []);
 
   useEffect(() => {
     const loadFaculties = async () => {
@@ -111,6 +130,11 @@ export default function StudentCaseSubmissionPage() {
     () => (detail ? canUploadSubmission(detail.case.status) : false),
     [detail]
   );
+  const submissionDeadline = useMemo(
+    () => (detail ? findLatestDeadline(calendarEvents, detail.case.type, 'SUBMISSION_DEADLINE') : null),
+    [calendarEvents, detail]
+  );
+  const submissionDeadlinePassed = isDeadlinePassed(submissionDeadline);
   const hasPreviousUploads = versions.length > 0;
   const useFacultySelect = faculties.length > 0 && !facultyLoadError;
 
@@ -154,6 +178,10 @@ export default function StudentCaseSubmissionPage() {
       setError(keywordValidationError);
       return;
     }
+    if (submissionDeadlinePassed) {
+      setError(getDeadlineBlockMessage('SUBMISSION_DEADLINE'));
+      return;
+    }
     if (!uploadAllowed) {
       setError('You can upload only after registration verification or when a revision has been requested.');
       return;
@@ -188,6 +216,11 @@ export default function StudentCaseSubmissionPage() {
       {loading && <div className="alert alert-info">Loading submission page...</div>}
       {error && <div className="alert alert-danger">{error}</div>}
       {message && <div className="alert alert-success">{message}</div>}
+      {submissionDeadlinePassed && submissionDeadline ? (
+        <div className="alert alert-danger">
+          The submission deadline has passed. {formatCalendarEventSchedule(submissionDeadline)}.
+        </div>
+      ) : null}
 
       {detail && (
         <div className="card shadow-sm mb-3">
@@ -196,16 +229,20 @@ export default function StudentCaseSubmissionPage() {
               <div className="small text-uppercase text-muted mb-1">Current status</div>
               <span className={`badge status-badge ${statusBadgeClass(detail.case.status)}`}>{formatStatus(detail.case.status)}</span>
               <div className="text-muted small mt-2">
-                {uploadAllowed
+                {submissionDeadlinePassed
+                  ? 'The submission deadline has passed for this publication.'
+                  : uploadAllowed
                   ? (hasPreviousUploads
                     ? 'Upload the revised PDF and confirm that the metadata below matches the latest version.'
                     : 'Upload the first approved PDF and complete the repository metadata below.')
                   : getStudentCaseGuidance(detail.case.status)}
               </div>
             </div>
-            {!uploadAllowed && (
+            {submissionDeadlinePassed ? (
+              <div className="text-muted small">Library submission deadlines block new uploads after the scheduled time.</div>
+            ) : !uploadAllowed ? (
               <div className="text-muted small">Uploads open after registration verification or when a supervisor or library revision is requested.</div>
-            )}
+            ) : null}
           </div>
         </div>
       )}
@@ -214,7 +251,7 @@ export default function StudentCaseSubmissionPage() {
         <div className="card-body">
           <h3 className="h6 mb-2">Upload File and Metadata</h3>
           <p className="text-muted small mb-3">
-            The title, author, keywords, and abstract entered here are used for the repository record if this case is published.
+            The title, author, keywords, and abstract entered here are used for the repository record if this publication is published.
           </p>
           <div className="row g-3">
             <div className="col-md-6">
@@ -227,7 +264,7 @@ export default function StudentCaseSubmissionPage() {
                   setFile(event.target.files?.[0] ?? null);
                   setError('');
                 }}
-                disabled={!uploadAllowed || uploading}
+                disabled={!uploadAllowed || submissionDeadlinePassed || uploading}
               />
               <div className="form-text">Only PDF files, max 25 MB.</div>
             </div>
@@ -237,6 +274,7 @@ export default function StudentCaseSubmissionPage() {
                 className="form-control"
                 value={meta.metadataTitle ?? ''}
                 onChange={(event) => setMeta((prev) => ({ ...prev, metadataTitle: event.target.value }))}
+                disabled={!uploadAllowed || submissionDeadlinePassed || uploading}
               />
             </div>
             <div className="col-md-6">
@@ -245,6 +283,7 @@ export default function StudentCaseSubmissionPage() {
                 className="form-control"
                 value={meta.metadataAuthors ?? ''}
                 onChange={(event) => setMeta((prev) => ({ ...prev, metadataAuthors: event.target.value }))}
+                disabled={!uploadAllowed || submissionDeadlinePassed || uploading}
               />
             </div>
             <div className="col-md-4">
@@ -258,6 +297,7 @@ export default function StudentCaseSubmissionPage() {
                 onChange={(event) =>
                   setMeta((prev) => ({ ...prev, metadataYear: event.target.value ? Number(event.target.value) : undefined }))
                 }
+                disabled={!uploadAllowed || submissionDeadlinePassed || uploading}
               />
             </div>
             <div className="col-md-4">
@@ -267,6 +307,7 @@ export default function StudentCaseSubmissionPage() {
                   className="form-select"
                   value={meta.metadataFaculty ?? ''}
                   onChange={(event) => setMeta((prev) => ({ ...prev, metadataFaculty: event.target.value }))}
+                  disabled={!uploadAllowed || submissionDeadlinePassed || uploading}
                 >
                   <option value="">Select faculty</option>
                   {faculties.map((item) => (
@@ -278,6 +319,7 @@ export default function StudentCaseSubmissionPage() {
                   className="form-control"
                   value={meta.metadataFaculty ?? ''}
                   onChange={(event) => setMeta((prev) => ({ ...prev, metadataFaculty: event.target.value }))}
+                  disabled={!uploadAllowed || submissionDeadlinePassed || uploading}
                 />
               )}
             </div>
@@ -287,6 +329,7 @@ export default function StudentCaseSubmissionPage() {
                 className="form-control"
                 value={meta.metadataStudyProgram ?? ''}
                 onChange={(event) => setMeta((prev) => ({ ...prev, metadataStudyProgram: event.target.value }))}
+                disabled={!uploadAllowed || submissionDeadlinePassed || uploading}
               />
             </div>
             <div className="col-12">
@@ -299,7 +342,7 @@ export default function StudentCaseSubmissionPage() {
                     setError('');
                   }
                 }}
-                disabled={!uploadAllowed || uploading}
+                disabled={!uploadAllowed || submissionDeadlinePassed || uploading}
                 placeholder="Type one keyword and press Enter"
               />
               {keywordError ? (
@@ -315,10 +358,11 @@ export default function StudentCaseSubmissionPage() {
                 rows={4}
                 value={meta.abstractText ?? ''}
                 onChange={(event) => setMeta((prev) => ({ ...prev, abstractText: event.target.value }))}
+                disabled={!uploadAllowed || submissionDeadlinePassed || uploading}
               />
             </div>
             <div className="col-12">
-              <button className="btn btn-primary" onClick={() => void onUpload()} disabled={!uploadAllowed || uploading}>
+              <button className="btn btn-primary" onClick={() => void onUpload()} disabled={!uploadAllowed || submissionDeadlinePassed || uploading}>
                 {uploading
                   ? (hasPreviousUploads ? 'Uploading Revised File...' : 'Uploading First File...')
                   : (hasPreviousUploads ? 'Upload Revised File' : 'Upload First File')}
@@ -358,7 +402,7 @@ export default function StudentCaseSubmissionPage() {
                 {versions.length === 0 && (
                   <tr>
                     <td colSpan={4} className="text-muted">
-                      No files have been uploaded for this case yet.
+                      No files have been uploaded for this publication yet.
                     </td>
                   </tr>
                 )}

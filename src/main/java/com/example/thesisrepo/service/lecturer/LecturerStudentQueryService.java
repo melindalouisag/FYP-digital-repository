@@ -131,7 +131,7 @@ public class LecturerStudentQueryService {
     SubmissionVersion submission = submissionVersions.findById(submissionId)
       .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Submission not found"));
     if (!submission.getPublicationCase().getId().equals(publicationCase.getId())) {
-      throw new ResponseStatusException(BAD_REQUEST, "Submission does not belong to this case");
+      throw new ResponseStatusException(BAD_REQUEST, "Submission does not belong to this publication");
     }
     return submissionDownloadResponseService.buildResponse(submission);
   }

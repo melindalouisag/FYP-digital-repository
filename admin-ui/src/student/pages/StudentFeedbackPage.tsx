@@ -47,7 +47,7 @@ export default function StudentFeedbackPage() {
         style={{ borderRadius: '999px' }}
         onClick={() => navigate(caseId ? `/student/cases/${caseId}` : '/student/submissions')}
       >
-        Return to Case Detail
+        Return to Publication Detail
       </button>
 
       {loading && (

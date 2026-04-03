@@ -23,7 +23,7 @@ const WORKFLOW_STATUS_PRESENTATION: Record<CaseStatus, WorkflowStatusPresentatio
   REGISTRATION_DRAFT: {
     label: 'Registration draft',
     description: 'Registration details are saved but not submitted yet.',
-    nextAction: 'Complete the registration details, confirm the supervisor, and submit the same case for approval.',
+    nextAction: 'Complete the registration details, confirm the supervisor, and submit this registration for approval.',
     tone: 'neutral',
     actor: 'Student',
     stage: 'registration',
@@ -33,7 +33,7 @@ const WORKFLOW_STATUS_PRESENTATION: Record<CaseStatus, WorkflowStatusPresentatio
   REGISTRATION_PENDING: {
     label: 'Waiting for supervisor approval',
     description: 'The registration has been submitted and is awaiting supervisor review.',
-    nextAction: 'No student action is needed right now. Monitor the case for supervisor feedback.',
+    nextAction: 'No student action is needed right now. Monitor this registration for supervisor feedback.',
     tone: 'warning',
     actor: 'Supervisor',
     stage: 'registration',
@@ -63,7 +63,7 @@ const WORKFLOW_STATUS_PRESENTATION: Record<CaseStatus, WorkflowStatusPresentatio
   UNDER_SUPERVISOR_REVIEW: {
     label: 'Under supervisor review',
     description: 'Your latest submission is being reviewed by the assigned supervisor.',
-    nextAction: 'Wait for supervisor review and check the case timeline for updates.',
+    nextAction: 'Wait for supervisor review and check the activity timeline for updates.',
     tone: 'warning',
     actor: 'Supervisor',
     stage: 'supervisor',
@@ -82,8 +82,8 @@ const WORKFLOW_STATUS_PRESENTATION: Record<CaseStatus, WorkflowStatusPresentatio
   },
   READY_TO_FORWARD: {
     label: 'Ready for library handoff',
-    description: 'Supervisor review is complete and the case is ready to move into library review.',
-    nextAction: 'No student action is needed. The case is waiting for the library handoff.',
+    description: 'Supervisor review is complete and the publication is ready to move into library review.',
+    nextAction: 'No student action is needed. This publication is waiting for the library handoff.',
     tone: 'warning',
     actor: 'Supervisor',
     stage: 'supervisor',
@@ -92,7 +92,7 @@ const WORKFLOW_STATUS_PRESENTATION: Record<CaseStatus, WorkflowStatusPresentatio
   },
   FORWARDED_TO_LIBRARY: {
     label: 'Forwarded to library',
-    description: 'The case has been handed to the library and will enter review.',
+    description: 'The publication has been handed to the library and will enter review.',
     nextAction: 'Wait for library review.',
     tone: 'warning',
     actor: 'Library',
@@ -103,7 +103,7 @@ const WORKFLOW_STATUS_PRESENTATION: Record<CaseStatus, WorkflowStatusPresentatio
   UNDER_LIBRARY_REVIEW: {
     label: 'Under library review',
     description: 'Library staff are checking the submission, metadata, and checklist requirements.',
-    nextAction: 'Wait for library review. Open the case if you need the latest checklist history.',
+    nextAction: 'Wait for library review. Open the publication record if you need the latest checklist history.',
     tone: 'warning',
     actor: 'Library',
     stage: 'library',
@@ -122,7 +122,7 @@ const WORKFLOW_STATUS_PRESENTATION: Record<CaseStatus, WorkflowStatusPresentatio
   },
   APPROVED_FOR_CLEARANCE: {
     label: 'Approved for clearance',
-    description: 'Submission review is complete and the case is ready for the final student clearance step.',
+    description: 'Submission review is complete and the publication is ready for the final student clearance step.',
     nextAction: 'Open the clearance form and submit it.',
     tone: 'success',
     actor: 'Student',
@@ -172,8 +172,8 @@ const WORKFLOW_STATUS_PRESENTATION: Record<CaseStatus, WorkflowStatusPresentatio
   },
   REJECTED: {
     label: 'Registration rejected',
-    description: 'The registration was rejected and must be corrected on the same case.',
-    nextAction: 'Review the feedback, update the registration details, and resubmit the same case.',
+    description: 'The registration was rejected and must be corrected on the same record.',
+    nextAction: 'Review the feedback, update the registration details, and resubmit the same registration.',
     tone: 'danger',
     actor: 'Student',
     stage: 'rejected',

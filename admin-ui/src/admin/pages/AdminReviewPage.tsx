@@ -42,7 +42,7 @@ export default function AdminReviewPage() {
   ), [groups]);
 
   return (
-    <ShellLayout title="Submission Review" subtitle="Review library-stage cases grouped by student">
+    <ShellLayout title="Submission Review" subtitle="Review library-stage publications grouped by student">
       {error && <div className="alert alert-danger">{error}</div>}
 
       {loading && (
@@ -57,15 +57,15 @@ export default function AdminReviewPage() {
           <div className="su-empty-icon">
             <PortalIcon src={adminSidebarIcons.submission} size={40} />
           </div>
-          <h5>No Cases Awaiting Library Review</h5>
-          <p className="text-muted">No cases are waiting for library checklist review.</p>
+          <h5>No Publications Awaiting Library Review</h5>
+          <p className="text-muted">No publications are waiting for library checklist review.</p>
         </div>
       )}
 
       {!loading && rows.length > 0 && (
         <div className="mb-3">
           <p className="text-muted small mb-0">
-            Select a student to open case-level checklist work, review history, and final library decisions.
+            Select a student to open publication-level checklist work, review history, and final library decisions.
           </p>
         </div>
       )}
@@ -88,7 +88,7 @@ export default function AdminReviewPage() {
                     </div>
                   </div>
                   <span className="badge bg-primary-subtle text-primary-emphasis" style={{ borderRadius: '999px' }}>
-                    {group.caseCount} case{group.caseCount > 1 ? 's' : ''}
+                    {group.caseCount} publication{group.caseCount > 1 ? 's' : ''}
                   </span>
                 </div>
                 <div className="text-muted small">

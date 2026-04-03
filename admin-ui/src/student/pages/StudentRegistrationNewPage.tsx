@@ -9,7 +9,7 @@ export default function StudentRegistrationNewPage() {
   return (
     <ShellLayout
       title={form.isEditMode ? 'Edit Publication Registration' : 'New Publication Registration'}
-      subtitle={form.isEditMode ? 'Update the same case, then resubmit it when your revisions are complete' : 'Prepare the registration details now, then submit the same case when everything is complete'}
+      subtitle={form.isEditMode ? 'Update this registration, then resubmit it when your revisions are complete' : 'Prepare the registration details now, then submit the same registration when everything is complete'}
     >
       <div className="su-card fade-in">
         <div className="card-body p-4">
@@ -17,6 +17,8 @@ export default function StudentRegistrationNewPage() {
             isEditMode={form.isEditMode}
             loadingPage={form.loadingPage}
             thesisBlocked={form.thesisBlocked}
+            registrationDeadlinePassed={form.registrationDeadlinePassed}
+            registrationDeadlineLabel={form.registrationDeadlineLabel}
             preferredThesisCaseId={form.preferredThesisCase?.id}
             currentStatus={form.currentStatus}
             onOpenPreferredCase={form.openPreferredThesisCase}

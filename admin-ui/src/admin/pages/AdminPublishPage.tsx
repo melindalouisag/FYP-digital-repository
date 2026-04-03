@@ -71,7 +71,7 @@ export default function AdminPublishPage() {
   const displayCaseTitle = (value?: string | null) => value?.trim() || 'Untitled submission';
 
   return (
-    <ShellLayout title="Publishing" subtitle="Review cases that are ready for repository release and publish them when metadata is complete">
+    <ShellLayout title="Publishing" subtitle="Review publications that are ready for repository release and publish them when metadata is complete">
       {error && <div className="alert alert-danger" style={{ borderRadius: '0.75rem' }}>{error}</div>}
       {message && <div className="alert alert-success" style={{ borderRadius: '0.75rem' }}>{message}</div>}
 
@@ -87,15 +87,15 @@ export default function AdminPublishPage() {
           <div className="su-empty-icon">
             <PortalIcon src={adminSidebarIcons.publishing} size={40} />
           </div>
-          <h5>No Cases Ready for Publication</h5>
-          <p className="text-muted">No cases are ready for publication at this time.</p>
+          <h5>No Publications Ready for Publication</h5>
+          <p className="text-muted">No publications are ready for publication at this time.</p>
         </div>
       )}
 
       {!loading && cases.length > 0 && (
         <div className="mb-3">
           <p className="text-muted small mb-0">
-            Open a case to review the latest submission and metadata, or publish directly from this queue when everything is complete.
+            Open a publication to review the latest submission and metadata, or publish directly from this queue when everything is complete.
           </p>
         </div>
       )}
