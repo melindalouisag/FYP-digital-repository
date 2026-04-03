@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { NavLink } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import ThemeSwitch from './theme/ThemeSwitch';
 import { useAuth } from './lib/context/AuthContext';
 import { useTheme } from './theme/ThemeContext';
@@ -23,7 +23,6 @@ function roleLinks(role?: string): LinkItem[] {
       { label: 'Calendar', path: '/student/calendar' },
       { label: 'Publication Registration', path: '/student/registrations', icon: '/icons/student/registration.png' },
       { label: 'Submission', path: '/student/submissions', icon: '/icons/student/submission.png' },
-      { label: 'Repository Search', path: '/', icon: '/icons/admin/search.png' },
     ];
   }
   if (role === 'LECTURER') {
@@ -33,7 +32,6 @@ function roleLinks(role?: string): LinkItem[] {
       { label: 'Registration Approval', path: '/lecturer/approvals', icon: '/icons/lecturer/maps-and-flags.png' },
       { label: 'Submission Review', path: '/lecturer/review', icon: '/icons/lecturer/submission.png' },
       { label: 'My Students', path: '/lecturer/students', icon: '/icons/lecturer/students.png' },
-      { label: 'Repository Search', path: '/', icon: '/icons/admin/search.png' },
     ];
   }
   if (role === 'ADMIN') {
@@ -45,10 +43,9 @@ function roleLinks(role?: string): LinkItem[] {
       { label: 'Clearance', path: '/admin/clearance', icon: '/icons/admin/clearance.png' },
       { label: 'Publishing', path: '/admin/publish', icon: '/icons/admin/publishing.png' },
       { label: 'Templates', path: '/admin/checklists', icon: '/icons/admin/template.png' },
-      { label: 'Repository Search', path: '/', icon: '/icons/admin/search.png' },
     ];
   }
-  return [{ label: 'Repository Search', path: '/', icon: '/icons/admin/search.png' }];
+  return [];
 }
 
 export default function ShellLayout({ title, subtitle, children }: ShellLayoutProps) {
@@ -83,13 +80,17 @@ export default function ShellLayout({ title, subtitle, children }: ShellLayoutPr
     <div className="min-vh-100 d-flex flex-column">
       <header className="su-app-header sticky-top">
         <div className="container-fluid px-3 px-lg-4 py-2 d-flex flex-wrap align-items-center justify-content-between gap-2">
-          <div className="d-flex align-items-center gap-2">
+          <Link
+            to="/"
+            className="d-flex align-items-center gap-2 text-decoration-none su-repository-brand-link"
+            aria-label="Go to Digital Repository home"
+          >
             <div className="su-logo-circle">SU</div>
             <div>
               <div className="fw-semibold" style={{ fontSize: '0.95rem' }}>Sampoerna University</div>
               <div className="text-white-50" style={{ fontSize: '0.72rem' }}>Digital Repository</div>
             </div>
-          </div>
+          </Link>
           <div className="d-flex align-items-center gap-3">
             <div className="d-flex align-items-center gap-2">
               <span className="small text-white-50">Dark mode</span>

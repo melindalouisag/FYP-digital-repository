@@ -30,6 +30,7 @@ export function CalendarDashboardPanel({ navigatePath, hideHeader = false }: Cal
   const openCalendar = (dateValue?: string) => {
     navigate(dateValue ? `${navigatePath}?date=${dateValue}` : navigatePath);
   };
+  const upcomingEvents = calendar.upcomingEvents.slice(0, 3);
 
   return (
     <DashboardPanel
@@ -94,9 +95,9 @@ export function CalendarDashboardPanel({ navigatePath, hideHeader = false }: Cal
             </div>
             <div className="su-calendar-divider" />
 
-            {calendar.upcomingEvents.length > 0 ? (
+            {upcomingEvents.length > 0 ? (
               <div className="su-calendar-todo-list">
-                {calendar.upcomingEvents.map((event) => {
+                {upcomingEvents.map((event) => {
                   const detailText = getCalendarEventDetailsText(event);
                   return (
                     <button

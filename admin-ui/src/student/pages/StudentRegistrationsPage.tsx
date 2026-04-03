@@ -59,22 +59,28 @@ export default function StudentRegistrationsPage() {
   const hasNext = page + 1 < totalPages;
 
   return (
-    <ShellLayout
-      title="Publication Registration"
-      subtitle={(
-        <>
-          How to use this page:
-          <br />
-          1. Click "Create New Registration" to start a new publication registration.
-          <br />
-          2. Fill in the registration form completely.
-          <br />
-          3. Submit the registration for approval.
-          <br />
-          4. Return to this page to track the status or reopen returned registrations.
-        </>
-      )}
-    >
+    <ShellLayout title="Publication Registration">
+      <section className="su-card su-registration-info-card mb-4">
+        <h3 className="su-registration-info-title">About Publication Registration</h3>
+        <p className="su-registration-info-copy">
+          Publication Registration is used to record your permission for Sampoerna University to include your thesis,
+          article, or other academic work in the University Library’s Digital Repository for education and research use.
+          This page is for registration only and is not the place to upload your final document. After the publication
+          registration is finished, continue with your document submission through the Submission page.
+        </p>
+
+        <h4 className="su-registration-info-subtitle">How to use this page</h4>
+        <ol className="su-registration-info-list mb-0">
+          <li>Click Create New Registration to start a new publication registration.</li>
+          <li>Complete the form with the required publication information carefully.</li>
+          <li>Review your details, then submit the registration for approval.</li>
+          <li>Return to this page to monitor the registration status.</li>
+          <li className="su-registration-info-emphasis">
+            After the registration is completed, continue your file upload through the Submission page.
+          </li>
+        </ol>
+      </section>
+
       <div className="d-flex justify-content-end align-items-center mb-4">
         <button className="btn btn-primary" style={{ borderRadius: '999px' }} onClick={() => navigate('/student/registrations/new')}>
           Create New Registration
