@@ -78,7 +78,7 @@ describe('RepositorySearchPage', () => {
     });
 
     expect(
-      screen.getByText('File download requires sign-in.')
-    ).toBeInTheDocument();
+      screen.queryByText('File download requires sign-in.')
+    ).not.toBeInTheDocument();
   });
 });

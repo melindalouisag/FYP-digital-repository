@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import ThemeSwitch from '../../theme/ThemeSwitch';
 import { useAuth } from '../../lib/context/AuthContext';
 import { useTheme } from '../../theme/ThemeContext';
@@ -8,7 +8,7 @@ import { RepositorySearchResults } from '../components/RepositorySearchResults';
 import { useRepositorySearch } from '../useRepositorySearch';
 
 export default function RepositorySearchPage() {
-  const { user, logout, loading } = useAuth();
+  const { user, logout } = useAuth();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const search = useRepositorySearch();
@@ -17,13 +17,13 @@ export default function RepositorySearchPage() {
     <div className="min-vh-100 su-repository-page">
       <header className="su-app-header">
         <div className="container py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
-          <div className="d-flex align-items-center gap-2">
+          <Link to="/" className="d-flex align-items-center gap-2 text-decoration-none su-repository-brand-link" aria-label="Go to Digital Repository home">
             <div className="su-logo-circle">SU</div>
             <div>
               <h1 className="h5 mb-0 text-white fw-bold">Sampoerna University</h1>
-              <small className="text-white-50">Digital Repository Portal</small>
+              <small className="text-white-50">Digital Repository</small>
             </div>
-          </div>
+          </Link>
           <div className="d-flex flex-wrap align-items-center gap-3">
             <div className="d-flex align-items-center gap-2 text-white">
               <span className="small text-white-50">Dark mode</span>
@@ -120,7 +120,6 @@ export default function RepositorySearchPage() {
           results={search.results}
           loading={search.loading}
           totalElements={search.pageData.totalElements}
-          showPublicAccessNotice={!loading && !user}
         />
 
         <RepositorySearchPagination
@@ -138,7 +137,7 @@ export default function RepositorySearchPage() {
 
         <footer className="su-repository-footer text-center text-muted small py-4 mt-4">
           <div className="fw-semibold">Sampoerna University Library</div>
-          <div>© {new Date().getFullYear()} — Digital Repository Portal</div>
+          <div>© {new Date().getFullYear()} — Digital Repository</div>
         </footer>
       </div>
     </div>

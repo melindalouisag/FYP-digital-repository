@@ -5,7 +5,6 @@ interface RepositorySearchResultsProps {
   results: RepositoryItemSummary[];
   loading: boolean;
   totalElements: number;
-  showPublicAccessNotice: boolean;
 }
 
 function SearchIcon({ size = 18, opacity = 0.8 }: { size?: number; opacity?: number }) {
@@ -32,7 +31,6 @@ export function RepositorySearchResults({
   results,
   loading,
   totalElements,
-  showPublicAccessNotice,
 }: RepositorySearchResultsProps) {
   return (
     <>
@@ -47,12 +45,6 @@ export function RepositorySearchResults({
           {totalElements} item{totalElements !== 1 ? 's' : ''}
         </span>
       </div>
-
-      {showPublicAccessNotice && (
-        <div className="alert border-0 su-repository-access-note" role="note">
-          File download requires sign-in.
-        </div>
-      )}
 
       <div className="vstack gap-3">
         {results.map((item, index) => (

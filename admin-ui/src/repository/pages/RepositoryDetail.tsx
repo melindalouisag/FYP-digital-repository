@@ -2,9 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { publicRepositoryApi, type RepositoryItemDetail } from '../../lib/api/publicRepository';
 import ThemeSwitch from '../../theme/ThemeSwitch';
-import PortalIcon from '../../lib/components/PortalIcon';
 import { useAuth } from '../../lib/context/AuthContext';
-import { adminSidebarIcons } from '../../lib/portalIcons';
 import { useTheme } from '../../theme/ThemeContext';
 
 export default function RepositoryDetail() {
@@ -72,9 +70,6 @@ export default function RepositoryDetail() {
     return (
       <div className="container py-4">
         <div className="alert alert-danger">{error || 'Repository item was not found.'}</div>
-        <button className="btn btn-outline-secondary btn-sm" onClick={() => navigate('/')}>
-          ← Back to Repository
-        </button>
       </div>
     );
   }
@@ -83,13 +78,13 @@ export default function RepositoryDetail() {
     <div className="min-vh-100" style={{ background: 'linear-gradient(180deg, #f0f6fa 0%, #fff 30%)' }}>
       <header className="su-app-header">
         <div className="container py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
-          <div className="d-flex align-items-center gap-2">
+          <Link to="/" className="d-flex align-items-center gap-2 text-decoration-none su-repository-brand-link" aria-label="Go to Digital Repository home">
             <div className="su-logo-circle">SU</div>
             <div>
               <h1 className="h5 mb-0 text-white fw-bold">Sampoerna University</h1>
-              <small className="text-white-50">Publication Detail</small>
+              <small className="text-white-50">Digital Repository</small>
             </div>
-          </div>
+          </Link>
           <div className="d-flex flex-wrap align-items-center gap-3">
             <div className="d-flex align-items-center gap-2 text-white">
               <span className="small text-white-50">Dark mode</span>
@@ -135,18 +130,6 @@ export default function RepositoryDetail() {
       </header>
 
       <div className="container py-4 fade-in">
-        <div className="d-flex justify-content-between align-items-center mb-3 gap-2">
-          <button className="btn btn-outline-secondary btn-sm" style={{ borderRadius: '999px' }} onClick={() => navigate(-1)}>
-            ← Back
-          </button>
-          <Link to="/" className="btn btn-outline-primary btn-sm" style={{ borderRadius: '999px' }}>
-            <span className="su-label-with-icon">
-              <PortalIcon src={adminSidebarIcons.search} />
-              <span>Back to Repository</span>
-            </span>
-          </Link>
-        </div>
-
         <div className="su-card fade-in">
           <div className="card-body p-4">
             <h2 className="su-page-title mb-3" style={{ fontSize: '1.5rem', lineHeight: 1.3 }}>{item.title}</h2>
@@ -205,7 +188,7 @@ export default function RepositoryDetail() {
 
         <footer className="text-center text-muted small py-4">
           <div className="fw-semibold">Sampoerna University Library</div>
-          <div>© {new Date().getFullYear()} — Digital Repository Portal</div>
+          <div>© {new Date().getFullYear()} — Digital Repository</div>
         </footer>
       </div>
     </div>

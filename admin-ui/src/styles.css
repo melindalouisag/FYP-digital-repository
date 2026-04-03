@@ -1291,6 +1291,22 @@ body {
   background: linear-gradient(180deg, #f0f6fa 0%, #fff 30%);
 }
 
+.su-repository-brand-link {
+  color: inherit;
+  border-radius: 0.9rem;
+  padding: 0.15rem 0.25rem;
+  margin: -0.15rem -0.25rem;
+  transition: background var(--su-transition), transform var(--su-transition), box-shadow var(--su-transition);
+}
+
+.su-repository-brand-link:hover,
+.su-repository-brand-link:focus-visible {
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+  outline: none;
+}
+
 .su-hero {
   background: linear-gradient(135deg, #0f2f4a 0%, #174a6f 50%, #1a5c82 100%);
   color: #fff;
@@ -1508,6 +1524,12 @@ body {
   background: linear-gradient(90deg, #0c1520 0%, #122132 100%);
   border-bottom-color: rgba(156, 176, 193, 0.12);
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+}
+
+[data-theme="dark"] .su-repository-brand-link:hover,
+[data-theme="dark"] .su-repository-brand-link:focus-visible {
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.2);
 }
 
 [data-theme="dark"] .su-repository-page .su-app-header .btn-outline-light {
