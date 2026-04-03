@@ -25,7 +25,7 @@ export default function StudentDashboardPage() {
           nextStepCases={dashboard.nextStepCases}
           onNavigate={navigate}
         />
-        <CalendarDashboardPanel navigatePath="/student/calendar" />
+        <CalendarDashboardPanel navigatePath="/student/calendar" hideHeader />
       </div>
 
       <StudentCaseListTable

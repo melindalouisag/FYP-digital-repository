@@ -140,44 +140,11 @@ export default function PortalCalendarPage() {
 
         <aside className="su-calendar-sidebar-column">
           <div className="su-card su-calendar-sidebar-card">
-            <div className="card-body p-3">
-              <div className="su-calendar-mini-toolbar">
-                <button
-                  className="su-calendar-chevron-button"
-                  type="button"
-                  aria-label="Previous month"
-                  onClick={() => setCurrentMonth((current) => shiftMonth(current, -1))}
-                >
-                  ‹
-                </button>
-                <div className="su-calendar-mini-title">{formatMonthLabel(currentMonth)}</div>
-                <button
-                  className="su-calendar-chevron-button"
-                  type="button"
-                  aria-label="Next month"
-                  onClick={() => setCurrentMonth((current) => shiftMonth(current, 1))}
-                >
-                  ›
-                </button>
-              </div>
-
-              <CalendarMonthGrid
-                currentMonth={currentMonth}
-                events={calendar.events}
-                selectedDate={selectedDate}
-                compact
-                onSelectDate={selectDate}
-              />
-            </div>
-          </div>
-
-          <div className="su-card su-calendar-sidebar-card">
             <div className="card-body p-4">
               <div className="su-calendar-selected-header">
                 <div className="min-w-0">
                   <div className="su-calendar-panel-kicker">Selected date</div>
                   <h3 className="h6 mb-1 su-page-title">{formatCalendarDateLabel(selectedDate)}</h3>
-                  <div className="text-muted small">Visible events scheduled for this date.</div>
                 </div>
                 <button
                   className="su-calendar-add-button"
@@ -234,6 +201,47 @@ export default function PortalCalendarPage() {
                 </div>
               ) : (
                 <p className="text-muted small mb-0">No events scheduled for this date.</p>
+              )}
+            </div>
+          </div>
+
+          <div className="su-card su-calendar-sidebar-card">
+            <div className="card-body p-4">
+              <div className="su-calendar-todo-header">
+                <h3 className="su-calendar-todo-title">To Do</h3>
+              </div>
+              <div className="su-calendar-divider" />
+
+              {calendar.upcomingEvents.length > 0 ? (
+                <div className="su-calendar-todo-list">
+                  {calendar.upcomingEvents.map((event) => {
+                    const detailText = getCalendarEventDetailsText(event);
+                    return (
+                      <button
+                        type="button"
+                        className="su-calendar-todo-item"
+                        key={event.id}
+                        onClick={() => selectDate(event.eventDate)}
+                      >
+                        <div className="d-flex justify-content-between align-items-start gap-2">
+                          <div className="min-w-0">
+                            <div className="su-calendar-todo-item-title">{event.title}</div>
+                            <div className="su-calendar-todo-item-support">
+                              {describeCalendarEvent(event)}
+                              {detailText ? ` • ${detailText}` : ''}
+                            </div>
+                            <div className="su-calendar-todo-item-meta">{formatCalendarEventSchedule(event)}</div>
+                          </div>
+                          <span className={`su-calendar-tag${event.eventType === 'DEADLINE' ? ' is-deadline' : ''}`}>
+                            {getCalendarEventBadgeLabel(event)}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-muted small mb-0">No upcoming events.</p>
               )}
             </div>
           </div>

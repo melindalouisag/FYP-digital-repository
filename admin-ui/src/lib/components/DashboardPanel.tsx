@@ -24,10 +24,12 @@ export default function DashboardPanel({
 
   return (
     <section className={panelClassName}>
-      <div className="su-dashboard-panel-header">
-        <h2 className="su-dashboard-panel-title">{title}</h2>
-        {actions ? <div className="su-dashboard-panel-actions">{actions}</div> : null}
-      </div>
+      {title || actions ? (
+        <div className="su-dashboard-panel-header">
+          <h2 className="su-dashboard-panel-title">{title}</h2>
+          {actions ? <div className="su-dashboard-panel-actions">{actions}</div> : null}
+        </div>
+      ) : null}
       <div className={panelBodyClassName}>{children}</div>
     </section>
   );

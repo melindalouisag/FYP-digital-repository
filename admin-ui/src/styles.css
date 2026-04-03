@@ -598,15 +598,15 @@ body {
 }
 
 .su-calendar-day {
-  min-height: 132px;
+  min-height: 108px;
   border: 1px solid #e2ebf1;
   border-radius: 1rem;
   background: #fff;
-  padding: 0.7rem;
+  padding: 0.58rem;
   text-align: left;
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0.35rem;
   transition: border-color var(--su-transition), transform var(--su-transition), box-shadow var(--su-transition), background var(--su-transition);
 }
 
@@ -869,8 +869,8 @@ body {
   }
 
   .su-calendar-day {
-    min-height: 110px;
-    padding: 0.55rem;
+    min-height: 92px;
+    padding: 0.48rem;
   }
 
   .su-calendar-grid.is-compact .su-calendar-day {

@@ -16,9 +16,10 @@ import { useCalendarEvents } from './useCalendarEvents';
 
 interface CalendarDashboardPanelProps {
   navigatePath: string;
+  hideHeader?: boolean;
 }
 
-export function CalendarDashboardPanel({ navigatePath }: CalendarDashboardPanelProps) {
+export function CalendarDashboardPanel({ navigatePath, hideHeader = false }: CalendarDashboardPanelProps) {
   const navigate = useNavigate();
   const calendar = useCalendarEvents();
   const today = new Date();
@@ -32,8 +33,8 @@ export function CalendarDashboardPanel({ navigatePath }: CalendarDashboardPanelP
 
   return (
     <DashboardPanel
-      title="Calendar"
-      actions={(
+      title={hideHeader ? '' : 'Calendar'}
+      actions={hideHeader ? undefined : (
         <button className="btn btn-link btn-sm text-decoration-none px-0 su-calendar-dashboard-link" type="button" onClick={() => openCalendar()}>
           Open Calendar
         </button>
