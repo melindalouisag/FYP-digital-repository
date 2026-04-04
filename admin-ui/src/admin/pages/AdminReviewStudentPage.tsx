@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ShellLayout from '../../ShellLayout';
 import { adminApi } from '../../lib/api/admin';
-import type { AdminStudentReviewGroup } from '../../lib/workflowTypes';
+import CaseTimeline from '../../lib/components/CaseTimeline';
+import type { AdminStudentReviewGroup, TimelineItem } from '../../lib/workflowTypes';
 import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 
 export default function AdminReviewStudentPage() {
@@ -11,6 +12,10 @@ export default function AdminReviewStudentPage() {
   const [group, setGroup] = useState<AdminStudentReviewGroup | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [timelineOpen, setTimelineOpen] = useState(false);
+  const [timelineLoading, setTimelineLoading] = useState(false);
+  const [timelineError, setTimelineError] = useState('');
+  const [timelineItems, setTimelineItems] = useState<TimelineItem[] | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -31,6 +36,13 @@ export default function AdminReviewStudentPage() {
     void load();
   }, [studentUserId]);
 
+  useEffect(() => {
+    setTimelineOpen(false);
+    setTimelineLoading(false);
+    setTimelineError('');
+    setTimelineItems(null);
+  }, [studentUserId, group?.studentUserId]);
+
   const latestActivity = useMemo(() => {
     if (!group) return null;
     return group.cases.reduce((latest, item) => {
@@ -42,6 +54,58 @@ export default function AdminReviewStudentPage() {
   }, [group]);
 
   const displayCaseTitle = (value?: string | null) => value?.trim() || 'Untitled submission';
+
+  const loadTimeline = useCallback(async () => {
+    if (!group || timelineLoading || timelineItems !== null) {
+      return;
+    }
+
+    setTimelineLoading(true);
+    setTimelineError('');
+    try {
+      const results = await Promise.allSettled(
+        group.cases.map(async (c) => {
+          const detail = await adminApi.caseDetail(c.caseId);
+          return {
+            title: displayCaseTitle(c.title ?? detail.case.title),
+            items: detail.timeline ?? [],
+          };
+        })
+      );
+
+      const nextItems = results
+        .flatMap((result) => {
+          if (result.status !== 'fulfilled') {
+            return [];
+          }
+          return result.value.items.map((item) => ({
+            ...item,
+            message: group.cases.length > 1
+              ? `${result.value.title} • ${item.message || item.type}`
+              : item.message || item.type,
+          }));
+        })
+        .sort((left, right) => compareTimelineDates(right.at, left.at));
+
+      setTimelineItems(nextItems);
+      if (results.some((result) => result.status === 'rejected')) {
+        setTimelineError('Some timeline entries could not be loaded.');
+      }
+    } catch {
+      setTimelineItems([]);
+      setTimelineError('Unable to load the review timeline right now.');
+    } finally {
+      setTimelineLoading(false);
+    }
+  }, [group, timelineItems, timelineLoading]);
+
+  const toggleTimeline = async () => {
+    const nextOpen = !timelineOpen;
+    setTimelineOpen(nextOpen);
+    if (nextOpen) {
+      await loadTimeline();
+    }
+  };
 
   return (
     <ShellLayout title="Student Publications in Review" subtitle="Library review publications for the selected student">
@@ -94,8 +158,21 @@ export default function AdminReviewStudentPage() {
           {/* Cases */}
           <div className="vstack gap-3">
             {group.cases.map((c, index) => (
-              <div className="su-card su-card-clickable fade-in" key={c.caseId} style={{ animationDelay: `${index * 0.05}s` }}
-                role="button" onClick={() => navigate(`/admin/review/${c.caseId}`)}>
+              <div
+                className="su-card su-card-clickable fade-in"
+                key={c.caseId}
+                style={{ animationDelay: `${index * 0.05}s` }}
+                role="button"
+                tabIndex={0}
+                onClick={() => navigate(`/admin/review/${c.caseId}`)}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter' && event.key !== ' ') {
+                    return;
+                  }
+                  event.preventDefault();
+                  navigate(`/admin/review/${c.caseId}`);
+                }}
+              >
                 <div className="card-body p-4">
                   <div className="d-flex flex-wrap justify-content-between align-items-center gap-2">
                     <div>
@@ -106,16 +183,48 @@ export default function AdminReviewStudentPage() {
                         <span className="text-muted small">Updated: {c.updatedAt ? new Date(c.updatedAt).toLocaleString() : 'N/A'}</span>
                       </div>
                     </div>
-                    <span className="btn btn-outline-primary btn-sm" style={{ borderRadius: '999px' }}>
-                      Open Review
-                    </span>
                   </div>
                 </div>
               </div>
             ))}
           </div>
+
+          <div className="su-card mt-4 fade-in" style={{ animationDelay: `${group.cases.length * 0.05}s` }}>
+            <div className="card-body p-4">
+              <div className="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <h3 className="h6 su-page-title mb-0">Review Timeline</h3>
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary btn-sm"
+                  style={{ borderRadius: '999px' }}
+                  onClick={() => void toggleTimeline()}
+                >
+                  {timelineOpen ? 'Hide Timeline' : 'Show Timeline'}
+                </button>
+              </div>
+
+              {timelineOpen ? (
+                <div className="mt-3">
+                  {timelineLoading ? (
+                    <p className="su-dashboard-empty-copy mb-0">Loading timeline...</p>
+                  ) : (
+                    <>
+                      {timelineError ? <div className="alert alert-warning py-2 mb-3">{timelineError}</div> : null}
+                      <CaseTimeline items={timelineItems ?? []} />
+                    </>
+                  )}
+                </div>
+              ) : null}
+            </div>
+          </div>
         </>
       )}
     </ShellLayout>
   );
+}
+
+function compareTimelineDates(left?: string | null, right?: string | null) {
+  const leftValue = left ? Date.parse(left) || 0 : 0;
+  const rightValue = right ? Date.parse(right) || 0 : 0;
+  return leftValue - rightValue;
 }

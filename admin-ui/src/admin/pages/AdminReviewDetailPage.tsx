@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { useNavigate, useParams } from 'react-router-dom';
 import ShellLayout from '../../ShellLayout';
 import { adminApi } from '../../lib/api/admin';
-import CaseTimeline from '../../lib/components/CaseTimeline';
 import type {
   CaseDetailPayload,
   ChecklistItem,
@@ -10,6 +9,7 @@ import type {
   ChecklistTemplateResponse,
   PublicationType,
   SubmissionVersion,
+  WorkflowComment,
 } from '../../lib/workflowTypes';
 import {
   canAdminDecide,
@@ -180,6 +180,35 @@ function ReviewCard({
   );
 }
 
+type CommentGroup = {
+  authorKey: string;
+  authorRole: WorkflowComment['authorRole'];
+  authorEmail?: string | null;
+  comments: WorkflowComment[];
+};
+
+function buildCommentGroups(comments: WorkflowComment[]): CommentGroup[] {
+  return comments.reduce<CommentGroup[]>((groups, comment) => {
+    const authorKey = `${comment.authorRole}:${comment.authorEmail ?? ''}`;
+    const currentGroup = groups[groups.length - 1];
+    if (currentGroup && currentGroup.authorKey === authorKey) {
+      currentGroup.comments.push(comment);
+      return groups;
+    }
+    groups.push({
+      authorKey,
+      authorRole: comment.authorRole,
+      authorEmail: comment.authorEmail,
+      comments: [comment],
+    });
+    return groups;
+  }, []);
+}
+
+function formatCommentAuthorRole(role: WorkflowComment['authorRole']) {
+  return role.charAt(0) + role.slice(1).toLowerCase();
+}
+
 export default function AdminReviewDetailPage() {
   const { caseId } = useParams();
   const navigate = useNavigate();
@@ -190,7 +219,6 @@ export default function AdminReviewDetailPage() {
   const [sectionNotes, setSectionNotes] = useState<Record<string, string>>({});
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
   const [revisionReason, setRevisionReason] = useState('');
-  const [timelineOpen, setTimelineOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState('');
@@ -234,6 +262,18 @@ export default function AdminReviewDetailPage() {
   const trimmedRevisionReason = revisionReason.trim();
   const checklistSaved = selectedSubmission ? selectedSubmission.status !== 'SUBMITTED' : false;
   const statusNotice = reviewStatusNotice(status, reviewStage, finalized);
+  const comments = useMemo(
+    () => detail?.comments ?? [],
+    [detail?.comments]
+  );
+  const commentGroups = useMemo(
+    () => buildCommentGroups(comments),
+    [comments]
+  );
+  const singleCommentAuthor = commentGroups.length === 1 ? commentGroups[0] : null;
+  const commentsTitle = comments.length > 0 && comments.every((comment) => comment.authorRole === 'LECTURER')
+    ? 'Lecturer Comments'
+    : 'Comments';
   const selectedSubmissionResults = useMemo(
     () => (selectedSubmission?.id === latestSubmission?.id ? detail?.checklistResults ?? [] : []),
     [detail?.checklistResults, latestSubmission?.id, selectedSubmission?.id]
@@ -392,6 +432,55 @@ export default function AdminReviewDetailPage() {
           </div>
 
           <ReviewCard
+            title={commentsTitle}
+            delay={0.05}
+          >
+            {comments.length === 0 ? (
+              <div className="text-muted small text-center py-3">No comments have been recorded for this publication.</div>
+            ) : (
+              <div className="vstack gap-3">
+                {singleCommentAuthor ? (
+                  <div className="su-review-comment-group">
+                    <div className="su-review-comment-group-header">
+                      <div className="su-review-comment-author">{formatCommentAuthorRole(singleCommentAuthor.authorRole)}</div>
+                      {singleCommentAuthor.authorEmail ? (
+                        <div className="su-review-comment-author-meta">{singleCommentAuthor.authorEmail}</div>
+                      ) : null}
+                    </div>
+                    <div className="su-review-comment-list">
+                      {singleCommentAuthor.comments.map((comment) => (
+                        <div className="su-review-comment-entry" key={comment.id}>
+                          <div className="su-review-comment-timestamp">{formatDateTime(comment.createdAt)}</div>
+                          <div className="su-review-comment-body" style={{ whiteSpace: 'pre-wrap' }}>{comment.body}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  commentGroups.map((group) => (
+                    <div className="su-review-comment-group" key={group.authorKey}>
+                      <div className="su-review-comment-group-header">
+                        <div className="su-review-comment-author">{formatCommentAuthorRole(group.authorRole)}</div>
+                        {group.authorEmail ? (
+                          <div className="su-review-comment-author-meta">{group.authorEmail}</div>
+                        ) : null}
+                      </div>
+                      <div className="su-review-comment-list">
+                        {group.comments.map((comment) => (
+                          <div className="su-review-comment-entry" key={comment.id}>
+                            <div className="su-review-comment-timestamp">{formatDateTime(comment.createdAt)}</div>
+                            <div className="su-review-comment-body" style={{ whiteSpace: 'pre-wrap' }}>{comment.body}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </ReviewCard>
+
+          <ReviewCard
             title="Checklist Review"
             delay={0.1}
           >
@@ -504,23 +593,8 @@ export default function AdminReviewDetailPage() {
           </ReviewCard>
 
           <ReviewCard
-            title="Timeline"
-            delay={0.15}
-          >
-            <button
-              type="button"
-              className="btn btn-outline-secondary btn-sm mb-3"
-              style={PILL_BUTTON_STYLE}
-              onClick={() => setTimelineOpen((current) => !current)}
-            >
-              {timelineOpen ? 'Hide Timeline' : 'Show Timeline'}
-            </button>
-            {timelineOpen && <CaseTimeline items={detail.timeline ?? []} />}
-          </ReviewCard>
-
-          <ReviewCard
             title="Review Decision"
-            delay={0.2}
+            delay={0.15}
           >
               {!decisionAllowed && (
                 <div className="alert alert-info">
@@ -563,31 +637,6 @@ export default function AdminReviewDetailPage() {
               </div>
           </ReviewCard>
 
-          <ReviewCard
-            title="Comments"
-            delay={0.25}
-            spaced={false}
-          >
-              {(detail.comments || []).length === 0 ? (
-                <div className="text-muted small text-center py-3">No comments have been recorded for this publication.</div>
-              ) : (
-                <div className="vstack gap-2">
-                  {(detail.comments || []).map((comment) => (
-                    <div className="p-3" key={comment.id}
-                      style={{ background: '#f8fafc', borderRadius: '0.6rem', border: '1px solid #e8eff5' }}>
-                      <div className="d-flex justify-content-between align-items-center mb-1">
-                        <div className="fw-semibold small">
-                          {comment.authorRole}
-                          {comment.authorEmail ? ` — ${comment.authorEmail}` : ''}
-                        </div>
-                        <div className="text-muted small">{formatDateTime(comment.createdAt)}</div>
-                      </div>
-                      <div style={{ whiteSpace: 'pre-wrap' }}>{comment.body}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-          </ReviewCard>
         </>
       )}
     </ShellLayout>
