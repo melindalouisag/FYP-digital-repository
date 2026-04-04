@@ -161,13 +161,11 @@ function reviewStatusNotice(
 
 function ReviewCard({
   title,
-  description,
   delay = 0,
   spaced = true,
   children,
 }: {
   title: string;
-  description: string;
   delay?: number;
   spaced?: boolean;
   children: ReactNode;
@@ -176,7 +174,6 @@ function ReviewCard({
     <div className={`su-card fade-in${spaced ? ' mb-3' : ''}`} style={{ animationDelay: `${delay}s` }}>
       <div className="card-body p-4">
         <h3 className="h6 su-page-title">{title}</h3>
-        <div className="text-muted small mb-3">{description}</div>
         {children}
       </div>
     </div>
@@ -396,7 +393,6 @@ export default function AdminReviewDetailPage() {
 
           <ReviewCard
             title="Checklist Review"
-            description="Use the active template for this publication type and save checklist results before recording the final library decision."
             delay={0.1}
           >
               {!hasActiveTemplate && (
@@ -509,7 +505,6 @@ export default function AdminReviewDetailPage() {
 
           <ReviewCard
             title="Timeline"
-            description="Review the timeline to confirm handoff order, feedback history, and recent workflow changes before making a decision."
             delay={0.15}
           >
             <button
@@ -525,7 +520,6 @@ export default function AdminReviewDetailPage() {
 
           <ReviewCard
             title="Review Decision"
-            description="Record the library decision here after reviewing the submission file, checklist results, and any existing comments."
             delay={0.2}
           >
               {!decisionAllowed && (
@@ -552,7 +546,7 @@ export default function AdminReviewDetailPage() {
 
               <div className="d-flex flex-wrap gap-2">
                 <button
-                  className="btn btn-outline-warning"
+                  className="btn su-action-button su-action-button-secondary"
                   disabled={working || !decisionAllowed || trimmedRevisionReason.length === 0}
                   onClick={() => void requestRevision()}
                   title={decisionActionTitle(decisionAllowed, trimmedRevisionReason.length > 0, 'Provide a revision reason to continue.')}
@@ -560,8 +554,7 @@ export default function AdminReviewDetailPage() {
                   Request Revision
                 </button>
                 <button
-                  className="btn btn-success"
-                  style={PILL_BUTTON_STYLE}
+                  className="btn su-action-button su-action-button-primary"
                   disabled={working || !decisionAllowed}
                   onClick={() => void approveCase()}
                 >
@@ -572,7 +565,6 @@ export default function AdminReviewDetailPage() {
 
           <ReviewCard
             title="Comments"
-            description="Review comments here for supporting context from the workflow history and earlier review actions."
             delay={0.25}
             spaced={false}
           >

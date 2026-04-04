@@ -9,6 +9,7 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public final class DashboardWorkflowSupport {
 
@@ -73,6 +74,27 @@ public final class DashboardWorkflowSupport {
       new DashboardStageCountResponse("Clearance", clearance),
       new DashboardStageCountResponse("Published", published)
     );
+  }
+
+  public static long totalStudentCount(Collection<PublicationCase> cases) {
+    return cases.stream()
+      .map(PublicationCase::getStudent)
+      .filter(Objects::nonNull)
+      .map(student -> student.getId())
+      .filter(Objects::nonNull)
+      .distinct()
+      .count();
+  }
+
+  public static long publishedStudentCount(Collection<PublicationCase> cases) {
+    return cases.stream()
+      .filter(c -> c.getStatus() == CaseStatus.PUBLISHED)
+      .map(PublicationCase::getStudent)
+      .filter(Objects::nonNull)
+      .map(student -> student.getId())
+      .filter(Objects::nonNull)
+      .distinct()
+      .count();
   }
 
   public static int adminQueuePriority(CaseStatus status) {

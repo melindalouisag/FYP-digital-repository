@@ -60,16 +60,6 @@ export default function StudentSubmissionsPage() {
 
   return (
     <ShellLayout title="Submission">
-      <section className="su-card su-registration-info-card mb-4">
-        <h4 className="su-registration-info-subtitle mt-0">How to use this page</h4>
-        <ol className="su-registration-info-list mb-0">
-          <li>Open a publication that is ready for submission.</li>
-          <li>Upload the required file for review.</li>
-          <li>Submit a revised file if corrections are requested.</li>
-          <li>Return to this page to monitor the submission progress.</li>
-        </ol>
-      </section>
-
       {error && <div className="alert alert-danger">{error}</div>}
 
       {!loading && submissionCases.length === 0 && (

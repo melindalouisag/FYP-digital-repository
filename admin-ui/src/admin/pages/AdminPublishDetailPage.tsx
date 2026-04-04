@@ -113,9 +113,6 @@ export default function AdminPublishDetailPage() {
             <div className="su-card h-100">
               <div className="card-body p-4">
                 <h3 className="h6 mb-3 su-page-title">Publication Summary</h3>
-                <div className="text-muted small mb-3">
-                  Confirm the publication status and current repository readiness before publishing or unpublishing.
-                </div>
                 {[
                   { label: 'Title', value: displayCaseTitle(detail.title) },
                   { label: 'Type', value: detail.type },
@@ -136,9 +133,6 @@ export default function AdminPublishDetailPage() {
             <div className="su-card h-100">
               <div className="card-body p-4">
                 <h3 className="h6 mb-3 su-page-title">Latest Submission</h3>
-                <div className="text-muted small mb-3">
-                  Review the final uploaded file before publishing the repository record.
-                </div>
                 {detail.latestSubmission ? (
                   <>
                     <div className="d-flex py-2" style={{ borderBottom: '1px solid #f0f0f0' }}>
@@ -172,9 +166,6 @@ export default function AdminPublishDetailPage() {
             <div className="su-card">
               <div className="card-body p-4">
                 <h3 className="h6 mb-3 su-page-title">Repository Metadata</h3>
-                <div className="text-muted small mb-3">
-                  Review the metadata below as it will appear in the repository record after publishing.
-                </div>
                 <div className="row g-3">
                   {[
                     { label: 'Title', value: detail.metadata?.title, col: 6 },
@@ -201,8 +192,8 @@ export default function AdminPublishDetailPage() {
                 <div className="mt-4">
                   {isReadyToPublish && (
                     <button
-                      className="btn btn-primary"
-                      style={{ borderRadius: '999px', padding: '0.5rem 2rem' }}
+                      className="btn su-action-button su-action-button-primary"
+                      style={{ paddingInline: '2rem' }}
                       disabled={working}
                       onClick={() => void publish()}
                     >

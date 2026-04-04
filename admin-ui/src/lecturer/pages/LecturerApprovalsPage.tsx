@@ -99,14 +99,6 @@ export default function LecturerApprovalsPage() {
         </div>
       )}
 
-      {!loading && rows.length > 0 && (
-        <div className="mb-3">
-          <p className="text-muted small mb-0">
-            Review the submitted registration details first, then either approve the registration or return it with a clear reason for the student.
-          </p>
-        </div>
-      )}
-
       <div className="vstack gap-3">
         {rows.map((row, index) => (
           <div className="su-card fade-in" key={row.caseId} style={{ animationDelay: `${index * 0.05}s` }}>
@@ -133,13 +125,13 @@ export default function LecturerApprovalsPage() {
                     Submitted: {row.registrationSubmittedAt ? new Date(row.registrationSubmittedAt).toLocaleString() : 'N/A'}
                   </div>
                 </div>
-                <button className="btn btn-success btn-sm" style={{ borderRadius: '999px', padding: '0.4rem 1.2rem' }} onClick={() => void approve(row.caseId)}>
+                <button className="btn btn-sm su-action-button su-action-button-primary" onClick={() => void approve(row.caseId)}>
                   Approve Registration
                 </button>
               </div>
 
-              <div className="p-3" style={{ background: '#fef3f2', borderRadius: '0.6rem', border: '1px solid #fecaca' }}>
-                <label className="form-label mb-1 small fw-semibold" style={{ color: '#dc3545' }}>Reason for rejection</label>
+              <div className="su-action-panel p-3">
+                <label className="form-label mb-1 small fw-semibold">Reason for rejection</label>
                 <div className="d-flex gap-2">
                   <input
                     className="form-control form-control-sm"
@@ -153,7 +145,7 @@ export default function LecturerApprovalsPage() {
                     placeholder="Enter rejection reason"
                     style={{ borderRadius: '999px' }}
                   />
-                  <button className="btn btn-outline-danger btn-sm" style={{ borderRadius: '999px', whiteSpace: 'nowrap' }} onClick={() => void reject(row.caseId)}>
+                  <button className="btn btn-sm su-action-button su-action-button-secondary" style={{ whiteSpace: 'nowrap' }} onClick={() => void reject(row.caseId)}>
                     Reject Registration
                   </button>
                 </div>

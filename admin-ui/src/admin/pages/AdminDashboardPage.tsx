@@ -10,13 +10,17 @@ import {
 } from '../../calendar/calendarUtils';
 import { calendarApi } from '../../lib/api/calendar';
 import DashboardPanel from '../../lib/components/DashboardPanel';
+import DashboardMetricCard from '../../lib/components/DashboardMetricCard';
 import { adminApi } from '../../lib/api/admin';
+import { adminSidebarIcons } from '../../lib/portalIcons';
 import type { AdminDashboardData, CalendarEvent, DashboardActionItem, DeadlineActionType, PublicationType } from '../../lib/workflowTypes';
 import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 
 const EMPTY_DASHBOARD: AdminDashboardData = {
   workflowProgressPercent: 0,
   activeCaseCount: 0,
+  publishedStudentCount: 0,
+  totalStudentCount: 0,
   registrationQueueCount: 0,
   submissionReviewQueueCount: 0,
   clearanceQueueCount: 0,
@@ -32,6 +36,14 @@ interface DeadlineFormState {
   publicationType: PublicationType;
   eventDate: string;
   eventTime: string;
+}
+
+interface DashboardMetricSummaryCard {
+  title: string;
+  value: number | string;
+  iconSrc: string;
+  detail?: string;
+  onClick?: () => void;
 }
 
 export default function AdminDashboardPage() {
@@ -96,29 +108,35 @@ export default function AdminDashboardPage() {
     [deadlineEvents]
   );
 
-  const queueCards = [
+  const queueCards: DashboardMetricSummaryCard[] = [
+    {
+      title: 'Published Students',
+      value: `${dashboard.publishedStudentCount} / ${dashboard.totalStudentCount}`,
+      detail: 'students published',
+      iconSrc: adminSidebarIcons.publishing,
+    },
     {
       title: 'Registration Queue',
       value: dashboard.registrationQueueCount,
-      detail: 'Pending registration verifications',
+      iconSrc: adminSidebarIcons.registration,
       onClick: () => navigate('/admin/registration-approvals'),
     },
     {
       title: 'Submission Review Queue',
       value: dashboard.submissionReviewQueueCount,
-      detail: 'Publications awaiting library checklist review',
+      iconSrc: adminSidebarIcons.submission,
       onClick: () => navigate('/admin/review'),
     },
     {
       title: 'Clearance Queue',
       value: dashboard.clearanceQueueCount,
-      detail: 'Submitted clearance forms awaiting review',
+      iconSrc: adminSidebarIcons.clearance,
       onClick: () => navigate('/admin/clearance'),
     },
     {
       title: 'Publishing Queue',
       value: dashboard.publishingQueueCount,
-      detail: 'Publications ready for repository release',
+      iconSrc: adminSidebarIcons.publishing,
       onClick: () => navigate('/admin/publish'),
     },
   ];
@@ -157,27 +175,16 @@ export default function AdminDashboardPage() {
       {error && <div className="alert alert-danger">{error}</div>}
 
       <div className="su-dashboard-grid su-dashboard-grid-5 mb-4">
-        <DashboardPanel title="Workflow Progress">
-          <div className="su-dashboard-progress-value">{loading ? '—%' : `${dashboard.workflowProgressPercent}%`}</div>
-          <div className="su-dashboard-progress-bar" aria-hidden="true">
-            <div className="su-dashboard-progress-fill" style={{ width: `${dashboard.workflowProgressPercent}%` }} />
-          </div>
-          <p className="su-dashboard-support mb-0">
-            {loading
-              ? 'Loading dashboard data.'
-              : dashboard.activeCaseCount > 0
-                ? 'Based on active repository workflow records'
-                : 'No active repository workflow records.'}
-          </p>
-        </DashboardPanel>
-
         {queueCards.map((card) => (
-          <DashboardPanel key={card.title} title={card.title} className="su-card-clickable" bodyClassName="justify-content-between">
-            <button type="button" className="su-dashboard-panel-button" onClick={card.onClick}>
-              <div className="su-dashboard-progress-value">{loading ? '—' : card.value}</div>
-              <p className="su-dashboard-support mb-0">{card.detail}</p>
-            </button>
-          </DashboardPanel>
+          <DashboardMetricCard
+            key={card.title}
+            iconSrc={card.iconSrc}
+            iconBackground="rgba(11, 117, 132, 0.10)"
+            label={card.title}
+            value={loading ? (card.title === 'Published Students' ? '— / —' : '—') : card.value}
+            description={card.detail}
+            onClick={card.onClick}
+          />
         ))}
       </div>
 

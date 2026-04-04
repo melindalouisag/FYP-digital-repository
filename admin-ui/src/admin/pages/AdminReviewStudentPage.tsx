@@ -88,9 +88,6 @@ export default function AdminReviewStudentPage() {
                   </div>
                 </div>
               </div>
-              <p className="text-muted small mb-0 mt-3">
-                Open a publication below to continue checklist review, inspect comments, and record the final library decision.
-              </p>
             </div>
           </div>
 

@@ -59,6 +59,8 @@ public class LecturerDashboardService {
     return new LecturerDashboardResponse(
       DashboardWorkflowSupport.averageProgress(supervisedCases),
       supervisedCases.stream().filter(DashboardWorkflowSupport::isActiveCase).count(),
+      DashboardWorkflowSupport.publishedStudentCount(supervisedCases),
+      DashboardWorkflowSupport.totalStudentCount(supervisedCases),
       caseSupervisors.findPendingApprovalsForLecturer(lecturer.getId()).size(),
       submissionReviewCount,
       studentCount,

@@ -62,14 +62,6 @@ export default function AdminReviewPage() {
         </div>
       )}
 
-      {!loading && rows.length > 0 && (
-        <div className="mb-3">
-          <p className="text-muted small mb-0">
-            Select a student to open publication-level checklist work, review history, and final library decisions.
-          </p>
-        </div>
-      )}
-
       <div className="row g-3">
         {rows.map((group, index) => (
           <div className="col-lg-6" key={group.studentUserId}>

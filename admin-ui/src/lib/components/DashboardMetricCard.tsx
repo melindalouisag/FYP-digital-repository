@@ -33,18 +33,30 @@ export default function DashboardMetricCard({
     className,
   ].filter(Boolean).join(' ');
 
-  return (
-    <div className={cardClassName} onClick={onClick} role={role} style={style}>
-      <div className="su-stat-card-body">
-        <div className="su-stat-icon" style={{ background: iconBackground }}>
-          <PortalIcon src={iconSrc} size={22} />
-        </div>
-        <div className="su-stat-value" style={valueStyle}>{value}</div>
+  const content = (
+    <>
+      <div className="su-stat-card-header">
         <div className="su-stat-label">{label}</div>
-        <div className={`su-stat-description${description ? '' : ' is-empty'}`}>
-          {description ?? <span aria-hidden="true">&nbsp;</span>}
+        <div className="su-stat-icon" style={{ background: iconBackground }}>
+          <PortalIcon src={iconSrc} size={20} />
         </div>
       </div>
+      <div className="su-stat-value" style={valueStyle}>{value}</div>
+      {description ? <div className="su-stat-support">{description}</div> : null}
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <button type="button" className={cardClassName} onClick={onClick} style={style}>
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <div className={cardClassName} role={role} style={style}>
+      {content}
     </div>
   );
 }

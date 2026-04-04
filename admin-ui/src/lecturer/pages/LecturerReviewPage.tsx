@@ -71,14 +71,6 @@ export default function LecturerReviewPage() {
         </div>
       )}
 
-      {!loading && groups.length > 0 && (
-        <div className="mb-3">
-          <p className="text-muted small mb-0">
-            Select a student record to open publication history, submission files, and the supervisor actions for each publication.
-          </p>
-        </div>
-      )}
-
       <div className="row g-3">
         {groups.map((group, index) => {
           const latestSubmissionAt = group.cases

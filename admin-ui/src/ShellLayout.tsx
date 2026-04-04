@@ -45,7 +45,7 @@ function roleLinks(role?: string): LinkItem[] {
   return [];
 }
 
-export default function ShellLayout({ title, subtitle, children }: ShellLayoutProps) {
+export default function ShellLayout({ title, children }: ShellLayoutProps) {
   const { user, logout } = useAuth();
   const { theme, setTheme } = useTheme();
   const [accountOpen, setAccountOpen] = useState(false);
@@ -185,7 +185,6 @@ export default function ShellLayout({ title, subtitle, children }: ShellLayoutPr
           <main className="col-12 col-lg-9 col-xl-10 p-3 p-lg-4 fade-in">
             <div className="mb-4">
               <h2 className="mb-1 su-page-title" style={{ fontSize: '1.5rem' }}>{title}</h2>
-              {subtitle && <p className="mb-0 su-page-subtitle">{subtitle}</p>}
             </div>
             {children}
           </main>

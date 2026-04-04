@@ -92,14 +92,6 @@ export default function AdminPublishPage() {
         </div>
       )}
 
-      {!loading && cases.length > 0 && (
-        <div className="mb-3">
-          <p className="text-muted small mb-0">
-            Open a publication to review the latest submission and metadata, or publish directly from this queue when everything is complete.
-          </p>
-        </div>
-      )}
-
       <div className="vstack gap-3">
         {cases.map((c, index) => (
           <div
@@ -121,8 +113,7 @@ export default function AdminPublishPage() {
                 </div>
                 <div className="d-flex flex-wrap gap-2">
                   <button
-                    className="btn btn-success btn-sm"
-                    style={{ borderRadius: '999px' }}
+                    className="btn btn-sm su-action-button su-action-button-primary"
                     disabled={workingCaseId === c.caseId || c.status !== 'READY_TO_PUBLISH'}
                     onClick={(event) => {
                       event.stopPropagation();
@@ -132,8 +123,7 @@ export default function AdminPublishPage() {
                     {workingCaseId === c.caseId ? 'Publishing...' : 'Publish to Repository'}
                   </button>
                   <button
-                    className="btn btn-outline-primary btn-sm"
-                    style={{ borderRadius: '999px' }}
+                    className="btn btn-sm su-action-button su-action-button-secondary"
                     onClick={(event) => {
                       event.stopPropagation();
                       navigate(`/admin/publish/${c.caseId}`);

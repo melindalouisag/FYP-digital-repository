@@ -250,9 +250,6 @@ export default function StudentCaseSubmissionPage() {
       <div className="card shadow-sm mb-3">
         <div className="card-body">
           <h3 className="h6 mb-2">Upload File and Metadata</h3>
-          <p className="text-muted small mb-3">
-            The title, author, keywords, and abstract entered here are used for the repository record if this publication is published.
-          </p>
           <div className="row g-3">
             <div className="col-md-6">
               <label className="form-label">Document file</label>
@@ -362,7 +359,7 @@ export default function StudentCaseSubmissionPage() {
               />
             </div>
             <div className="col-12">
-              <button className="btn btn-primary" onClick={() => void onUpload()} disabled={!uploadAllowed || submissionDeadlinePassed || uploading}>
+              <button className="btn su-action-button su-action-button-primary" onClick={() => void onUpload()} disabled={!uploadAllowed || submissionDeadlinePassed || uploading}>
                 {uploading
                   ? (hasPreviousUploads ? 'Uploading Revised File...' : 'Uploading First File...')
                   : (hasPreviousUploads ? 'Upload Revised File' : 'Upload First File')}

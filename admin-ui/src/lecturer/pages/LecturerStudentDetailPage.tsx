@@ -180,9 +180,6 @@ export default function LecturerStudentDetailPage() {
                   {group.cases.length} publication{group.cases.length > 1 ? 's' : ''}
                 </span>
               </div>
-              <p className="text-muted small mb-0 mt-3">
-                Use the publication cards below to review publication history, open submission files, and complete supervisor decisions when they are available.
-              </p>
             </div>
           </div>
 
@@ -265,9 +262,6 @@ export default function LecturerStudentDetailPage() {
                     {submissionsOpen[c.caseId] && (
                       <div className="mb-3 p-3" style={{ background: '#f8fafc', borderRadius: '0.6rem' }}>
                         <h6 className="fw-bold mb-2">Submission History</h6>
-                        <div className="text-muted small mb-2">
-                          Review the uploaded versions here before recording feedback or forwarding the publication to library review.
-                        </div>
                         {(submissions[c.caseId] ?? []).length === 0 ? (
                           <div className="text-muted small">No submission versions are available.</div>
                         ) : (
@@ -297,11 +291,8 @@ export default function LecturerStudentDetailPage() {
 
                     {/* Supervisor Actions */}
                     {canAct && (
-                      <div className="p-3" style={{ background: '#f0f9ff', borderRadius: '0.6rem', border: '1px solid #bae6fd' }}>
+                      <div className="su-action-panel p-3">
                         <h6 className="fw-bold mb-2">Supervisor Actions</h6>
-                        <div className="text-muted small mb-3">
-                          Request revision when the submission needs changes, or approve it for library review.
-                        </div>
                         <div className="mb-3">
                           <label className="form-label">Reason for revision request</label>
                           <textarea
@@ -318,8 +309,7 @@ export default function LecturerStudentDetailPage() {
                         </div>
                         <div className="d-flex flex-wrap gap-2">
                           <button
-                            className="btn btn-warning btn-sm"
-                            style={{ borderRadius: '999px' }}
+                            className="btn su-action-button su-action-button-secondary"
                             disabled={busy || revisionReason.length === 0}
                             onClick={() =>
                               void runAction(c.caseId, () => lecturerApi.requestRevision(c.caseId, revisionReason).then(() => {
@@ -330,8 +320,7 @@ export default function LecturerStudentDetailPage() {
                             Request Revision
                           </button>
                           <button
-                            className="btn btn-success"
-                            style={{ borderRadius: '999px' }}
+                            className="btn su-action-button su-action-button-primary"
                             disabled={busy}
                             onClick={() => void runAction(c.caseId, () => lecturerApi.approveAndForward(c.caseId).then(() => undefined))}
                           >

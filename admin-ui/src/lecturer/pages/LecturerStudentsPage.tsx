@@ -74,14 +74,6 @@ export default function LecturerStudentsPage() {
         </div>
       )}
 
-      {!loading && groups.length > 0 && (
-        <div className="mb-3">
-          <p className="text-muted small mb-0">
-            Select a student to review publication status, submission history, and any pending supervisor actions.
-          </p>
-        </div>
-      )}
-
       <div className="row g-3">
         {groups.map((group, index) => (
           <div className="col-lg-6" key={group.studentUserId}>

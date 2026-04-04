@@ -1,4 +1,6 @@
 import DashboardPanel from '../../lib/components/DashboardPanel';
+import PortalIcon from '../../lib/components/PortalIcon';
+import { studentSidebarIcons } from '../../lib/portalIcons';
 import { getWorkflowStatusPresentation, statusBadgeClass } from '../../lib/workflowUi';
 import type { CaseSummary } from '../../lib/workflowTypes';
 import { resolveStudentCaseNavigation } from '../caseNavigation';
@@ -15,7 +17,14 @@ export function StudentNextActionPanel({
   onNavigate,
 }: StudentNextActionPanelProps) {
   return (
-    <DashboardPanel title="Next Action">
+    <DashboardPanel
+      title={(
+        <span className="su-dashboard-title-with-icon">
+          <PortalIcon src={studentSidebarIcons.needsAction} className="su-dashboard-title-icon" />
+          <span>Next Action</span>
+        </span>
+      )}
+    >
       {loading ? (
         <p className="su-dashboard-empty-copy mb-0">Loading dashboard data.</p>
       ) : nextStepCases.length === 0 ? (

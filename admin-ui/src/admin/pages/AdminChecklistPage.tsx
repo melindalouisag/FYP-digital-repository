@@ -129,14 +129,6 @@ export default function AdminChecklistPage() {
       {error && <div className="alert alert-danger" style={{ borderRadius: '0.75rem' }}>{error}</div>}
       {message && <div className="alert alert-success" style={{ borderRadius: '0.75rem' }}>{message}</div>}
 
-      {!isLoading && (
-        <div className="mb-3">
-          <p className="text-muted small mb-0">
-            Each publication type keeps one active template for future reviews, while draft versions remain available for editing and activation.
-          </p>
-        </div>
-      )}
-
       {TYPES.map((type) => (
         <div className="su-card mb-3" key={type}>
           <div className="card-body p-4">

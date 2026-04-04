@@ -289,6 +289,8 @@ export interface DashboardActionItem {
 export interface LecturerDashboardData {
   supervisionProgressPercent: number;
   activeSupervisedCaseCount: number;
+  publishedStudentCount: number;
+  totalStudentCount: number;
   registrationApprovalCount: number;
   submissionReviewCount: number;
   studentCount: number;
@@ -299,6 +301,8 @@ export interface LecturerDashboardData {
 export interface AdminDashboardData {
   workflowProgressPercent: number;
   activeCaseCount: number;
+  publishedStudentCount: number;
+  totalStudentCount: number;
   registrationQueueCount: number;
   submissionReviewQueueCount: number;
   clearanceQueueCount: number;

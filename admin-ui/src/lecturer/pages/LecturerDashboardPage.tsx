@@ -2,19 +2,31 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ShellLayout from '../../ShellLayout';
 import DashboardPanel from '../../lib/components/DashboardPanel';
+import DashboardMetricCard from '../../lib/components/DashboardMetricCard';
 import { lecturerApi } from '../../lib/api/lecturer';
+import { lecturerSidebarIcons } from '../../lib/portalIcons';
 import type { DashboardActivityItem, LecturerDashboardData } from '../../lib/workflowTypes';
 import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 
 const EMPTY_DASHBOARD: LecturerDashboardData = {
   supervisionProgressPercent: 0,
   activeSupervisedCaseCount: 0,
+  publishedStudentCount: 0,
+  totalStudentCount: 0,
   registrationApprovalCount: 0,
   submissionReviewCount: 0,
   studentCount: 0,
   stageDistribution: [],
   recentActivity: [],
 };
+
+interface DashboardMetricSummaryCard {
+  title: string;
+  value: number | string;
+  iconSrc: string;
+  detail?: string;
+  onClick?: () => void;
+}
 
 export default function LecturerDashboardPage() {
   const navigate = useNavigate();
@@ -49,23 +61,29 @@ export default function LecturerDashboardPage() {
     [dashboard.stageDistribution]
   );
 
-  const summaryCards = [
+  const summaryCards: DashboardMetricSummaryCard[] = [
+    {
+      title: 'Published Students',
+      value: `${dashboard.publishedStudentCount} / ${dashboard.totalStudentCount}`,
+      detail: 'students published',
+      iconSrc: lecturerSidebarIcons.library,
+    },
     {
       title: 'Registration Approvals',
       value: dashboard.registrationApprovalCount,
-      detail: 'Registration requests awaiting your approval',
+      iconSrc: lecturerSidebarIcons.approvals,
       onClick: () => navigate('/lecturer/approvals'),
     },
     {
       title: 'Submission Review',
       value: dashboard.submissionReviewCount,
-      detail: 'Student submissions needing your review',
+      iconSrc: lecturerSidebarIcons.review,
       onClick: () => navigate('/lecturer/review'),
     },
     {
       title: 'My Students',
       value: dashboard.studentCount,
-      detail: 'Students under your supervision',
+      iconSrc: lecturerSidebarIcons.students,
       onClick: () => navigate('/lecturer/students'),
     },
   ];
@@ -89,27 +107,16 @@ export default function LecturerDashboardPage() {
       </div>
 
       <div className="su-dashboard-grid su-dashboard-grid-4 mb-4">
-        <DashboardPanel title="Supervision Progress">
-          <div className="su-dashboard-progress-value">{loading ? '—%' : `${dashboard.supervisionProgressPercent}%`}</div>
-          <div className="su-dashboard-progress-bar" aria-hidden="true">
-            <div className="su-dashboard-progress-fill" style={{ width: `${dashboard.supervisionProgressPercent}%` }} />
-          </div>
-          <p className="su-dashboard-support mb-0">
-            {loading
-              ? 'Loading dashboard data.'
-              : dashboard.activeSupervisedCaseCount > 0
-                ? 'Based on active supervised publications'
-                : 'No active supervised publications.'}
-          </p>
-        </DashboardPanel>
-
         {summaryCards.map((card) => (
-          <DashboardPanel key={card.title} title={card.title} className="su-card-clickable" bodyClassName="justify-content-between">
-            <button type="button" className="su-dashboard-panel-button" onClick={card.onClick}>
-              <div className="su-dashboard-progress-value">{loading ? '—' : card.value}</div>
-              <p className="su-dashboard-support mb-0">{card.detail}</p>
-            </button>
-          </DashboardPanel>
+          <DashboardMetricCard
+            key={card.title}
+            iconSrc={card.iconSrc}
+            iconBackground="rgba(11, 117, 132, 0.10)"
+            label={card.title}
+            value={loading ? (card.title === 'Published Students' ? '— / —' : '—') : card.value}
+            description={card.detail}
+            onClick={card.onClick}
+          />
         ))}
       </div>
       <div className="row g-3">

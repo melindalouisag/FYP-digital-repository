@@ -60,26 +60,6 @@ export default function StudentRegistrationsPage() {
 
   return (
     <ShellLayout title="Register Publication">
-      <section className="su-card su-registration-info-card mb-4">
-        <p className="su-registration-info-copy">
-          This section is to record the student’s permission to allow Sampoerna University to include the thesis,
-          article, or other academic work in the University Library’s Digital Repository for education and research
-          purposes. This page is for registration only and is not the place to upload the final document. After the
-          registration is completed, continue with your document submission through the Submission page.
-        </p>
-
-        <h4 className="su-registration-info-subtitle">How to use this page</h4>
-        <ol className="su-registration-info-list mb-0">
-          <li>Click Create New Registration to register your publication.</li>
-          <li>Fill in the required publication information carefully.</li>
-          <li>Review your details, then submit the registration for approval.</li>
-          <li>Return to this page to monitor the registration status.</li>
-          <li className="su-registration-info-emphasis">
-            After the registration is completed, continue your file upload through the Submission page.
-          </li>
-        </ol>
-      </section>
-
       <div className="d-flex justify-content-end align-items-center mb-4">
         <button className="btn btn-primary" style={{ borderRadius: '999px' }} onClick={() => navigate('/student/registrations/new')}>
           Create New Registration

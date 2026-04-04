@@ -87,14 +87,6 @@ export default function AdminClearancePage() {
         </div>
       )}
 
-      {!loading && cases.length > 0 && (
-        <div className="mb-3">
-          <p className="text-muted small mb-0">
-            Use this queue to confirm final student clearance before publishing, or return the publication with a clear correction reason.
-          </p>
-        </div>
-      )}
-
       <div className="vstack gap-3">
         {cases.map((c, index) => {
           const busy = workingCaseId === c.id;
@@ -110,8 +102,7 @@ export default function AdminClearancePage() {
                     </div>
                   </div>
                   <button
-                    className="btn btn-success btn-sm"
-                    style={{ borderRadius: '999px', padding: '0.4rem 1.2rem' }}
+                    className="btn btn-sm su-action-button su-action-button-primary"
                     disabled={busy}
                     onClick={() => void run(c.id, () => adminApi.approveClearance(c.id).then(() => undefined))}
                   >
@@ -119,8 +110,8 @@ export default function AdminClearancePage() {
                   </button>
                 </div>
 
-                <div className="p-3" style={{ background: '#fffbeb', borderRadius: '0.6rem', border: '1px solid #fde68a' }}>
-                  <label className="form-label mb-1 small fw-semibold" style={{ color: '#d97706' }}>Reason for correction</label>
+                <div className="su-action-panel p-3">
+                  <label className="form-label mb-1 small fw-semibold">Reason for correction</label>
                   <div className="d-flex gap-2">
                     <input
                       className="form-control form-control-sm"
@@ -133,8 +124,8 @@ export default function AdminClearancePage() {
                       style={{ borderRadius: '999px' }}
                     />
                     <button
-                      className="btn btn-outline-warning btn-sm"
-                      style={{ borderRadius: '999px', whiteSpace: 'nowrap' }}
+                      className="btn btn-sm su-action-button su-action-button-secondary"
+                      style={{ whiteSpace: 'nowrap' }}
                       disabled={busy}
                       onClick={() =>
                         void run(c.id, async () => {

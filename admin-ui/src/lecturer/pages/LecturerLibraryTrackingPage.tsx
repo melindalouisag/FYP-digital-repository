@@ -101,14 +101,6 @@ export default function LecturerLibraryTrackingPage() {
         </div>
       )}
 
-      {!loading && groups.length > 0 && (
-        <div className="mb-3">
-          <p className="text-muted small mb-0">
-            Select a student record to review library-stage progress, feedback, and any follow-up required before clearance.
-          </p>
-        </div>
-      )}
-
       <div className="row g-3">
         {groups.map((group, index) => {
           const summary = summaries[group.studentUserId] ?? { needRevisions: 0, inReview: 0, approved: 0 };

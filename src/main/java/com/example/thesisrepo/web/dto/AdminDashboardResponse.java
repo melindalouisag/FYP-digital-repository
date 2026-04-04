@@ -5,6 +5,8 @@ import java.util.List;
 public record AdminDashboardResponse(
   int workflowProgressPercent,
   long activeCaseCount,
+  long publishedStudentCount,
+  long totalStudentCount,
   long registrationQueueCount,
   long submissionReviewQueueCount,
   long clearanceQueueCount,

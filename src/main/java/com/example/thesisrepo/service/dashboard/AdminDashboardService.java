@@ -58,6 +58,8 @@ public class AdminDashboardService {
     return new AdminDashboardResponse(
       DashboardWorkflowSupport.averageProgress(allCases),
       allCases.stream().filter(DashboardWorkflowSupport::isActiveCase).count(),
+      DashboardWorkflowSupport.publishedStudentCount(allCases),
+      DashboardWorkflowSupport.totalStudentCount(allCases),
       countByStatuses(allCases, REGISTRATION_QUEUE_STATUSES),
       countByStatuses(allCases, REVIEW_QUEUE_STATUSES),
       countByStatuses(allCases, CLEARANCE_QUEUE_STATUSES),
