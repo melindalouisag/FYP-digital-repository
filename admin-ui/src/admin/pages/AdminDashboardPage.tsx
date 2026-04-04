@@ -1,10 +1,17 @@
-import { CalendarDashboardPanel } from '../../calendar/CalendarDashboardPanel';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ShellLayout from '../../ShellLayout';
+import {
+  compareCalendarEvents,
+  formatCalendarEventSchedule,
+  getDeadlineActionLabel,
+  getPublicationTypeLabel,
+  toDateInputValue,
+} from '../../calendar/calendarUtils';
+import { calendarApi } from '../../lib/api/calendar';
 import DashboardPanel from '../../lib/components/DashboardPanel';
 import { adminApi } from '../../lib/api/admin';
-import type { AdminDashboardData, DashboardActionItem } from '../../lib/workflowTypes';
+import type { AdminDashboardData, CalendarEvent, DashboardActionItem, DeadlineActionType, PublicationType } from '../../lib/workflowTypes';
 import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 
 const EMPTY_DASHBOARD: AdminDashboardData = {
@@ -19,11 +26,40 @@ const EMPTY_DASHBOARD: AdminDashboardData = {
   recentActivity: [],
 };
 
+interface DeadlineFormState {
+  title: string;
+  deadlineAction: DeadlineActionType;
+  publicationType: PublicationType;
+  eventDate: string;
+  eventTime: string;
+}
+
 export default function AdminDashboardPage() {
   const navigate = useNavigate();
   const [dashboard, setDashboard] = useState<AdminDashboardData>(EMPTY_DASHBOARD);
+  const [deadlineEvents, setDeadlineEvents] = useState<CalendarEvent[]>([]);
+  const [deadlineForm, setDeadlineForm] = useState<DeadlineFormState>(createDeadlineFormState());
   const [loading, setLoading] = useState(true);
+  const [deadlineSaving, setDeadlineSaving] = useState(false);
   const [error, setError] = useState('');
+  const [deadlineError, setDeadlineError] = useState('');
+  const [deadlineMessage, setDeadlineMessage] = useState('');
+  const [deadlineLoadError, setDeadlineLoadError] = useState('');
+
+  const loadDeadlines = useCallback(async () => {
+    try {
+      const rows = await calendarApi.listEvents();
+      setDeadlineEvents(
+        rows
+          .filter((event) => event.eventType === 'DEADLINE')
+          .sort(compareCalendarEvents)
+      );
+      setDeadlineLoadError('');
+    } catch {
+      setDeadlineEvents([]);
+      setDeadlineLoadError('Unable to load scheduled deadlines right now.');
+    }
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -42,9 +78,22 @@ export default function AdminDashboardPage() {
     void load();
   }, []);
 
+  useEffect(() => {
+    void loadDeadlines();
+  }, [loadDeadlines]);
+
   const maxStageCount = useMemo(
     () => Math.max(...dashboard.stageDistribution.map((item) => item.count), 1),
     [dashboard.stageDistribution]
+  );
+  const upcomingDeadlines = useMemo(
+    () => deadlineEvents
+      .filter((event) => {
+        const rawTime = event.eventTime.length === 5 ? `${event.eventTime}:00` : event.eventTime;
+        return new Date(`${event.eventDate}T${rawTime}`).getTime() >= Date.now();
+      })
+      .slice(0, 4),
+    [deadlineEvents]
   );
 
   const queueCards = [
@@ -73,6 +122,35 @@ export default function AdminDashboardPage() {
       onClick: () => navigate('/admin/publish'),
     },
   ];
+
+  const saveDeadline = async () => {
+    if (!deadlineForm.title.trim()) {
+      setDeadlineError('Please enter a deadline title.');
+      setDeadlineMessage('');
+      return;
+    }
+
+    setDeadlineSaving(true);
+    setDeadlineError('');
+    setDeadlineMessage('');
+    try {
+      await calendarApi.createEvent({
+        title: deadlineForm.title.trim(),
+        eventDate: deadlineForm.eventDate,
+        eventTime: deadlineForm.eventTime,
+        eventType: 'DEADLINE',
+        deadlineAction: deadlineForm.deadlineAction,
+        publicationType: deadlineForm.publicationType,
+      });
+      setDeadlineMessage('Deadline saved successfully.');
+      setDeadlineForm(createDeadlineFormState());
+      await loadDeadlines();
+    } catch (err) {
+      setDeadlineError(err instanceof Error ? err.message : 'Unable to save the deadline.');
+    } finally {
+      setDeadlineSaving(false);
+    }
+  };
 
   return (
     <ShellLayout title="Admin Dashboard" subtitle="Library administration overview for registration, review, clearance, and publishing">
@@ -104,7 +182,107 @@ export default function AdminDashboardPage() {
       </div>
 
       <div className="mb-4">
-        <CalendarDashboardPanel navigatePath="/admin/calendar" />
+        <DashboardPanel title="Add Event" className="su-dashboard-panel-auto-height" bodyClassName="su-dashboard-panel-body-auto-height">
+          {deadlineError ? <div className="alert alert-danger py-2 mb-0">{deadlineError}</div> : null}
+          {deadlineMessage ? <div className="alert alert-success py-2 mb-0">{deadlineMessage}</div> : null}
+          {deadlineLoadError ? <div className="alert alert-warning py-2 mb-0">{deadlineLoadError}</div> : null}
+
+          <div className="su-dashboard-form-panel">
+            <div className="row g-2">
+              <div className="col-12 col-xl-4">
+                <label className="form-label mb-1">Deadline title</label>
+                <input
+                  className="form-control form-control-sm"
+                  value={deadlineForm.title}
+                  placeholder="Input event title..."
+                  onChange={(event) => setDeadlineForm((current) => ({ ...current, title: event.target.value }))}
+                />
+              </div>
+              <div className="col-6 col-xl-2">
+                <label className="form-label mb-1">Action</label>
+                <select
+                  className="form-select form-select-sm"
+                  value={deadlineForm.deadlineAction}
+                  onChange={(event) => setDeadlineForm((current) => ({
+                    ...current,
+                    deadlineAction: event.target.value as DeadlineActionType,
+                  }))}
+                >
+                  <option value="REGISTRATION_DEADLINE">Registration deadline</option>
+                  <option value="SUBMISSION_DEADLINE">Submission deadline</option>
+                </select>
+              </div>
+              <div className="col-6 col-xl-2">
+                <label className="form-label mb-1">Type</label>
+                <select
+                  className="form-select form-select-sm"
+                  value={deadlineForm.publicationType}
+                  onChange={(event) => setDeadlineForm((current) => ({
+                    ...current,
+                    publicationType: event.target.value as PublicationType,
+                  }))}
+                >
+                  {PUBLICATION_TYPE_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {getPublicationTypeLabel(option)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="col-6 col-xl-2">
+                <label className="form-label mb-1">Date</label>
+                <input
+                  className="form-control form-control-sm"
+                  type="date"
+                  value={deadlineForm.eventDate}
+                  onChange={(event) => setDeadlineForm((current) => ({ ...current, eventDate: event.target.value }))}
+                />
+              </div>
+              <div className="col-6 col-xl-2">
+                <label className="form-label mb-1">Time</label>
+                <input
+                  className="form-control form-control-sm"
+                  type="time"
+                  value={deadlineForm.eventTime}
+                  onChange={(event) => setDeadlineForm((current) => ({ ...current, eventTime: event.target.value }))}
+                />
+              </div>
+              <div className="col-12 d-flex justify-content-end">
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={() => void saveDeadline()}
+                  disabled={deadlineSaving}
+                >
+                  {deadlineSaving ? 'Saving...' : 'Save deadline'}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="su-dashboard-subsection">
+            <h3 className="su-dashboard-subtitle">Upcoming deadlines</h3>
+            {upcomingDeadlines.length > 0 ? (
+              <div className="su-dashboard-list">
+                {upcomingDeadlines.map((event) => (
+                  <div className="su-dashboard-list-item" key={event.id}>
+                    <div className="d-flex justify-content-between gap-2 align-items-start">
+                      <div className="min-w-0">
+                        <div className="su-dashboard-item-title">{event.title}</div>
+                        <div className="su-dashboard-item-support">
+                          {getDeadlineActionLabel(event.deadlineAction)} • {getPublicationTypeLabel(event.publicationType)}
+                        </div>
+                        <div className="su-dashboard-item-meta">{formatCalendarEventSchedule(event)}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="su-dashboard-empty-copy mb-0">No deadlines scheduled.</p>
+            )}
+          </div>
+        </DashboardPanel>
       </div>
 
       <div className="row g-3">
@@ -203,6 +381,18 @@ export default function AdminDashboardPage() {
       </div>
     </ShellLayout>
   );
+}
+
+const PUBLICATION_TYPE_OPTIONS: PublicationType[] = ['THESIS', 'ARTICLE', 'INTERNSHIP_REPORT', 'OTHER'];
+
+function createDeadlineFormState(): DeadlineFormState {
+  return {
+    title: '',
+    deadlineAction: 'REGISTRATION_DEADLINE',
+    publicationType: 'THESIS',
+    eventDate: toDateInputValue(new Date()),
+    eventTime: '17:00',
+  };
 }
 
 function resolveAdminQueuePath(item: DashboardActionItem): string {

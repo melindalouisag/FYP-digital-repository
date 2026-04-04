@@ -1,4 +1,3 @@
-import { CalendarDashboardPanel } from '../../calendar/CalendarDashboardPanel';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ShellLayout from '../../ShellLayout';
@@ -113,11 +112,6 @@ export default function LecturerDashboardPage() {
           </DashboardPanel>
         ))}
       </div>
-
-      <div className="mb-4">
-        <CalendarDashboardPanel navigatePath="/lecturer/calendar" />
-      </div>
-
       <div className="row g-3">
         <div className="col-12 col-xl-5 d-flex">
           <DashboardPanel title="Stage Distribution" className="w-100">

@@ -56,7 +56,7 @@ export function useStudentDashboard(): UseStudentDashboardResult {
     [cases]
   );
   const nextStepCases = useMemo(
-    () => orderedActiveCases.slice(0, 3),
+    () => orderedActiveCases.slice(0, 2),
     [orderedActiveCases]
   );
   const furthestCase = useMemo(

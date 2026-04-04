@@ -20,15 +20,13 @@ function roleLinks(role?: string): LinkItem[] {
   if (role === 'STUDENT') {
     return [
       { label: 'Dashboard', path: '/student/dashboard', icon: '/icons/student/dashboard.png' },
-      { label: 'Calendar', path: '/student/calendar' },
-      { label: 'Publication Registration', path: '/student/registrations', icon: '/icons/student/registration.png' },
+      { label: 'Register Publication', path: '/student/registrations', icon: '/icons/student/registration.png' },
       { label: 'Submission', path: '/student/submissions', icon: '/icons/student/submission.png' },
     ];
   }
   if (role === 'LECTURER') {
     return [
       { label: 'Dashboard', path: '/lecturer/dashboard', icon: '/icons/lecturer/dashboard.png' },
-      { label: 'Calendar', path: '/lecturer/calendar' },
       { label: 'Registration Approval', path: '/lecturer/approvals', icon: '/icons/lecturer/maps-and-flags.png' },
       { label: 'Submission Review', path: '/lecturer/review', icon: '/icons/lecturer/submission.png' },
       { label: 'My Students', path: '/lecturer/students', icon: '/icons/lecturer/students.png' },
@@ -37,7 +35,6 @@ function roleLinks(role?: string): LinkItem[] {
   if (role === 'ADMIN') {
     return [
       { label: 'Dashboard', path: '/admin/dashboard', icon: '/icons/admin/dashboard.png' },
-      { label: 'Calendar', path: '/admin/calendar' },
       { label: 'Registration', path: '/admin/registration-approvals', icon: '/icons/admin/registration.png' },
       { label: 'Submission Review', path: '/admin/review', icon: '/icons/admin/submission.png' },
       { label: 'Clearance', path: '/admin/clearance', icon: '/icons/admin/clearance.png' },

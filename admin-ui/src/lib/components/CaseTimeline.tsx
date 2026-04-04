@@ -7,11 +7,7 @@ interface CaseTimelineProps {
 
 export default function CaseTimeline({ items, emptyLabel = 'No timeline activity yet.' }: CaseTimelineProps) {
   if (items.length === 0) {
-    return (
-      <div className="su-empty-state">
-        <div>{emptyLabel}</div>
-      </div>
-    );
+    return <p className="su-dashboard-empty-copy mb-0">{emptyLabel}</p>;
   }
 
   return (
@@ -21,8 +17,7 @@ export default function CaseTimeline({ items, emptyLabel = 'No timeline activity
           <div className="d-flex flex-wrap align-items-center gap-2 mb-1">
             <span className="text-muted small">{item.at ? new Date(item.at).toLocaleString() : 'N/A'}</span>
             {item.actorRole && (
-              <span className="badge bg-secondary-subtle text-secondary-emphasis"
-                style={{ borderRadius: '999px', fontSize: '0.7rem', padding: '0.2rem 0.5rem' }}>
+              <span className="su-timeline-actor">
                 {item.actorRole}
               </span>
             )}

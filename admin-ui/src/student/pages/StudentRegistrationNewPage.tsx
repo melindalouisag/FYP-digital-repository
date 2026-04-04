@@ -8,8 +8,7 @@ export default function StudentRegistrationNewPage() {
 
   return (
     <ShellLayout
-      title={form.isEditMode ? 'Edit Publication Registration' : 'New Publication Registration'}
-      subtitle={form.isEditMode ? 'Update this registration, then resubmit it when your revisions are complete' : 'Prepare the registration details now, then submit the same registration when everything is complete'}
+      title={form.isEditMode ? 'Update Registration' : 'Register Publication'}
     >
       <div className="su-card fade-in">
         <div className="card-body p-4">
