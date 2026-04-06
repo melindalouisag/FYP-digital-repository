@@ -42,7 +42,6 @@ function roleLinks(role?: string): LinkItem[] {
       { label: 'Clearance', path: '/admin/clearance', icon: '/icons/admin/clearance.png' },
       { label: 'Publishing', path: '/admin/publish', icon: '/icons/admin/publishing.png' },
       { label: 'Templates', path: '/admin/checklists', icon: '/icons/admin/template.png' },
-      { label: 'Profiles', path: '/admin/profiles', icon: '/icons/admin/search.png' },
     ];
   }
   return [];

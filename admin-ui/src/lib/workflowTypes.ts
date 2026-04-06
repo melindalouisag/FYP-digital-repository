@@ -320,12 +320,3 @@ export interface NotificationItem {
   occurredAt?: string;
   status: CaseStatus;
 }
-
-export interface AdminUserDirectoryItem {
-  userId: number;
-  fullName: string;
-  email: string;
-  faculty?: string | null;
-  studyProgram?: string | null;
-  role: UserRole;
-}

@@ -3,7 +3,6 @@ import type {
   AdminPublishDetail,
   AdminPublishQueueItem,
   AdminRegistrationApproval,
-  AdminUserDirectoryItem,
   AdminStudentReviewGroup,
   CaseDetailPayload,
   CaseStatus,
@@ -141,14 +140,6 @@ export const adminApi = {
 
   activateTemplate(templateId: number): Promise<{ templateId: number; active: boolean }> {
     return postJson(`/api/admin/checklists/templates/${templateId}/activate`);
-  },
-
-  studentDirectory(): Promise<AdminUserDirectoryItem[]> {
-    return getJson('/api/admin/students');
-  },
-
-  lecturerDirectory(): Promise<AdminUserDirectoryItem[]> {
-    return getJson('/api/admin/lecturers');
   },
 
   importChecklistXlsx(
