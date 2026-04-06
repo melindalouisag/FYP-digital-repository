@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import ShellLayout from '../../ShellLayout';
 import { adminApi } from '../../lib/api/admin';
 import PortalIcon from '../../lib/components/PortalIcon';
+import { useConfirmDialog } from '../../lib/components/useConfirmDialog';
 import { adminSidebarIcons } from '../../lib/portalIcons';
 import type { CaseSummary, PagedResponse } from '../../lib/workflowTypes';
 import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
@@ -19,6 +20,7 @@ const EMPTY_PAGE: PagedResponse<CaseSummary> = {
 };
 
 export default function AdminClearancePage() {
+  const { openConfirm, confirmDialog } = useConfirmDialog();
   const [pageData, setPageData] = useState<PagedResponse<CaseSummary>>(EMPTY_PAGE);
   const [page, setPage] = useState(0);
   const [reasons, setReasons] = useState<Record<number, string>>({});
@@ -54,8 +56,10 @@ export default function AdminClearancePage() {
     try {
       await action();
       await load(page);
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Action failed.');
+      return false;
     } finally {
       setWorkingCaseId(null);
     }
@@ -66,9 +70,61 @@ export default function AdminClearancePage() {
   const pageEnd = pageStart === 0 ? 0 : pageStart + cases.length - 1;
   const displayCaseTitle = (value?: string | null) => value?.trim() || 'Untitled submission';
 
+  const openApproveConfirm = (publicationCase: CaseSummary) => {
+    openConfirm({
+      title: 'Confirm Approval',
+      message: (
+        <div className="vstack gap-2">
+          <div>
+            This will approve clearance for <strong>{displayCaseTitle(publicationCase.title)}</strong> and move the publication to the next stage.
+          </div>
+          <div>Please confirm that the clearance submission is complete.</div>
+        </div>
+      ),
+      confirmLabel: 'Confirm Approval',
+      onConfirm: async (close) => {
+        const success = await run(publicationCase.id, () => adminApi.approveClearance(publicationCase.id).then(() => undefined));
+        if (success) {
+          close();
+        }
+      },
+    });
+  };
+
+  const openCorrectionConfirm = (publicationCase: CaseSummary) => {
+    const reason = reasons[publicationCase.id]?.trim();
+    if (!reason) {
+      setError('Correction reason is required.');
+      return;
+    }
+
+    openConfirm({
+      title: 'Confirm Revision Request',
+      message: (
+        <div className="vstack gap-2">
+          <div>
+            This will return <strong>{displayCaseTitle(publicationCase.title)}</strong> to the student for clearance correction.
+          </div>
+          <div>Please confirm that the correction reason clearly explains what must be updated.</div>
+        </div>
+      ),
+      confirmLabel: 'Confirm Request Revision',
+      confirmVariant: 'secondary',
+      onConfirm: async (close) => {
+        const success = await run(publicationCase.id, async () => {
+          await adminApi.requestClearanceCorrection(publicationCase.id, reason);
+        });
+        if (success) {
+          close();
+        }
+      },
+    });
+  };
+
   return (
-    <ShellLayout title="Clearance" subtitle="Review submitted clearance forms and either approve them or return them for correction">
-      {error && <div className="alert alert-danger" style={{ borderRadius: '0.75rem' }}>{error}</div>}
+    <>
+      <ShellLayout title="Clearance" subtitle="Review submitted clearance forms and either approve them or return them for correction">
+        {error && <div className="alert alert-danger" style={{ borderRadius: '0.75rem' }}>{error}</div>}
 
       {loading && (
         <div className="text-center py-5">
@@ -104,7 +160,7 @@ export default function AdminClearancePage() {
                   <button
                     className="btn btn-sm su-action-button su-action-button-primary"
                     disabled={busy}
-                    onClick={() => void run(c.id, () => adminApi.approveClearance(c.id).then(() => undefined))}
+                    onClick={() => openApproveConfirm(c)}
                   >
                     Approve Clearance
                   </button>
@@ -127,13 +183,7 @@ export default function AdminClearancePage() {
                       className="btn btn-sm su-action-button su-action-button-secondary"
                       style={{ whiteSpace: 'nowrap' }}
                       disabled={busy}
-                      onClick={() =>
-                        void run(c.id, async () => {
-                          const reason = reasons[c.id]?.trim();
-                          if (!reason) throw new Error('Correction reason is required.');
-                          await adminApi.requestClearanceCorrection(c.id, reason);
-                        })
-                      }
+                      onClick={() => openCorrectionConfirm(c)}
                     >
                       Request Correction
                     </button>
@@ -181,6 +231,8 @@ export default function AdminClearancePage() {
           </nav>
         </div>
       )}
-    </ShellLayout>
+      </ShellLayout>
+      {confirmDialog}
+    </>
   );
 }

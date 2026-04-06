@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import ShellLayout from '../../ShellLayout';
 import { adminApi } from '../../lib/api/admin';
 import PortalIcon from '../../lib/components/PortalIcon';
+import { useConfirmDialog } from '../../lib/components/useConfirmDialog';
 import { adminSidebarIcons } from '../../lib/portalIcons';
 import type { AdminRegistrationApproval, PagedResponse } from '../../lib/workflowTypes';
 import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
@@ -19,6 +20,7 @@ const EMPTY_PAGE: PagedResponse<AdminRegistrationApproval> = {
 };
 
 export default function AdminRegistrationApprovalsPage() {
+  const { openConfirm, confirmDialog } = useConfirmDialog();
   const [pageData, setPageData] = useState<PagedResponse<AdminRegistrationApproval>>(EMPTY_PAGE);
   const [page, setPage] = useState(0);
   const [rejectNotes, setRejectNotes] = useState<Record<number, string>>({});
@@ -51,8 +53,10 @@ export default function AdminRegistrationApprovalsPage() {
     try {
       await adminApi.approveRegistration(caseId);
       await load(page);
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Approve action failed.');
+      return false;
     }
   };
 
@@ -60,13 +64,15 @@ export default function AdminRegistrationApprovalsPage() {
     const note = rejectNotes[caseId]?.trim();
     if (!note) {
       setError('Rejection reason is required.');
-      return;
+      return false;
     }
     try {
       await adminApi.rejectRegistration(caseId, note);
       await load(page);
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Reject action failed.');
+      return false;
     }
   };
 
@@ -75,9 +81,59 @@ export default function AdminRegistrationApprovalsPage() {
   const pageStart = pageData.totalElements === 0 ? 0 : pageData.page * pageData.size + 1;
   const pageEnd = pageStart === 0 ? 0 : pageStart + rows.length - 1;
 
+  const openApproveConfirm = (row: AdminRegistrationApproval) => {
+    openConfirm({
+      title: 'Confirm Approval',
+      message: (
+        <div className="vstack gap-2">
+          <div>
+            This will verify <strong>{displayRegistrationTitle(row.title)}</strong> and open the submission stage.
+          </div>
+          <div>Please confirm that the registration is ready for the next workflow step.</div>
+        </div>
+      ),
+      confirmLabel: 'Confirm Approval',
+      onConfirm: async (close) => {
+        const success = await approve(row.caseId);
+        if (success) {
+          close();
+        }
+      },
+    });
+  };
+
+  const openRejectConfirm = (row: AdminRegistrationApproval) => {
+    const note = rejectNotes[row.caseId]?.trim();
+    if (!note) {
+      setError('Rejection reason is required.');
+      return;
+    }
+
+    openConfirm({
+      title: 'Confirm Revision Request',
+      message: (
+        <div className="vstack gap-2">
+          <div>
+            This will return <strong>{displayRegistrationTitle(row.title)}</strong> to the student for revision.
+          </div>
+          <div>Please confirm that the rejection reason clearly explains what must be corrected.</div>
+        </div>
+      ),
+      confirmLabel: 'Confirm Request Revision',
+      confirmVariant: 'secondary',
+      onConfirm: async (close) => {
+        const success = await reject(row.caseId);
+        if (success) {
+          close();
+        }
+      },
+    });
+  };
+
   return (
-    <ShellLayout title="Registration Verification" subtitle="Verify registrations after supervisor approval or return them with a reason">
-      {error && <div className="alert alert-danger" style={{ borderRadius: '0.75rem' }}>{error}</div>}
+    <>
+      <ShellLayout title="Registration Verification" subtitle="Verify registrations after supervisor approval or return them with a reason">
+        {error && <div className="alert alert-danger" style={{ borderRadius: '0.75rem' }}>{error}</div>}
 
       {loading && (
         <div className="text-center py-5">
@@ -119,7 +175,7 @@ export default function AdminRegistrationApprovalsPage() {
                     Submitted: {row.submittedAt ? new Date(row.submittedAt).toLocaleString() : 'N/A'}
                   </div>
                 </div>
-                <button className="btn btn-sm su-action-button su-action-button-primary" onClick={() => void approve(row.caseId)}>
+                <button className="btn btn-sm su-action-button su-action-button-primary" onClick={() => openApproveConfirm(row)}>
                   Verify Registration
                 </button>
               </div>
@@ -139,7 +195,7 @@ export default function AdminRegistrationApprovalsPage() {
                     placeholder="Enter rejection reason"
                     style={{ borderRadius: '999px' }}
                   />
-                  <button className="btn btn-sm su-action-button su-action-button-secondary" style={{ whiteSpace: 'nowrap' }} onClick={() => void reject(row.caseId)}>
+                  <button className="btn btn-sm su-action-button su-action-button-secondary" style={{ whiteSpace: 'nowrap' }} onClick={() => openRejectConfirm(row)}>
                     Reject Registration
                   </button>
                 </div>
@@ -185,6 +241,8 @@ export default function AdminRegistrationApprovalsPage() {
           </nav>
         </div>
       )}
-    </ShellLayout>
+      </ShellLayout>
+      {confirmDialog}
+    </>
   );
 }

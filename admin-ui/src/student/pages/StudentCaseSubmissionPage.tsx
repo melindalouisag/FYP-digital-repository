@@ -23,7 +23,7 @@ import {
   statusBadgeClass,
 } from '../../lib/workflowUi';
 
-const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
 
 export default function StudentCaseSubmissionPage() {
   const { caseId } = useParams();
@@ -186,7 +186,7 @@ export default function StudentCaseSubmissionPage() {
       return 'Only PDF files are accepted.';
     }
     if (candidate.size > MAX_UPLOAD_BYTES) {
-      return 'File exceeds 25 MB maximum upload size.';
+      return 'File size must not exceed 15MB.';
     }
     return '';
   };
@@ -226,7 +226,7 @@ export default function StudentCaseSubmissionPage() {
       setFile(null);
       await load();
     } catch (err) {
-      if (err instanceof ApiError && (err.status === 400 || err.status === 409)) {
+      if (err instanceof ApiError && (err.status === 400 || err.status === 409 || err.status === 413)) {
         setError(err.message || 'You can upload only after registration verification or when a revision has been requested.');
       } else {
         setError(err instanceof Error ? err.message : 'Upload failed.');
@@ -352,7 +352,7 @@ export default function StudentCaseSubmissionPage() {
                 }}
                 disabled={!uploadAllowed || submissionDeadlinePassed || uploading}
               />
-              <div className="form-text">Only PDF files, max 25 MB.</div>
+              <div className="form-text">Only PDF files. Maximum file size: 15MB.</div>
             </div>
             <div className="col-md-6">
               <label className="form-label">Title</label>

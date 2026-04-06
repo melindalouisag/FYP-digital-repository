@@ -45,7 +45,7 @@ public class StorageService {
   @Value("${file.storage.provider:}")
   private String provider;
 
-  @Value("${file.max-size-bytes:5242880}")
+  @Value("${file.max-size-bytes:15728640}")
   private long maxSizeBytes;
 
   @Value("${azure.storage.container-name:}")
@@ -207,7 +207,7 @@ public class StorageService {
       throw new IOException("File is required");
     }
     if (file.getSize() > maxSizeBytes) {
-      throw new IOException("File exceeds maximum size of " + maxSizeBytes + " bytes");
+      throw new IOException(buildMaxSizeMessage());
     }
 
     String safeOriginalFilename = sanitizeOriginalFilename(file.getOriginalFilename());
@@ -232,6 +232,11 @@ public class StorageService {
     if (!hasPdfMagicBytes(file)) {
       throw new IOException("Only PDF files are accepted.");
     }
+  }
+
+  private String buildMaxSizeMessage() {
+    long maxSizeMb = Math.round((double) maxSizeBytes / (1024 * 1024));
+    return "File size must not exceed " + maxSizeMb + "MB.";
   }
 
   public String sanitizeOriginalFilename(String originalFilename) throws IOException {

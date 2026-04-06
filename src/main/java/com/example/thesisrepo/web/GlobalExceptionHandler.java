@@ -5,6 +5,7 @@ import com.example.thesisrepo.web.dto.ApiFieldErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
@@ -26,6 +28,8 @@ import java.util.List;
 @ControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
+  @Value("${file.max-size-bytes:15728640}")
+  private long maxFileSizeBytes;
 
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ResponseEntity<ApiErrorResponse> handleMethodArgumentNotValid(
@@ -73,6 +77,14 @@ public class GlobalExceptionHandler {
     HttpServletRequest request
   ) {
     return buildResponse(HttpStatus.BAD_REQUEST, "Malformed request body.", request, List.of());
+  }
+
+  @ExceptionHandler(MaxUploadSizeExceededException.class)
+  public ResponseEntity<ApiErrorResponse> handleMaxUploadSizeExceeded(
+    MaxUploadSizeExceededException exception,
+    HttpServletRequest request
+  ) {
+    return buildResponse(HttpStatus.BAD_REQUEST, buildMaxFileSizeMessage(), request, List.of());
   }
 
   @ExceptionHandler(ResponseStatusException.class)
@@ -138,5 +150,10 @@ public class GlobalExceptionHandler {
     }
     int index = path.lastIndexOf('.');
     return index >= 0 ? path.substring(index + 1) : path;
+  }
+
+  private String buildMaxFileSizeMessage() {
+    long maxSizeMb = Math.round((double) maxFileSizeBytes / (1024 * 1024));
+    return "File size must not exceed " + maxSizeMb + "MB.";
   }
 }

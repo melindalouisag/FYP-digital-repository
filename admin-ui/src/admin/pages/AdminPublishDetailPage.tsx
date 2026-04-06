@@ -44,7 +44,7 @@ export default function AdminPublishDetailPage() {
   }, [load]);
 
   const publish = async () => {
-    if (!caseId) return;
+    if (!caseId) return false;
     setWorkingAction('publish');
     setError('');
     setMessage('');
@@ -52,11 +52,34 @@ export default function AdminPublishDetailPage() {
       await adminApi.publish(Number(caseId));
       setMessage('Publication published to repository.');
       await load();
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Publish action failed.');
+      return false;
     } finally {
       setWorkingAction(null);
     }
+  };
+
+  const openPublishConfirm = () => {
+    openConfirm({
+      title: 'Confirm Publish',
+      message: (
+        <div className="vstack gap-2">
+          <div>
+            This will publish <strong>{displayCaseTitle(detail?.title)}</strong> to the repository.
+          </div>
+          <div>Please confirm that the metadata and uploaded file are ready for release.</div>
+        </div>
+      ),
+      confirmLabel: 'Confirm Publish',
+      onConfirm: async (close) => {
+        const success = await publish();
+        if (success) {
+          close();
+        }
+      },
+    });
   };
 
   const unpublish = async () => {
@@ -195,7 +218,7 @@ export default function AdminPublishDetailPage() {
                       className="btn su-action-button su-action-button-primary"
                       style={{ paddingInline: '2rem' }}
                       disabled={working}
-                      onClick={() => void publish()}
+                      onClick={openPublishConfirm}
                     >
                       {workingAction === 'publish' ? 'Publishing...' : 'Publish to Repository'}
                     </button>

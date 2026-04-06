@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ShellLayout from '../../ShellLayout';
 import DashboardPanel from '../../lib/components/DashboardPanel';
+import DashboardProgressRingCard from '../../lib/components/DashboardProgressRingCard';
 import DashboardMetricCard from '../../lib/components/DashboardMetricCard';
 import { lecturerApi } from '../../lib/api/lecturer';
 import { lecturerSidebarIcons } from '../../lib/portalIcons';
@@ -60,14 +61,13 @@ export default function LecturerDashboardPage() {
     () => Math.max(...dashboard.stageDistribution.map((item) => item.count), 1),
     [dashboard.stageDistribution]
   );
+  const completionPercent = useMemo(() => (
+    dashboard.totalStudentCount > 0
+      ? Math.round((dashboard.publishedStudentCount / dashboard.totalStudentCount) * 100)
+      : null
+  ), [dashboard.publishedStudentCount, dashboard.totalStudentCount]);
 
   const summaryCards: DashboardMetricSummaryCard[] = [
-    {
-      title: 'Published Students',
-      value: `${dashboard.publishedStudentCount} / ${dashboard.totalStudentCount}`,
-      detail: 'students published',
-      iconSrc: lecturerSidebarIcons.library,
-    },
     {
       title: 'Registration Approvals',
       value: dashboard.registrationApprovalCount,
@@ -107,13 +107,21 @@ export default function LecturerDashboardPage() {
       </div>
 
       <div className="su-dashboard-grid su-dashboard-grid-4 mb-4">
+        <DashboardProgressRingCard
+          title="Publication Completion"
+          progressPercent={completionPercent}
+          loading={loading}
+          emptyText="No supervised publications yet."
+          primaryText={`${dashboard.publishedStudentCount} of ${dashboard.totalStudentCount} students published`}
+          secondaryText={`${dashboard.activeSupervisedCaseCount} active supervised publication${dashboard.activeSupervisedCaseCount === 1 ? '' : 's'}`}
+        />
         {summaryCards.map((card) => (
           <DashboardMetricCard
             key={card.title}
             iconSrc={card.iconSrc}
             iconBackground="rgba(11, 117, 132, 0.10)"
             label={card.title}
-            value={loading ? (card.title === 'Published Students' ? '— / —' : '—') : card.value}
+            value={loading ? '—' : card.value}
             description={card.detail}
             onClick={card.onClick}
           />

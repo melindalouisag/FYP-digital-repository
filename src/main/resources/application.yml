@@ -18,8 +18,8 @@ spring:
 
   servlet:
     multipart:
-      max-file-size: 5MB
-      max-request-size: 5MB
+      max-file-size: 15MB
+      max-request-size: 16MB
 
 server:
   port: ${PORT:8080}
@@ -32,7 +32,7 @@ logging:
 file:
   storage:
     provider: ${FILE_STORAGE_PROVIDER:}
-  max-size-bytes: 5242880
+  max-size-bytes: 15728640
 
 azure:
   storage:

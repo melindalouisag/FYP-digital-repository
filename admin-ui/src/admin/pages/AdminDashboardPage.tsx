@@ -10,6 +10,7 @@ import {
 } from '../../calendar/calendarUtils';
 import { calendarApi } from '../../lib/api/calendar';
 import DashboardPanel from '../../lib/components/DashboardPanel';
+import DashboardProgressRingCard from '../../lib/components/DashboardProgressRingCard';
 import DashboardMetricCard from '../../lib/components/DashboardMetricCard';
 import { adminApi } from '../../lib/api/admin';
 import { adminSidebarIcons } from '../../lib/portalIcons';
@@ -107,14 +108,13 @@ export default function AdminDashboardPage() {
       .slice(0, 4),
     [deadlineEvents]
   );
+  const completionPercent = useMemo(() => (
+    dashboard.totalStudentCount > 0
+      ? Math.round((dashboard.publishedStudentCount / dashboard.totalStudentCount) * 100)
+      : null
+  ), [dashboard.publishedStudentCount, dashboard.totalStudentCount]);
 
   const queueCards: DashboardMetricSummaryCard[] = [
-    {
-      title: 'Published Students',
-      value: `${dashboard.publishedStudentCount} / ${dashboard.totalStudentCount}`,
-      detail: 'students published',
-      iconSrc: adminSidebarIcons.publishing,
-    },
     {
       title: 'Registration Queue',
       value: dashboard.registrationQueueCount,
@@ -175,13 +175,21 @@ export default function AdminDashboardPage() {
       {error && <div className="alert alert-danger">{error}</div>}
 
       <div className="su-dashboard-grid su-dashboard-grid-5 mb-4">
+        <DashboardProgressRingCard
+          title="Repository Completion"
+          progressPercent={completionPercent}
+          loading={loading}
+          emptyText="No workflow records yet."
+          primaryText={`${dashboard.publishedStudentCount} of ${dashboard.totalStudentCount} students published`}
+          secondaryText={`${dashboard.activeCaseCount} active publication${dashboard.activeCaseCount === 1 ? '' : 's'}`}
+        />
         {queueCards.map((card) => (
           <DashboardMetricCard
             key={card.title}
             iconSrc={card.iconSrc}
             iconBackground="rgba(11, 117, 132, 0.10)"
             label={card.title}
-            value={loading ? (card.title === 'Published Students' ? '— / —' : '—') : card.value}
+            value={loading ? '—' : card.value}
             description={card.detail}
             onClick={card.onClick}
           />
