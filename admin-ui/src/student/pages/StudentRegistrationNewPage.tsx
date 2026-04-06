@@ -20,6 +20,7 @@ export default function StudentRegistrationNewPage() {
             registrationDeadlineLabel={form.registrationDeadlineLabel}
             preferredThesisCaseId={form.preferredThesisCase?.id}
             currentStatus={form.currentStatus}
+            registrationFeedback={form.registrationFeedback}
             onOpenPreferredCase={form.openPreferredThesisCase}
           />
           <RegistrationForm form={form} />

@@ -12,7 +12,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { masterApi, type Faculty } from '../../lib/api/master';
 import { studentApi, type SupervisorRow } from '../../lib/api/student';
 import { useAuth } from '../../lib/context/AuthContext';
-import type { CalendarEvent, CaseSummary, PublicationType } from '../../lib/workflowTypes';
+import type { CalendarEvent, CaseDetailPayload, CaseSummary, PublicationType } from '../../lib/workflowTypes';
 
 export type FormErrors = {
   title?: string;
@@ -52,6 +52,7 @@ export interface UseRegistrationFormResult {
   thesisBlocked: boolean;
   registrationDeadlinePassed: boolean;
   registrationDeadlineLabel: string;
+  registrationFeedback: RegistrationFeedbackEntry[];
   preferredThesisCase: CaseSummary | null;
   setTitle: (value: string) => void;
   setYear: (value?: number) => void;
@@ -66,6 +67,13 @@ export interface UseRegistrationFormResult {
   openPreferredThesisCase: () => void;
   submitDraft: () => Promise<void>;
   submitForApproval: () => Promise<void>;
+}
+
+export interface RegistrationFeedbackEntry {
+  key: string;
+  sourceLabel: string;
+  body: string;
+  createdAt?: string;
 }
 
 const STATUS_PRIORITY: Record<string, number> = {
@@ -126,6 +134,7 @@ export function useRegistrationForm(): UseRegistrationFormResult {
   const [loadingPage, setLoadingPage] = useState(Boolean(isEditMode));
   const [loadingSupervisors, setLoadingSupervisors] = useState(true);
   const [currentStatus, setCurrentStatus] = useState<string | null>(null);
+  const [registrationFeedback, setRegistrationFeedback] = useState<RegistrationFeedbackEntry[]>([]);
   const [errors, setErrors] = useState<FormErrors>({});
   const [serverError, setServerError] = useState('');
 
@@ -244,6 +253,7 @@ export function useRegistrationForm(): UseRegistrationFormResult {
     setStudentIdNumberState(detail.registration?.studentIdNumber ?? user?.studentId ?? '');
     setSelectedSupervisorEmailState(detail.supervisors?.[0]?.email ?? '');
     setCurrentStatus(detail.case.status);
+    setRegistrationFeedback(buildRegistrationFeedback(detail));
   }, [user?.faculty, user?.fullName, user?.studentId]);
 
   useEffect(() => {
@@ -272,6 +282,7 @@ export function useRegistrationForm(): UseRegistrationFormResult {
   useEffect(() => {
     const loadEditCase = async () => {
       if (!isEditMode || !editCaseId) {
+        setRegistrationFeedback([]);
         setLoadingPage(false);
         return;
       }
@@ -392,6 +403,7 @@ export function useRegistrationForm(): UseRegistrationFormResult {
     thesisBlocked,
     registrationDeadlinePassed,
     registrationDeadlineLabel,
+    registrationFeedback,
     preferredThesisCase,
     setTitle: (value) => {
       setTitleState(value);
@@ -438,4 +450,36 @@ export function useRegistrationForm(): UseRegistrationFormResult {
     submitDraft: () => submit(false),
     submitForApproval: () => submit(true),
   };
+}
+
+function buildRegistrationFeedback(detail: CaseDetailPayload): RegistrationFeedbackEntry[] {
+  const entries: RegistrationFeedbackEntry[] = detail.comments
+    ?.filter((comment) => comment.authorRole === 'LECTURER' || comment.authorRole === 'ADMIN')
+    .map((comment) => ({
+      key: `comment-${comment.id}`,
+      sourceLabel: comment.authorRole === 'ADMIN' ? 'Feedback from library' : 'Feedback from lecturer',
+      body: comment.body,
+      createdAt: comment.createdAt,
+    })) ?? [];
+
+  const supervisorDecisionNote = detail.registration?.supervisorDecisionNote?.trim();
+  if (supervisorDecisionNote) {
+    const duplicate = entries.some((entry) => entry.body.trim() === supervisorDecisionNote);
+    if (!duplicate) {
+      entries.push({
+        key: 'registration-supervisor-note',
+        sourceLabel: 'Feedback from lecturer',
+        body: supervisorDecisionNote,
+        createdAt: detail.registration?.supervisorDecisionAt ?? undefined,
+      });
+    }
+  }
+
+  return entries.sort((left, right) => compareRegistrationFeedbackDates(left.createdAt, right.createdAt));
+}
+
+function compareRegistrationFeedbackDates(left?: string, right?: string) {
+  const leftValue = left ? Date.parse(left) || 0 : 0;
+  const rightValue = right ? Date.parse(right) || 0 : 0;
+  return leftValue - rightValue;
 }

@@ -38,6 +38,7 @@ const AdminPublishPage = lazy(() => import('../admin/pages/AdminPublishPage'));
 const AdminPublishDetailPage = lazy(() => import('../admin/pages/AdminPublishDetailPage'));
 const AdminChecklistPage = lazy(() => import('../admin/pages/AdminChecklistPage'));
 const AdminChecklistEditorPage = lazy(() => import('../admin/pages/AdminChecklistEditorPage'));
+const AdminProfilesPage = lazy(() => import('../admin/pages/AdminProfilesPage'));
 
 const ROUTE_PATHS = {
   LECTURER_REVIEW: '/lecturer/review',
@@ -138,6 +139,7 @@ export function AppRoutes() {
     { path: '/admin/publish/:caseId', element: withSuspense(protectedElement(<AdminPublishDetailPage />, ['ADMIN'])) },
     { path: '/admin/checklists', element: withSuspense(protectedElement(<AdminChecklistPage />, ['ADMIN'])) },
     { path: '/admin/checklists/:templateId/edit', element: withSuspense(protectedElement(<AdminChecklistEditorPage />, ['ADMIN'])) },
+    { path: '/admin/profiles', element: withSuspense(protectedElement(<AdminProfilesPage />, ['ADMIN'])) },
   ];
 
   return (

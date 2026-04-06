@@ -3,6 +3,7 @@ import type {
   AdminPublishDetail,
   AdminPublishQueueItem,
   AdminRegistrationApproval,
+  AdminUserDirectoryItem,
   AdminStudentReviewGroup,
   CaseDetailPayload,
   CaseStatus,
@@ -140,6 +141,44 @@ export const adminApi = {
 
   activateTemplate(templateId: number): Promise<{ templateId: number; active: boolean }> {
     return postJson(`/api/admin/checklists/templates/${templateId}/activate`);
+  },
+
+  studentDirectory(params?: {
+    q?: string;
+    faculty?: string;
+    studyProgram?: string;
+  }): Promise<AdminUserDirectoryItem[]> {
+    const query = new URLSearchParams();
+    if (params?.q?.trim()) {
+      query.set('q', params.q.trim());
+    }
+    if (params?.faculty?.trim()) {
+      query.set('faculty', params.faculty.trim());
+    }
+    if (params?.studyProgram?.trim()) {
+      query.set('studyProgram', params.studyProgram.trim());
+    }
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+    return getJson(`/api/admin/students${suffix}`);
+  },
+
+  lecturerDirectory(params?: {
+    q?: string;
+    faculty?: string;
+    studyProgram?: string;
+  }): Promise<AdminUserDirectoryItem[]> {
+    const query = new URLSearchParams();
+    if (params?.q?.trim()) {
+      query.set('q', params.q.trim());
+    }
+    if (params?.faculty?.trim()) {
+      query.set('faculty', params.faculty.trim());
+    }
+    if (params?.studyProgram?.trim()) {
+      query.set('studyProgram', params.studyProgram.trim());
+    }
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+    return getJson(`/api/admin/lecturers${suffix}`);
   },
 
   importChecklistXlsx(

@@ -15,7 +15,7 @@ import DownloadFilenameLink from '../../lib/components/DownloadFilenameLink';
 import KeywordChipInput from '../../lib/components/KeywordChipInput';
 import { useAuth } from '../../lib/context/AuthContext';
 import { joinKeywordTokens, splitKeywordString } from '../../lib/keywords';
-import type { CalendarEvent, CaseDetailPayload, SubmissionVersion } from '../../lib/workflowTypes';
+import type { CalendarEvent, CaseDetailPayload, ChecklistResult, SubmissionVersion, UserRole, WorkflowComment } from '../../lib/workflowTypes';
 import {
   canUploadSubmission,
   formatStatus,
@@ -30,6 +30,7 @@ export default function StudentCaseSubmissionPage() {
   const { user } = useAuth();
   const [detail, setDetail] = useState<CaseDetailPayload | null>(null);
   const [versions, setVersions] = useState<SubmissionVersion[]>([]);
+  const [checklistResults, setChecklistResults] = useState<ChecklistResult[]>([]);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [meta, setMeta] = useState<SubmissionMetaPayload>({
@@ -55,16 +56,19 @@ export default function StudentCaseSubmissionPage() {
     setLoading(true);
     setError('');
     try {
-      const [caseDetail, submissionList] = await Promise.all([
+      const [caseDetail, submissionList, checklistRows] = await Promise.all([
         studentApi.caseDetail(Number(caseId)),
         studentApi.listSubmissions(Number(caseId)),
+        studentApi.listChecklistResults(Number(caseId)).catch(() => []),
       ]);
       setDetail(caseDetail);
       setVersions(submissionList);
+      setChecklistResults(checklistRows);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load submission data.');
       setDetail(null);
       setVersions([]);
+      setChecklistResults([]);
     } finally {
       setLoading(false);
     }
@@ -130,6 +134,32 @@ export default function StudentCaseSubmissionPage() {
     () => (detail ? canUploadSubmission(detail.case.status) : false),
     [detail]
   );
+  const latestSubmission = versions[0] ?? null;
+  const currentRevisionRole = useMemo<UserRole | null>(() => {
+    if (!detail) {
+      return null;
+    }
+    if (detail.case.status === 'NEEDS_REVISION_SUPERVISOR') {
+      return 'LECTURER';
+    }
+    if (detail.case.status === 'NEEDS_REVISION_LIBRARY') {
+      return 'ADMIN';
+    }
+    return null;
+  }, [detail]);
+  const revisionComments = useMemo(
+    () => buildCurrentRevisionComments(detail?.comments ?? [], currentRevisionRole, latestSubmission?.createdAt),
+    [currentRevisionRole, detail?.comments, latestSubmission?.createdAt]
+  );
+  const failedChecklistItems = useMemo(
+    () => (
+      currentRevisionRole === 'ADMIN'
+        ? checklistResults.filter((item) => item.passFail === 'FAIL')
+        : []
+    ),
+    [checklistResults, currentRevisionRole]
+  );
+  const showRevisionPanel = Boolean(currentRevisionRole);
   const submissionDeadline = useMemo(
     () => (detail ? findLatestDeadline(calendarEvents, detail.case.type, 'SUBMISSION_DEADLINE') : null),
     [calendarEvents, detail]
@@ -246,6 +276,65 @@ export default function StudentCaseSubmissionPage() {
           </div>
         </div>
       )}
+
+      {detail && showRevisionPanel ? (
+        <div className="su-revision-panel mb-3">
+          <div className="su-revision-panel-header">
+            <div>
+              <div className="su-revision-panel-kicker">Revision Guidance</div>
+              <h3 className="su-revision-panel-title mb-1">
+                {currentRevisionRole === 'ADMIN' ? 'Feedback from library' : 'Feedback from lecturer'}
+              </h3>
+              <div className="su-revision-panel-copy">
+                Review the comments below before uploading the corrected file and metadata.
+              </div>
+            </div>
+          </div>
+
+          {revisionComments.length > 0 ? (
+            <div className="su-revision-comment-list">
+              {revisionComments.map((comment) => (
+                <div className="su-revision-comment-item" key={comment.id}>
+                  <div className="su-revision-comment-meta">
+                    {comment.authorRole === 'ADMIN' ? 'Library feedback' : 'Lecturer feedback'}
+                    {comment.createdAt ? ` • ${new Date(comment.createdAt).toLocaleString()}` : ''}
+                  </div>
+                  <div className="su-revision-comment-body">{comment.body}</div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="su-revision-empty-copy">
+              A revision has been requested. Please update the file and confirm the metadata before uploading again.
+            </div>
+          )}
+
+          {currentRevisionRole === 'ADMIN' ? (
+            <div className="su-revision-section">
+              <div className="su-revision-section-title">Checklist items to revise</div>
+              {failedChecklistItems.length > 0 ? (
+                <div className="su-revision-checklist">
+                  {failedChecklistItems.map((item) => (
+                    <div className="su-revision-checklist-item" key={item.id}>
+                      <div className="su-revision-checklist-title">{item.checklistItem.itemText}</div>
+                      <div className="su-revision-checklist-meta">
+                        {item.checklistItem.section?.trim() || 'Library checklist requirement'}
+                      </div>
+                      {item.note?.trim() ? (
+                        <div className="su-revision-checklist-note">{item.note.trim()}</div>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="su-revision-empty-copy">
+                  No failed checklist items are recorded for this revision request.
+                </div>
+              )}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="card shadow-sm mb-3">
         <div className="card-body">
@@ -410,4 +499,35 @@ export default function StudentCaseSubmissionPage() {
       </div>
     </ShellLayout>
   );
+}
+
+function buildCurrentRevisionComments(
+  comments: WorkflowComment[],
+  role: UserRole | null,
+  latestSubmissionCreatedAt?: string
+) {
+  if (!role) {
+    return [];
+  }
+
+  const sameRoleComments = comments.filter((comment) => comment.authorRole === role);
+  if (sameRoleComments.length === 0) {
+    return [];
+  }
+
+  const latestSubmissionAt = latestSubmissionCreatedAt ? Date.parse(latestSubmissionCreatedAt) || 0 : 0;
+  if (latestSubmissionAt === 0) {
+    return sameRoleComments;
+  }
+
+  const currentCycleComments = sameRoleComments.filter((comment) => {
+    if (!comment.createdAt) {
+      return true;
+    }
+    return (Date.parse(comment.createdAt) || 0) >= latestSubmissionAt;
+  });
+
+  return currentCycleComments.length > 0
+    ? currentCycleComments
+    : sameRoleComments.slice(-3);
 }

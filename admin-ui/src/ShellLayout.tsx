@@ -1,7 +1,10 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { notificationsApi } from './lib/api/notifications';
 import ThemeSwitch from './theme/ThemeSwitch';
+import type { NotificationItem } from './lib/workflowTypes';
 import { useAuth } from './lib/context/AuthContext';
+import { formatStatus, statusBadgeClass } from './lib/workflowUi';
 import { useTheme } from './theme/ThemeContext';
 
 interface ShellLayoutProps {
@@ -40,38 +43,98 @@ function roleLinks(role?: string): LinkItem[] {
       { label: 'Clearance', path: '/admin/clearance', icon: '/icons/admin/clearance.png' },
       { label: 'Publishing', path: '/admin/publish', icon: '/icons/admin/publishing.png' },
       { label: 'Templates', path: '/admin/checklists', icon: '/icons/admin/template.png' },
+      { label: 'Profiles', path: '/admin/profiles', icon: '/icons/admin/search.png' },
     ];
   }
   return [];
 }
 
 export default function ShellLayout({ title, children }: ShellLayoutProps) {
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { theme, setTheme } = useTheme();
   const [accountOpen, setAccountOpen] = useState(false);
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [notificationsError, setNotificationsError] = useState('');
+  const [, setNotificationStorageVersion] = useState(0);
   const accountRef = useRef<HTMLDivElement | null>(null);
+  const notificationRef = useRef<HTMLDivElement | null>(null);
   const links = roleLinks(user?.role);
   const roleLabel = user?.role ? user.role.charAt(0) + user.role.slice(1).toLowerCase() : 'Guest';
   const currentYear = new Date().getFullYear();
+  const userId = user?.id ?? null;
+  const userRole = user?.role ?? null;
   const initials = user?.fullName
     ? user.fullName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
     : user?.email?.slice(0, 2).toUpperCase() ?? 'G';
   const availableRoles = user?.availableRoles ?? (user?.role ? [user.role] : []);
+  const notificationStorageKey = user ? `su-notifications-last-seen:${user.id}:${user.role}` : null;
+  const lastSeenAt = notificationStorageKey ? readLocalStorage(notificationStorageKey) : null;
+  const shortDisplayName = useMemo(
+    () => shortenDisplayName(user?.fullName, user?.email),
+    [user?.email, user?.fullName]
+  );
+  const unreadCount = useMemo(
+    () => countUnreadNotifications(notifications, lastSeenAt),
+    [lastSeenAt, notifications]
+  );
 
   useEffect(() => {
-    if (!accountOpen) {
+    if (!accountOpen && !notificationOpen) {
       return undefined;
     }
 
     const onPointerDown = (event: MouseEvent) => {
-      if (accountRef.current && !accountRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (accountRef.current && !accountRef.current.contains(target)) {
         setAccountOpen(false);
+      }
+      if (notificationRef.current && !notificationRef.current.contains(target)) {
+        setNotificationOpen(false);
       }
     };
 
     document.addEventListener('mousedown', onPointerDown);
     return () => document.removeEventListener('mousedown', onPointerDown);
-  }, [accountOpen]);
+  }, [accountOpen, notificationOpen]);
+
+  useEffect(() => {
+    if (userId == null || userRole == null) {
+      return;
+    }
+
+    let active = true;
+    void Promise.resolve().then(async () => {
+      if (!active) {
+        return;
+      }
+      setNotificationsLoading(true);
+      setNotificationsError('');
+      try {
+        const items = await notificationsApi.list();
+        if (!active) {
+          return;
+        }
+        setNotifications(items);
+      } catch (error: unknown) {
+        if (!active) {
+          return;
+        }
+        setNotifications([]);
+        setNotificationsError(error instanceof Error ? error.message : 'Failed to load notifications.');
+      } finally {
+        if (active) {
+          setNotificationsLoading(false);
+        }
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [userId, userRole]);
 
   return (
     <div className="min-vh-100 d-flex flex-column">
@@ -96,11 +159,96 @@ export default function ShellLayout({ title, children }: ShellLayoutProps) {
                 onChange={(checked) => setTheme(checked ? 'dark' : 'light')}
               />
             </div>
+            <div className="su-header-menu" ref={notificationRef}>
+              <button
+                className="su-header-icon-button"
+                type="button"
+                aria-label="Open notifications"
+                aria-expanded={notificationOpen}
+                onClick={() => {
+                  setAccountOpen(false);
+                  setNotificationOpen((current) => {
+                    const nextOpen = !current;
+                    if (nextOpen && notificationStorageKey) {
+                      writeLocalStorage(
+                        notificationStorageKey,
+                        newestNotificationTimestamp(notifications) ?? new Date().toISOString()
+                      );
+                      setNotificationStorageVersion((value) => value + 1);
+                    }
+                    return nextOpen;
+                  });
+                }}
+              >
+                <BellIcon />
+                {unreadCount > 0 ? (
+                  <span className="su-notification-badge">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                ) : null}
+              </button>
+
+              {notificationOpen ? (
+                <div className="su-header-popover su-notification-popover">
+                  <div className="su-account-popover-header">
+                    <div className="su-account-name text-body">Notifications</div>
+                    <div className="su-account-meta">
+                      {notifications.length === 0 ? 'No recent workflow updates.' : `${notifications.length} recent update${notifications.length === 1 ? '' : 's'}`}
+                    </div>
+                  </div>
+
+                  {notificationsError ? (
+                    <div className="alert alert-warning py-2 small mb-2">{notificationsError}</div>
+                  ) : null}
+
+                  {notificationsLoading ? (
+                    <div className="su-notification-empty">Loading notifications...</div>
+                  ) : notifications.length === 0 ? (
+                    <div className="su-notification-empty">No recent workflow updates.</div>
+                  ) : (
+                    <div className="su-notification-list">
+                      {notifications.map((item) => (
+                        <button
+                          className="su-notification-item-button"
+                          type="button"
+                          key={`${item.eventType}-${item.caseId ?? 'general'}-${item.occurredAt ?? item.title}`}
+                          onClick={() => {
+                            const nextPath = resolveNotificationPath(user?.role, item);
+                            setNotificationOpen(false);
+                            if (nextPath) {
+                              navigate(nextPath);
+                            }
+                          }}
+                        >
+                          <div className="su-notification-item">
+                            <div className="d-flex justify-content-between gap-2 align-items-start">
+                              <div className="min-w-0">
+                                <div className="su-notification-item-title">{item.title}</div>
+                                <div className="su-notification-item-detail">{item.detail}</div>
+                                <div className="su-notification-item-meta">
+                                  {item.occurredAt ? new Date(item.occurredAt).toLocaleString() : 'N/A'}
+                                </div>
+                              </div>
+                              <span className={`badge status-badge ${statusBadgeClass(item.status)}`}>
+                                {formatStatus(item.status)}
+                              </span>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : null}
+            </div>
             <div className="su-account-menu" ref={accountRef}>
               <button
                 className="su-account-button"
                 type="button"
-                onClick={() => setAccountOpen((current) => !current)}
+                onClick={() => {
+                  setNotificationOpen(false);
+                  setAccountOpen((current) => !current);
+                }}
                 aria-expanded={accountOpen}
               >
                 <span
@@ -118,13 +266,13 @@ export default function ShellLayout({ title, children }: ShellLayoutProps) {
                 </span>
                 <span className="text-start">
                   <span className="su-account-name">
-                    {user?.fullName || user?.email || 'Guest'}
+                    {shortDisplayName}
                   </span>
                 </span>
               </button>
 
               {accountOpen ? (
-                <div className="su-account-popover">
+                <div className="su-header-popover su-account-popover">
                   <div className="su-account-popover-header">
                     <div className="su-account-name text-body">{user?.fullName || user?.email || 'Guest'}</div>
                     <div className="su-account-meta">{user?.email || 'No email available'}</div>
@@ -197,5 +345,130 @@ export default function ShellLayout({ title, children }: ShellLayoutProps) {
         <div>© {currentYear}</div>
       </footer>
     </div>
+  );
+}
+
+function countUnreadNotifications(items: NotificationItem[], lastSeenAt: string | null) {
+  if (!lastSeenAt) {
+    return items.length;
+  }
+  const lastSeenValue = Date.parse(lastSeenAt) || 0;
+  return items.filter((item) => {
+    if (!item.occurredAt) {
+      return true;
+    }
+    return (Date.parse(item.occurredAt) || 0) > lastSeenValue;
+  }).length;
+}
+
+function newestNotificationTimestamp(items: NotificationItem[]) {
+  return items.reduce<string | null>((latest, item) => {
+    if (!item.occurredAt) {
+      return latest;
+    }
+    if (!latest) {
+      return item.occurredAt;
+    }
+    return (Date.parse(item.occurredAt) || 0) > (Date.parse(latest) || 0)
+      ? item.occurredAt
+      : latest;
+  }, null);
+}
+
+function readLocalStorage(key: string) {
+  try {
+    if (typeof window === 'undefined' || typeof window.localStorage?.getItem !== 'function') {
+      return null;
+    }
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeLocalStorage(key: string, value: string) {
+  try {
+    if (typeof window === 'undefined' || typeof window.localStorage?.setItem !== 'function') {
+      return;
+    }
+    window.localStorage.setItem(key, value);
+  } catch {
+    // Ignore storage write failures in restricted or test environments.
+  }
+}
+
+function shortenDisplayName(fullName?: string, email?: string) {
+  const source = fullName?.trim() || email?.trim() || 'Guest';
+  const words = source.split(/\s+/).filter(Boolean);
+  const compact = words.length > 1 ? words.slice(0, 2).join(' ') : source;
+  return compact.length <= 18 ? compact : `${compact.slice(0, 15).trimEnd()}...`;
+}
+
+function resolveNotificationPath(role: string | undefined, item: NotificationItem) {
+  if (role === 'STUDENT' && item.caseId) {
+    switch (item.eventType) {
+      case 'SUPERVISOR_REJECTED_REGISTRATION':
+      case 'LIBRARY_REJECTED_REGISTRATION':
+        return `/student/registrations/${item.caseId}/edit`;
+      case 'SUPERVISOR_REQUESTED_REVISION':
+      case 'LIBRARY_REQUESTED_REVISION':
+      case 'UNPUBLISHED_FOR_CORRECTION':
+        return `/student/cases/${item.caseId}/submission`;
+      case 'CLEARANCE_CORRECTION_REQUESTED':
+        return `/student/clearance/${item.caseId}`;
+      case 'LIBRARY_APPROVED_REGISTRATION':
+        return `/student/cases/${item.caseId}/submission`;
+      default:
+        return `/student/cases/${item.caseId}`;
+    }
+  }
+
+  if (role === 'LECTURER') {
+    switch (item.eventType) {
+      case 'REGISTRATION_SUBMITTED':
+        return '/lecturer/approvals';
+      case 'SUBMISSION_UPLOADED':
+        return '/lecturer/review';
+      case 'LIBRARY_REQUESTED_REVISION':
+      case 'LIBRARY_APPROVED_FOR_CLEARANCE':
+      case 'PUBLISHED':
+        return '/lecturer/library';
+      default:
+        return '/lecturer/dashboard';
+    }
+  }
+
+  if (role === 'ADMIN') {
+    switch (item.eventType) {
+      case 'SUPERVISOR_APPROVED_REGISTRATION':
+        return '/admin/registration-approvals';
+      case 'SUPERVISOR_FORWARDED_TO_LIBRARY':
+      case 'SUBMISSION_UPLOADED':
+        return item.caseId ? `/admin/review/${item.caseId}` : '/admin/review';
+      case 'CLEARANCE_SUBMITTED':
+        return '/admin/clearance';
+      default:
+        return '/admin/dashboard';
+    }
+  }
+
+  return '/';
+}
+
+function BellIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" className="su-header-icon-svg">
+      <path
+        d="M10 3.25a3.75 3.75 0 0 0-3.75 3.75v1.2c0 .88-.27 1.74-.78 2.46l-.92 1.31a1.2 1.2 0 0 0 .98 1.88h9.04a1.2 1.2 0 0 0 .98-1.88l-.92-1.31A4.25 4.25 0 0 1 13.75 8.2V7A3.75 3.75 0 0 0 10 3.25Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      />
+      <path
+        d="M8.2 15.55a1.95 1.95 0 0 0 3.6 0"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }

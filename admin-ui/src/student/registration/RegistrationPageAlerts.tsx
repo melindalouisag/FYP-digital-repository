@@ -1,3 +1,5 @@
+import type { RegistrationFeedbackEntry } from './useRegistrationForm';
+
 interface RegistrationPageAlertsProps {
   isEditMode: boolean;
   loadingPage: boolean;
@@ -6,6 +8,7 @@ interface RegistrationPageAlertsProps {
   registrationDeadlineLabel: string;
   preferredThesisCaseId?: number;
   currentStatus: string | null;
+  registrationFeedback: RegistrationFeedbackEntry[];
   onOpenPreferredCase: () => void;
 }
 
@@ -17,6 +20,7 @@ export function RegistrationPageAlerts({
   registrationDeadlineLabel,
   preferredThesisCaseId,
   currentStatus,
+  registrationFeedback,
   onOpenPreferredCase,
 }: RegistrationPageAlertsProps) {
   return (
@@ -56,6 +60,30 @@ export function RegistrationPageAlerts({
       {isEditMode && currentStatus === 'REJECTED' && (
         <div className="alert alert-danger">
           This registration was rejected. Update it here, then resubmit it when your revisions are ready.
+        </div>
+      )}
+      {isEditMode && currentStatus === 'REJECTED' && registrationFeedback.length > 0 && (
+        <div className="su-revision-panel mb-4">
+          <div className="su-revision-panel-header">
+            <div>
+              <div className="su-revision-panel-kicker">Action Required</div>
+              <h3 className="su-revision-panel-title mb-1">What needs revision</h3>
+              <div className="su-revision-panel-copy">
+                Review this feedback before updating the registration form below.
+              </div>
+            </div>
+          </div>
+          <div className="su-revision-comment-list">
+            {registrationFeedback.map((entry) => (
+              <div className="su-revision-comment-item" key={entry.key}>
+                <div className="su-revision-comment-meta">
+                  {entry.sourceLabel}
+                  {entry.createdAt ? ` • ${new Date(entry.createdAt).toLocaleString()}` : ''}
+                </div>
+                <div className="su-revision-comment-body">{entry.body}</div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </>

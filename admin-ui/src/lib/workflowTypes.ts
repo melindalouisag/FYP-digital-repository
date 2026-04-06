@@ -311,3 +311,21 @@ export interface AdminDashboardData {
   stageDistribution: DashboardStageCount[];
   recentActivity: DashboardActivityItem[];
 }
+
+export interface NotificationItem {
+  caseId?: number | null;
+  eventType: string;
+  title: string;
+  detail: string;
+  occurredAt?: string;
+  status: CaseStatus;
+}
+
+export interface AdminUserDirectoryItem {
+  userId: number;
+  fullName: string;
+  email: string;
+  faculty?: string | null;
+  studyProgram?: string | null;
+  role: UserRole;
+}

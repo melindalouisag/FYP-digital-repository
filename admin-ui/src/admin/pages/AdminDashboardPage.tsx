@@ -293,7 +293,7 @@ export default function AdminDashboardPage() {
       </div>
 
       <div className="row g-3">
-        <div className="col-12 col-xl-4 d-flex">
+        <div className="col-12 col-xl-6 d-flex">
           <DashboardPanel title="Needs Action Now" className="w-100">
             {loading ? (
               <p className="su-dashboard-empty-copy mb-0">Loading dashboard data.</p>
@@ -330,7 +330,7 @@ export default function AdminDashboardPage() {
           </DashboardPanel>
         </div>
 
-        <div className="col-12 col-xl-4 d-flex">
+        <div className="col-12 col-xl-6 d-flex">
           <DashboardPanel title="Stage Distribution" className="w-100">
             {loading ? (
               <p className="su-dashboard-empty-copy mb-0">Loading dashboard data.</p>
@@ -349,35 +349,6 @@ export default function AdminDashboardPage() {
                         className="su-dashboard-bar-fill"
                         style={{ width: `${maxStageCount === 0 ? 0 : (item.count / maxStageCount) * 100}%` }}
                       />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </DashboardPanel>
-        </div>
-
-        <div className="col-12 col-xl-4 d-flex">
-          <DashboardPanel title="Recent Workflow Activity" className="w-100">
-            {loading ? (
-              <p className="su-dashboard-empty-copy mb-0">Loading dashboard data.</p>
-            ) : dashboard.recentActivity.length === 0 ? (
-              <p className="su-dashboard-empty-copy mb-0">No recent workflow activity.</p>
-            ) : (
-              <div className="su-dashboard-list">
-                {dashboard.recentActivity.map((item) => (
-                  <div className="su-dashboard-list-item" key={`${item.caseId}-${item.occurredAt ?? item.detail}`}>
-                    <div className="d-flex justify-content-between gap-2 align-items-start">
-                      <div className="min-w-0">
-                        <div className="su-dashboard-item-title su-text-truncate">{item.title}</div>
-                        <div className="su-dashboard-item-support">{item.detail}</div>
-                        <div className="su-dashboard-item-meta">
-                          {item.occurredAt ? new Date(item.occurredAt).toLocaleString() : 'N/A'}
-                        </div>
-                      </div>
-                      <span className={`badge status-badge ${statusBadgeClass(item.status)}`}>
-                        {formatStatus(item.status)}
-                      </span>
                     </div>
                   </div>
                 ))}
