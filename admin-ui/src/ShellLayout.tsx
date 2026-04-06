@@ -211,28 +211,14 @@ export default function ShellLayout({ title, children }: ShellLayoutProps) {
                   role="dialog"
                   aria-label="Notifications"
                 >
-                  <div className="su-notification-header">
-                    <div className="su-notification-header-row">
-                      <div className="su-notification-header-title">Notifications</div>
-                      {unreadCount > 0 ? (
-                        <span className="su-notification-header-badge">
-                          {unreadCount} new
-                        </span>
-                      ) : null}
-                    </div>
-                    <div className="su-notification-header-subtitle">
-                      Recent updates
-                    </div>
-                  </div>
-
                   {notificationsError ? (
-                    <div className="alert alert-warning py-2 small mb-0 mx-3 mt-3">{notificationsError}</div>
+                    <div className="alert alert-warning py-2 small mb-0 mx-3 mt-2">{notificationsError}</div>
                   ) : null}
 
                   {notificationsLoading ? (
                     <div className="su-notification-empty">Loading notifications...</div>
                   ) : notifications.length === 0 ? (
-                    <div className="su-notification-empty">No recent updates.</div>
+                    <div className="su-notification-empty">No recent activity.</div>
                   ) : (
                     <div className="su-notification-list">
                       {notifications.map((item) => {
@@ -240,29 +226,29 @@ export default function ShellLayout({ title, children }: ShellLayoutProps) {
                         return (
                           <button
                             className="su-notification-item-button"
-                          type="button"
-                          key={`${item.eventType}-${item.caseId ?? 'general'}-${item.occurredAt ?? item.title}`}
-                          onClick={() => {
-                            const nextPath = resolveNotificationPath(user?.role, item);
-                            setNotificationOpen(false);
-                            if (nextPath) {
-                              navigate(nextPath);
-                            }
-                          }}
-                        >
-                          <div className={`su-notification-item${unread ? ' is-unread' : ''}`}>
-                            <div className="su-notification-item-title-row">
-                              <div className="su-notification-item-title">{item.title}</div>
-                              {unread ? <span className="su-notification-item-dot" aria-hidden="true" /> : null}
+                            type="button"
+                            key={`${item.eventType}-${item.caseId ?? 'general'}-${item.occurredAt ?? item.title}`}
+                            onClick={() => {
+                              const nextPath = resolveNotificationPath(user?.role, item);
+                              setNotificationOpen(false);
+                              if (nextPath) {
+                                navigate(nextPath);
+                              }
+                            }}
+                          >
+                            <div className={`su-notification-item${unread ? ' is-unread' : ''}`}>
+                              <div className="su-notification-item-title-row">
+                                <div className="su-notification-item-title">{item.title}</div>
+                                {unread ? <span className="su-notification-item-dot" aria-hidden="true" /> : null}
+                              </div>
+                              <div className="su-notification-item-detail" title={item.detail}>
+                                {item.detail}
+                              </div>
+                              <div className="su-notification-item-meta">
+                                {item.occurredAt ? new Date(item.occurredAt).toLocaleString() : 'N/A'}
+                              </div>
                             </div>
-                            <div className="su-notification-item-detail" title={item.detail}>
-                              {item.detail}
-                            </div>
-                            <div className="su-notification-item-meta">
-                              {item.occurredAt ? new Date(item.occurredAt).toLocaleString() : 'N/A'}
-                            </div>
-                          </div>
-                        </button>
+                          </button>
                         );
                       })}
                     </div>

@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import ShellLayout from '../../ShellLayout';
 import { lecturerApi, type LecturerCaseWorkItem, type LecturerStudentGroup, type LecturerSubmissionVersion } from '../../lib/api/lecturer';
 import CaseTimeline from '../../lib/components/CaseTimeline';
+import { useConfirmDialog } from '../../lib/components/useConfirmDialog';
 import DownloadFilenameLink from '../../lib/components/DownloadFilenameLink';
 import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 import type { TimelineItem } from '../../lib/workflowTypes';
@@ -17,6 +18,7 @@ export default function LecturerStudentDetailPage() {
   const { studentId } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { openConfirm, confirmDialog } = useConfirmDialog();
   const tab = searchParams.get('tab') === 'library' ? 'library' : 'supervisor';
 
   const [group, setGroup] = useState<LecturerStudentGroup | null>(null);
@@ -95,8 +97,10 @@ export default function LecturerStudentDetailPage() {
     try {
       await action();
       await load();
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Action failed.');
+      return false;
     } finally {
       setWorkingCaseId(null);
     }
@@ -124,7 +128,8 @@ export default function LecturerStudentDetailPage() {
   const displayCaseTitle = (value?: string | null) => value?.trim() || 'Untitled submission';
 
   return (
-    <ShellLayout title="Student Publications" subtitle="Review publication history, submission files, and supervisor decisions for the selected student">
+    <>
+      <ShellLayout title="Student Publications" subtitle="Review publication history, submission files, and supervisor decisions for the selected student">
       {error && <div className="alert alert-danger" style={{ borderRadius: '0.75rem' }}>{error}</div>}
 
       <div className="d-flex flex-wrap align-items-center gap-2 mb-4">
@@ -311,18 +316,64 @@ export default function LecturerStudentDetailPage() {
                           <button
                             className="btn su-action-button su-action-button-secondary"
                             disabled={busy || revisionReason.length === 0}
-                            onClick={() =>
-                              void runAction(c.caseId, () => lecturerApi.requestRevision(c.caseId, revisionReason).then(() => {
-                                setRevisionDrafts((prev) => ({ ...prev, [c.caseId]: '' }));
-                              }))
-                            }
+                            onClick={() => {
+                              if (revisionReason.length === 0) {
+                                setError('Revision reason is required before requesting revision.');
+                                return;
+                              }
+                              openConfirm({
+                                title: 'Confirm Revision Request',
+                                message: (
+                                  <div className="vstack gap-2">
+                                    <div>
+                                      This will return <strong>{displayCaseTitle(c.registrationTitle)}</strong> to the student for revision.
+                                    </div>
+                                    <div>Please confirm that the revision reason is ready to send.</div>
+                                  </div>
+                                ),
+                                confirmLabel: 'Confirm Request Revision',
+                                confirmVariant: 'secondary',
+                                onConfirm: async (close) => {
+                                  const success = await runAction(c.caseId, () =>
+                                    lecturerApi.requestRevision(c.caseId, revisionReason).then(() => {
+                                      setRevisionDrafts((prev) => ({ ...prev, [c.caseId]: '' }));
+                                    })
+                                  );
+                                  if (success) {
+                                    close();
+                                  }
+                                },
+                              });
+                            }}
                           >
                             Request Revision
                           </button>
                           <button
                             className="btn su-action-button su-action-button-primary"
                             disabled={busy}
-                            onClick={() => void runAction(c.caseId, () => lecturerApi.approveAndForward(c.caseId).then(() => undefined))}
+                            onClick={() => {
+                              openConfirm({
+                                title: 'Confirm Approval and Forwarding',
+                                message: (
+                                  <div className="vstack gap-2">
+                                    <div>
+                                      This will approve <strong>{displayCaseTitle(c.registrationTitle)}</strong> and forward it to library review.
+                                    </div>
+                                    <div>Please confirm that the submission is ready for the next stage.</div>
+                                  </div>
+                                ),
+                                confirmLabel: 'Confirm Approval',
+                                onConfirm: async (close) => {
+                                  const success = await runAction(
+                                    c.caseId,
+                                    () => lecturerApi.approveAndForward(c.caseId).then(() => undefined)
+                                  );
+                                  if (success) {
+                                    close();
+                                  }
+                                },
+                              });
+                            }}
                           >
                             Approve and Forward to Library
                           </button>
@@ -343,6 +394,8 @@ export default function LecturerStudentDetailPage() {
           )}
         </>
       )}
-    </ShellLayout>
+      </ShellLayout>
+      {confirmDialog}
+    </>
   );
 }

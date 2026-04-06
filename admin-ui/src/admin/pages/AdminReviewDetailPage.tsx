@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { useNavigate, useParams } from 'react-router-dom';
 import ShellLayout from '../../ShellLayout';
 import { adminApi } from '../../lib/api/admin';
+import { useConfirmDialog } from '../../lib/components/useConfirmDialog';
 import type {
   CaseDetailPayload,
   ChecklistItem,
@@ -212,6 +213,7 @@ function formatCommentAuthorRole(role: WorkflowComment['authorRole']) {
 export default function AdminReviewDetailPage() {
   const { caseId } = useParams();
   const navigate = useNavigate();
+  const { openConfirm, confirmDialog } = useConfirmDialog();
   const [detail, setDetail] = useState<CaseDetailPayload | null>(null);
   const [templates, setTemplates] = useState<ChecklistTemplateResponse[]>([]);
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<number | null>(null);
@@ -339,8 +341,10 @@ export default function AdminReviewDetailPage() {
       await action();
       setMessage(successMessage);
       await load();
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Action failed.');
+      return false;
     } finally {
       setWorking(false);
     }
@@ -375,8 +379,61 @@ export default function AdminReviewDetailPage() {
     );
   };
 
+  const openRequestRevisionConfirm = () => {
+    if (trimmedRevisionReason.length === 0) {
+      setError('Revision reason is required before requesting revision.');
+      return;
+    }
+
+    openConfirm({
+      title: 'Confirm Revision Request',
+      message: (
+        <div className="vstack gap-2">
+          <div>
+            This will return <strong>{displayCaseTitle(detail?.case.title)}</strong> to the student for revision.
+          </div>
+          <div>Please confirm that the revision comment clearly explains what must be corrected.</div>
+        </div>
+      ),
+      confirmLabel: 'Confirm Request Revision',
+      confirmVariant: 'secondary',
+      onConfirm: async (close) => {
+        const success = await requestRevision();
+        if (success) {
+          close();
+        }
+      },
+    });
+  };
+
+  const openApproveConfirm = () => {
+    openConfirm({
+      title: 'Confirm Approval for Clearance',
+      message: (
+        <div className="vstack gap-2">
+          <div>
+            This will move <strong>{displayCaseTitle(detail?.case.title)}</strong> forward to the clearance stage.
+          </div>
+          {!checklistSaved ? (
+            <div>
+              Checklist results are not saved yet. Continue only if you intentionally want to advance this submission now.
+            </div>
+          ) : null}
+        </div>
+      ),
+      confirmLabel: 'Confirm Approval',
+      onConfirm: async (close) => {
+        const success = await approveCase();
+        if (success) {
+          close();
+        }
+      },
+    });
+  };
+
   return (
-    <ShellLayout title="Submission Review Detail" subtitle="Review the submission, complete the checklist, and record the final library decision">
+    <>
+      <ShellLayout title="Submission Review Detail" subtitle="Review the submission, complete the checklist, and record the final library decision">
       {loading && (
         <div className="text-center py-5">
           <div className="su-spinner mx-auto mb-3" />
@@ -622,7 +679,7 @@ export default function AdminReviewDetailPage() {
                 <button
                   className="btn su-action-button su-action-button-secondary"
                   disabled={working || !decisionAllowed || trimmedRevisionReason.length === 0}
-                  onClick={() => void requestRevision()}
+                  onClick={openRequestRevisionConfirm}
                   title={decisionActionTitle(decisionAllowed, trimmedRevisionReason.length > 0, 'Provide a revision reason to continue.')}
                 >
                   Request Revision
@@ -630,7 +687,7 @@ export default function AdminReviewDetailPage() {
                 <button
                   className="btn su-action-button su-action-button-primary"
                   disabled={working || !decisionAllowed}
-                  onClick={() => void approveCase()}
+                  onClick={openApproveConfirm}
                 >
                   Approve for Clearance
                 </button>
@@ -639,6 +696,8 @@ export default function AdminReviewDetailPage() {
 
         </>
       )}
-    </ShellLayout>
+      </ShellLayout>
+      {confirmDialog}
+    </>
   );
 }

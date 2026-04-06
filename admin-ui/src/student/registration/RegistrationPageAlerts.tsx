@@ -26,13 +26,6 @@ export function RegistrationPageAlerts({
   return (
     <>
       {loadingPage && <div className="alert alert-info">Loading registration...</div>}
-      {!loadingPage && (
-        <div className="small text-muted mb-4">
-          {isEditMode
-            ? 'Use this page to update the same registration. Save changes if you are still preparing details, then submit it again when it is ready.'
-            : 'Use this form to prepare your registration. Save a draft if you are still working, then submit it after selecting a supervisor and accepting both permission statements.'}
-        </div>
-      )}
       {registrationDeadlinePassed && (
         <div className="alert alert-danger">
           The registration deadline has passed.
