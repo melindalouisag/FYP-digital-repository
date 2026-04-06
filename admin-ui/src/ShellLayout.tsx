@@ -4,7 +4,6 @@ import { notificationsApi } from './lib/api/notifications';
 import ThemeSwitch from './theme/ThemeSwitch';
 import type { NotificationItem } from './lib/workflowTypes';
 import { useAuth } from './lib/context/AuthContext';
-import { formatStatus, statusBadgeClass } from './lib/workflowUi';
 import { useTheme } from './theme/ThemeContext';
 
 interface ShellLayoutProps {
@@ -101,6 +100,21 @@ export default function ShellLayout({ title, children }: ShellLayoutProps) {
   }, [accountOpen, notificationOpen]);
 
   useEffect(() => {
+    if (!notificationOpen) {
+      return undefined;
+    }
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setNotificationOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [notificationOpen]);
+
+  useEffect(() => {
     if (userId == null || userRole == null) {
       return;
     }
@@ -163,8 +177,10 @@ export default function ShellLayout({ title, children }: ShellLayoutProps) {
               <button
                 className="su-header-icon-button"
                 type="button"
+                aria-haspopup="dialog"
                 aria-label="Open notifications"
                 aria-expanded={notificationOpen}
+                aria-controls="su-notification-popover"
                 onClick={() => {
                   setAccountOpen(false);
                   setNotificationOpen((current) => {
@@ -189,27 +205,41 @@ export default function ShellLayout({ title, children }: ShellLayoutProps) {
               </button>
 
               {notificationOpen ? (
-                <div className="su-header-popover su-notification-popover">
-                  <div className="su-account-popover-header">
-                    <div className="su-account-name text-body">Notifications</div>
-                    <div className="su-account-meta">
-                      {notifications.length === 0 ? 'No recent workflow updates.' : `${notifications.length} recent update${notifications.length === 1 ? '' : 's'}`}
+                <div
+                  className="su-header-popover su-notification-popover"
+                  id="su-notification-popover"
+                  role="dialog"
+                  aria-label="Notifications"
+                >
+                  <div className="su-notification-header">
+                    <div className="su-notification-header-row">
+                      <div className="su-notification-header-title">Notifications</div>
+                      {unreadCount > 0 ? (
+                        <span className="su-notification-header-badge">
+                          {unreadCount} new
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="su-notification-header-subtitle">
+                      Recent updates
                     </div>
                   </div>
 
                   {notificationsError ? (
-                    <div className="alert alert-warning py-2 small mb-2">{notificationsError}</div>
+                    <div className="alert alert-warning py-2 small mb-0 mx-3 mt-3">{notificationsError}</div>
                   ) : null}
 
                   {notificationsLoading ? (
                     <div className="su-notification-empty">Loading notifications...</div>
                   ) : notifications.length === 0 ? (
-                    <div className="su-notification-empty">No recent workflow updates.</div>
+                    <div className="su-notification-empty">No recent updates.</div>
                   ) : (
                     <div className="su-notification-list">
-                      {notifications.map((item) => (
-                        <button
-                          className="su-notification-item-button"
+                      {notifications.map((item) => {
+                        const unread = isUnreadNotification(item, lastSeenAt);
+                        return (
+                          <button
+                            className="su-notification-item-button"
                           type="button"
                           key={`${item.eventType}-${item.caseId ?? 'general'}-${item.occurredAt ?? item.title}`}
                           onClick={() => {
@@ -220,22 +250,21 @@ export default function ShellLayout({ title, children }: ShellLayoutProps) {
                             }
                           }}
                         >
-                          <div className="su-notification-item">
-                            <div className="d-flex justify-content-between gap-2 align-items-start">
-                              <div className="min-w-0">
-                                <div className="su-notification-item-title">{item.title}</div>
-                                <div className="su-notification-item-detail">{item.detail}</div>
-                                <div className="su-notification-item-meta">
-                                  {item.occurredAt ? new Date(item.occurredAt).toLocaleString() : 'N/A'}
-                                </div>
-                              </div>
-                              <span className={`badge status-badge ${statusBadgeClass(item.status)}`}>
-                                {formatStatus(item.status)}
-                              </span>
+                          <div className={`su-notification-item${unread ? ' is-unread' : ''}`}>
+                            <div className="su-notification-item-title-row">
+                              <div className="su-notification-item-title">{item.title}</div>
+                              {unread ? <span className="su-notification-item-dot" aria-hidden="true" /> : null}
+                            </div>
+                            <div className="su-notification-item-detail" title={item.detail}>
+                              {item.detail}
+                            </div>
+                            <div className="su-notification-item-meta">
+                              {item.occurredAt ? new Date(item.occurredAt).toLocaleString() : 'N/A'}
                             </div>
                           </div>
                         </button>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -373,6 +402,13 @@ function newestNotificationTimestamp(items: NotificationItem[]) {
       ? item.occurredAt
       : latest;
   }, null);
+}
+
+function isUnreadNotification(item: NotificationItem, lastSeenAt: string | null) {
+  if (!lastSeenAt || !item.occurredAt) {
+    return !lastSeenAt;
+  }
+  return (Date.parse(item.occurredAt) || 0) > (Date.parse(lastSeenAt) || 0);
 }
 
 function readLocalStorage(key: string) {
