@@ -305,6 +305,30 @@ body {
   font-weight: 600;
 }
 
+.su-sidebar-link-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.su-sidebar-count-badge {
+  margin-left: auto;
+  min-width: 1.45rem;
+  padding: 0.12rem 0.42rem;
+  border-radius: 999px;
+  background: rgba(11, 117, 132, 0.12);
+  color: var(--su-navy);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.su-sidebar a.active .su-sidebar-count-badge {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+}
+
 .su-sidebar-link-bullet {
   width: 0.55rem;
   height: 0.55rem;
@@ -352,6 +376,11 @@ body {
 
 [data-theme="dark"] .su-sidebar-icon-img {
   filter: invert(0.85);
+}
+
+[data-theme="dark"] .su-sidebar-count-badge {
+  background: rgba(11, 117, 132, 0.2);
+  color: var(--text);
 }
 
 [data-theme="dark"] .su-portal-icon {

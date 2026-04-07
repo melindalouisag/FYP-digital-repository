@@ -11,9 +11,7 @@ import {
 import { calendarApi } from '../../lib/api/calendar';
 import DashboardPanel from '../../lib/components/DashboardPanel';
 import DashboardProgressRingCard from '../../lib/components/DashboardProgressRingCard';
-import DashboardMetricCard from '../../lib/components/DashboardMetricCard';
 import { adminApi } from '../../lib/api/admin';
-import { adminSidebarIcons } from '../../lib/portalIcons';
 import type { AdminDashboardData, CalendarEvent, DashboardActionItem, DeadlineActionType, PublicationType } from '../../lib/workflowTypes';
 import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 
@@ -37,14 +35,6 @@ interface DeadlineFormState {
   publicationType: PublicationType;
   eventDate: string;
   eventTime: string;
-}
-
-interface DashboardMetricSummaryCard {
-  title: string;
-  value: number | string;
-  iconSrc: string;
-  detail?: string;
-  onClick?: () => void;
 }
 
 export default function AdminDashboardPage() {
@@ -114,33 +104,6 @@ export default function AdminDashboardPage() {
       : null
   ), [dashboard.publishedStudentCount, dashboard.totalStudentCount]);
 
-  const queueCards: DashboardMetricSummaryCard[] = [
-    {
-      title: 'Registration Queue',
-      value: dashboard.registrationQueueCount,
-      iconSrc: adminSidebarIcons.registration,
-      onClick: () => navigate('/admin/registration-approvals'),
-    },
-    {
-      title: 'Submission Review Queue',
-      value: dashboard.submissionReviewQueueCount,
-      iconSrc: adminSidebarIcons.submission,
-      onClick: () => navigate('/admin/review'),
-    },
-    {
-      title: 'Clearance Queue',
-      value: dashboard.clearanceQueueCount,
-      iconSrc: adminSidebarIcons.clearance,
-      onClick: () => navigate('/admin/clearance'),
-    },
-    {
-      title: 'Publishing Queue',
-      value: dashboard.publishingQueueCount,
-      iconSrc: adminSidebarIcons.publishing,
-      onClick: () => navigate('/admin/publish'),
-    },
-  ];
-
   const saveDeadline = async () => {
     if (!deadlineForm.title.trim()) {
       setDeadlineError('Please enter a deadline title.');
@@ -171,10 +134,19 @@ export default function AdminDashboardPage() {
   };
 
   return (
-    <ShellLayout title="Admin Dashboard" subtitle="Library administration overview for registration, review, clearance, and publishing">
+    <ShellLayout
+      title="Admin Dashboard"
+      subtitle="Library administration overview for registration, review, clearance, and publishing"
+      sidebarBadges={{
+        '/admin/registration-approvals': dashboard.registrationQueueCount,
+        '/admin/review': dashboard.submissionReviewQueueCount,
+        '/admin/clearance': dashboard.clearanceQueueCount,
+        '/admin/publish': dashboard.publishingQueueCount,
+      }}
+    >
       {error && <div className="alert alert-danger">{error}</div>}
 
-      <div className="su-dashboard-grid su-dashboard-grid-5 mb-4">
+      <div className="su-dashboard-grid su-dashboard-grid-3 mb-4">
         <DashboardProgressRingCard
           title="Repository Completion"
           progressPercent={completionPercent}
@@ -183,17 +155,66 @@ export default function AdminDashboardPage() {
           primaryText={`${dashboard.publishedStudentCount} of ${dashboard.totalStudentCount} students published`}
           secondaryText={`${dashboard.activeCaseCount} active publication${dashboard.activeCaseCount === 1 ? '' : 's'}`}
         />
-        {queueCards.map((card) => (
-          <DashboardMetricCard
-            key={card.title}
-            iconSrc={card.iconSrc}
-            iconBackground="rgba(11, 117, 132, 0.10)"
-            label={card.title}
-            value={loading ? '—' : card.value}
-            description={card.detail}
-            onClick={card.onClick}
-          />
-        ))}
+        <DashboardPanel title="Needs Action Now" className="w-100">
+          {loading ? (
+            <p className="su-dashboard-empty-copy mb-0">Loading dashboard data.</p>
+          ) : dashboard.needsActionNow.length === 0 ? (
+            <p className="su-dashboard-empty-copy mb-0">No urgent queue items right now.</p>
+          ) : (
+            <div className="su-dashboard-list">
+              {dashboard.needsActionNow.map((item) => (
+                <button
+                  className="su-dashboard-item-button"
+                  type="button"
+                  key={`${item.queueKey}-${item.caseId}`}
+                  onClick={() => navigate(resolveAdminQueuePath(item))}
+                >
+                  <div className="su-dashboard-list-item">
+                    <div className="d-flex justify-content-between gap-2 align-items-start">
+                      <div className="min-w-0">
+                        <div className="su-dashboard-item-title su-text-truncate">{item.title}</div>
+                        <div className="su-dashboard-item-support">
+                          {item.detail}
+                        </div>
+                        <div className="su-dashboard-item-meta">
+                          {item.queueLabel}
+                          {item.updatedAt ? ` • Updated ${new Date(item.updatedAt).toLocaleString()}` : ''}
+                        </div>
+                      </div>
+                      <span className={`badge status-badge ${statusBadgeClass(item.status)}`}>
+                        {formatStatus(item.status)}
+                      </span>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </DashboardPanel>
+        <DashboardPanel title="Stage Distribution" className="w-100">
+          {loading ? (
+            <p className="su-dashboard-empty-copy mb-0">Loading dashboard data.</p>
+          ) : dashboard.stageDistribution.length === 0 ? (
+            <p className="su-dashboard-empty-copy mb-0">No workflow records available.</p>
+          ) : (
+            <div className="su-dashboard-bars">
+              {dashboard.stageDistribution.map((item) => (
+                <div className="su-dashboard-bar-row" key={item.label}>
+                  <div className="d-flex justify-content-between gap-2 mb-2">
+                    <span className="su-dashboard-bar-label">{item.label}</span>
+                    <span className="su-dashboard-bar-value">{item.count}</span>
+                  </div>
+                  <div className="su-dashboard-bar-track" aria-hidden="true">
+                    <div
+                      className="su-dashboard-bar-fill"
+                      style={{ width: `${maxStageCount === 0 ? 0 : (item.count / maxStageCount) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </DashboardPanel>
       </div>
 
       <div className="mb-4">
@@ -298,72 +319,6 @@ export default function AdminDashboardPage() {
             )}
           </div>
         </DashboardPanel>
-      </div>
-
-      <div className="row g-3">
-        <div className="col-12 col-xl-6 d-flex">
-          <DashboardPanel title="Needs Action Now" className="w-100">
-            {loading ? (
-              <p className="su-dashboard-empty-copy mb-0">Loading dashboard data.</p>
-            ) : dashboard.needsActionNow.length === 0 ? (
-              <p className="su-dashboard-empty-copy mb-0">No urgent queue items right now.</p>
-            ) : (
-              <div className="su-dashboard-list">
-                {dashboard.needsActionNow.map((item) => (
-                  <button
-                    className="su-dashboard-item-button"
-                    type="button"
-                    key={`${item.queueKey}-${item.caseId}`}
-                    onClick={() => navigate(resolveAdminQueuePath(item))}
-                  >
-                    <div className="su-dashboard-list-item">
-                      <div className="d-flex justify-content-between gap-2 align-items-start">
-                        <div className="min-w-0">
-                          <div className="su-dashboard-item-title su-text-truncate">{item.title}</div>
-                          <div className="su-dashboard-item-support">{item.detail}</div>
-                          <div className="su-dashboard-item-meta">
-                            {item.queueLabel}
-                            {item.updatedAt ? ` • Updated ${new Date(item.updatedAt).toLocaleString()}` : ''}
-                          </div>
-                        </div>
-                        <span className={`badge status-badge ${statusBadgeClass(item.status)}`}>
-                          {formatStatus(item.status)}
-                        </span>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </DashboardPanel>
-        </div>
-
-        <div className="col-12 col-xl-6 d-flex">
-          <DashboardPanel title="Stage Distribution" className="w-100">
-            {loading ? (
-              <p className="su-dashboard-empty-copy mb-0">Loading dashboard data.</p>
-            ) : dashboard.stageDistribution.length === 0 ? (
-              <p className="su-dashboard-empty-copy mb-0">No workflow records available.</p>
-            ) : (
-              <div className="su-dashboard-bars">
-                {dashboard.stageDistribution.map((item) => (
-                  <div className="su-dashboard-bar-row" key={item.label}>
-                    <div className="d-flex justify-content-between gap-2 mb-2">
-                      <span className="su-dashboard-bar-label">{item.label}</span>
-                      <span className="su-dashboard-bar-value">{item.count}</span>
-                    </div>
-                    <div className="su-dashboard-bar-track" aria-hidden="true">
-                      <div
-                        className="su-dashboard-bar-fill"
-                        style={{ width: `${maxStageCount === 0 ? 0 : (item.count / maxStageCount) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </DashboardPanel>
-        </div>
       </div>
     </ShellLayout>
   );

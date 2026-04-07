@@ -1,11 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import ShellLayout from '../../ShellLayout';
 import DashboardPanel from '../../lib/components/DashboardPanel';
 import DashboardProgressRingCard from '../../lib/components/DashboardProgressRingCard';
-import DashboardMetricCard from '../../lib/components/DashboardMetricCard';
 import { lecturerApi } from '../../lib/api/lecturer';
-import { lecturerSidebarIcons } from '../../lib/portalIcons';
 import type { DashboardActivityItem, LecturerDashboardData } from '../../lib/workflowTypes';
 import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 
@@ -21,16 +18,7 @@ const EMPTY_DASHBOARD: LecturerDashboardData = {
   recentActivity: [],
 };
 
-interface DashboardMetricSummaryCard {
-  title: string;
-  value: number | string;
-  iconSrc: string;
-  detail?: string;
-  onClick?: () => void;
-}
-
 export default function LecturerDashboardPage() {
-  const navigate = useNavigate();
   const [dashboard, setDashboard] = useState<LecturerDashboardData>(EMPTY_DASHBOARD);
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [loading, setLoading] = useState(true);
@@ -70,29 +58,15 @@ export default function LecturerDashboardPage() {
     ? `${dashboard.activeSupervisedCaseCount} active supervised publication${dashboard.activeSupervisedCaseCount === 1 ? '' : 's'}`
     : 'No supervised publications yet.';
 
-  const summaryCards: DashboardMetricSummaryCard[] = [
-    {
-      title: 'Registration Approvals',
-      value: dashboard.registrationApprovalCount,
-      iconSrc: lecturerSidebarIcons.approvals,
-      onClick: () => navigate('/lecturer/approvals'),
-    },
-    {
-      title: 'Submission Review',
-      value: dashboard.submissionReviewCount,
-      iconSrc: lecturerSidebarIcons.review,
-      onClick: () => navigate('/lecturer/review'),
-    },
-    {
-      title: 'My Students',
-      value: dashboard.studentCount,
-      iconSrc: lecturerSidebarIcons.students,
-      onClick: () => navigate('/lecturer/students'),
-    },
-  ];
-
   return (
-    <ShellLayout title="Lecturer Dashboard" subtitle="Monitor registration approvals, submission review, and supervised publication activity">
+    <ShellLayout
+      title="Lecturer Dashboard"
+      subtitle="Monitor registration approvals, submission review, and supervised publication activity"
+      sidebarBadges={{
+        '/lecturer/approvals': dashboard.registrationApprovalCount,
+        '/lecturer/review': dashboard.submissionReviewCount,
+      }}
+    >
       {error && <div className="alert alert-danger">{error}</div>}
 
       <div className="d-flex flex-wrap align-items-center gap-2 mb-4">
@@ -109,7 +83,7 @@ export default function LecturerDashboardPage() {
         </select>
       </div>
 
-      <div className="su-dashboard-grid su-dashboard-grid-4 mb-4">
+      <div className="su-dashboard-grid su-dashboard-grid-3 mb-4">
         <DashboardProgressRingCard
           title="Publication Completion"
           progressPercent={completionPercent}
@@ -117,63 +91,45 @@ export default function LecturerDashboardPage() {
           primaryText={`${dashboard.publishedStudentCount} of ${dashboard.totalStudentCount} students published`}
           secondaryText={completionSecondaryText}
         />
-        {summaryCards.map((card) => (
-          <DashboardMetricCard
-            key={card.title}
-            iconSrc={card.iconSrc}
-            iconBackground="rgba(11, 117, 132, 0.10)"
-            label={card.title}
-            value={loading ? '—' : card.value}
-            description={card.detail}
-            onClick={card.onClick}
-          />
-        ))}
-      </div>
-      <div className="row g-3">
-        <div className="col-12 col-xl-5 d-flex">
-          <DashboardPanel title="Stage Distribution" className="w-100">
-            {loading ? (
-              <p className="su-dashboard-empty-copy mb-0">Loading dashboard data.</p>
-            ) : dashboard.stageDistribution.length === 0 ? (
-              <p className="su-dashboard-empty-copy mb-0">No supervised publications available for this view.</p>
-            ) : (
-              <div className="su-dashboard-bars">
-                {dashboard.stageDistribution.map((item) => (
-                  <div className="su-dashboard-bar-row" key={item.label}>
-                    <div className="d-flex justify-content-between gap-2 mb-2">
-                      <span className="su-dashboard-bar-label">{item.label}</span>
-                      <span className="su-dashboard-bar-value">{item.count}</span>
-                    </div>
-                    <div className="su-dashboard-bar-track" aria-hidden="true">
-                      <div
-                        className="su-dashboard-bar-fill"
-                        style={{ width: `${maxStageCount === 0 ? 0 : (item.count / maxStageCount) * 100}%` }}
-                      />
-                    </div>
+        <DashboardPanel title="Stage Distribution" className="w-100">
+          {loading ? (
+            <p className="su-dashboard-empty-copy mb-0">Loading dashboard data.</p>
+          ) : dashboard.stageDistribution.length === 0 ? (
+            <p className="su-dashboard-empty-copy mb-0">No supervised publications available for this view.</p>
+          ) : (
+            <div className="su-dashboard-bars">
+              {dashboard.stageDistribution.map((item) => (
+                <div className="su-dashboard-bar-row" key={item.label}>
+                  <div className="d-flex justify-content-between gap-2 mb-2">
+                    <span className="su-dashboard-bar-label">{item.label}</span>
+                    <span className="su-dashboard-bar-value">{item.count}</span>
                   </div>
-                ))}
-              </div>
-            )}
-          </DashboardPanel>
-        </div>
-
-        <div className="col-12 col-xl-7 d-flex">
-          <DashboardPanel title="Recent Student Activity" className="w-100">
-            {loading ? (
-              <p className="su-dashboard-empty-copy mb-0">Loading dashboard data.</p>
-            ) : dashboard.recentActivity.length === 0 ? (
-              <p className="su-dashboard-empty-copy mb-0">No recent student activity.</p>
-            ) : (
-              <div className="su-dashboard-list">
-                {dashboard.recentActivity.map((item) => (
-                  <div className="su-dashboard-list-item" key={`${item.caseId}-${item.occurredAt ?? item.detail}`}>
-                    <LecturerActivityItem item={item} />
+                  <div className="su-dashboard-bar-track" aria-hidden="true">
+                    <div
+                      className="su-dashboard-bar-fill"
+                      style={{ width: `${maxStageCount === 0 ? 0 : (item.count / maxStageCount) * 100}%` }}
+                    />
                   </div>
-                ))}
-              </div>
-            )}
-          </DashboardPanel>
-        </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </DashboardPanel>
+        <DashboardPanel title="Recent Student Activity" className="w-100">
+          {loading ? (
+            <p className="su-dashboard-empty-copy mb-0">Loading dashboard data.</p>
+          ) : dashboard.recentActivity.length === 0 ? (
+            <p className="su-dashboard-empty-copy mb-0">No recent student activity.</p>
+          ) : (
+            <div className="su-dashboard-list">
+              {dashboard.recentActivity.map((item) => (
+                <div className="su-dashboard-list-item" key={`${item.caseId}-${item.occurredAt ?? item.detail}`}>
+                  <LecturerActivityItem item={item} />
+                </div>
+              ))}
+            </div>
+          )}
+        </DashboardPanel>
       </div>
     </ShellLayout>
   );

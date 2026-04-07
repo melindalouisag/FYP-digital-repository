@@ -10,6 +10,7 @@ interface ShellLayoutProps {
   title: string;
   subtitle?: ReactNode;
   children: ReactNode;
+  sidebarBadges?: Partial<Record<string, number>>;
 }
 
 type LinkItem = {
@@ -47,7 +48,7 @@ function roleLinks(role?: string): LinkItem[] {
   return [];
 }
 
-export default function ShellLayout({ title, children }: ShellLayoutProps) {
+export default function ShellLayout({ title, children, sidebarBadges }: ShellLayoutProps) {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { theme, setTheme } = useTheme();
@@ -338,7 +339,12 @@ export default function ShellLayout({ title, children }: ShellLayoutProps) {
                   ) : (
                     <span className="su-sidebar-link-bullet" aria-hidden="true" />
                   )}
-                  {link.label}
+                  <span className="su-sidebar-link-label">{link.label}</span>
+                  {(sidebarBadges?.[link.path] ?? 0) > 0 ? (
+                    <span className="su-sidebar-count-badge" aria-label={`${sidebarBadges?.[link.path]} pending`}>
+                      {sidebarBadges?.[link.path]}
+                    </span>
+                  ) : null}
                 </NavLink>
               ))}
             </nav>
