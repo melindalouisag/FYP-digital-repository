@@ -23,8 +23,8 @@ export default function LoginPage() {
           SU
         </div>
         <h1 className="h5 su-page-title mb-1">Sampoerna University</h1>
-        <h2 className="h4 mb-1 fw-bold">Access Digital Repository</h2>
-        <p className="text-muted small mb-3">Use your university Microsoft account to continue.</p>
+        <h2 className="h4 mb-1 fw-bold">Sign in</h2>
+        <p className="text-muted small mb-3">Sign in using your university Microsoft account.</p>
 
         {error && (
           <div className="alert alert-danger py-2" style={{ borderRadius: "0.6rem" }}>
@@ -38,7 +38,7 @@ export default function LoginPage() {
             href={SSO_URL}
             style={{ fontSize: "0.95rem", borderRadius: "0.6rem", padding: "0.7rem" }}
           >
-            Sign in with university account
+            Sign in
           </a>
 
           <div className="text-center mt-2">
@@ -50,9 +50,9 @@ export default function LoginPage() {
 
         <hr className="my-3" />
         <div className="text-center">
-          <small className="text-muted">Need access guidance? </small>
+          <small className="text-muted">New students can register to create their profile before using the repository system. </small>
           <button className="btn btn-link btn-sm p-0" type="button" onClick={() => navigate("/register")}>
-            Use your university Microsoft account
+            Register
           </button>
         </div>
       </div>

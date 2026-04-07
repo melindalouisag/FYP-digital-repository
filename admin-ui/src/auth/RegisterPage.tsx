@@ -14,23 +14,22 @@ function RegisterPage() {
           SU
         </div>
         <h1 className="h5 su-page-title mb-1">Sampoerna University</h1>
-        <h2 className="h4 mb-2 fw-bold">Use Your University Account</h2>
+        <h2 className="h4 mb-2 fw-bold">Register</h2>
 
         <div className="p-3 mb-3" style={{ background: "#f0f6fa", borderRadius: "0.75rem", border: "1px solid #d5e3ed" }}>
           <p className="text-muted small mb-2"><strong>Institutional access</strong></p>
           <p className="text-muted small mb-0">
-            Access to the Digital Repository is provided through your Sampoerna University Microsoft account. After signing in, complete
-            any remaining academic profile details if they are required.
+            New students can register using their Sampoerna University Microsoft account to create their profile before using the repository system.
           </p>
         </div>
 
         <div className="d-grid gap-2">
           <a className="btn btn-primary" style={{ borderRadius: "0.6rem" }} href={SSO_URL}>
-            Sign in with university account
+            Register
           </a>
 
           <button className="btn btn-outline-secondary" style={{ borderRadius: "0.6rem" }} onClick={() => navigate("/login")}>
-            Back to sign in
+            Sign in
           </button>
 
           <Link className="btn btn-link text-muted" to="/" style={{ borderRadius: "0.6rem" }}>

@@ -56,7 +56,7 @@ export default function RepositorySearchPage() {
                     Sign in
                   </button>
                   <button type="button" className="btn btn-light btn-sm" style={{ borderRadius: '0.7rem', fontWeight: 600 }} onClick={() => navigate('/register')}>
-                    Use your university account
+                    Register
                   </button>
                 </>
               )}
