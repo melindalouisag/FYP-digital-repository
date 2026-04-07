@@ -64,8 +64,11 @@ export default function LecturerDashboardPage() {
   const completionPercent = useMemo(() => (
     dashboard.totalStudentCount > 0
       ? Math.round((dashboard.publishedStudentCount / dashboard.totalStudentCount) * 100)
-      : null
+      : 0
   ), [dashboard.publishedStudentCount, dashboard.totalStudentCount]);
+  const completionSecondaryText = dashboard.totalStudentCount > 0
+    ? `${dashboard.activeSupervisedCaseCount} active supervised publication${dashboard.activeSupervisedCaseCount === 1 ? '' : 's'}`
+    : 'No supervised publications yet.';
 
   const summaryCards: DashboardMetricSummaryCard[] = [
     {
@@ -111,9 +114,8 @@ export default function LecturerDashboardPage() {
           title="Publication Completion"
           progressPercent={completionPercent}
           loading={loading}
-          emptyText="No supervised publications yet."
           primaryText={`${dashboard.publishedStudentCount} of ${dashboard.totalStudentCount} students published`}
-          secondaryText={`${dashboard.activeSupervisedCaseCount} active supervised publication${dashboard.activeSupervisedCaseCount === 1 ? '' : 's'}`}
+          secondaryText={completionSecondaryText}
         />
         {summaryCards.map((card) => (
           <DashboardMetricCard
