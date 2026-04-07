@@ -91,7 +91,7 @@ export default function LecturerDashboardPage() {
           primaryText={`${dashboard.publishedStudentCount} of ${dashboard.totalStudentCount} students published`}
           secondaryText={completionSecondaryText}
         />
-        <DashboardPanel title="Stage Distribution" className="w-100">
+        <DashboardPanel title="Workflow Stage Overview" className="w-100">
           {loading ? (
             <p className="su-dashboard-empty-copy mb-0">Loading dashboard data.</p>
           ) : dashboard.stageDistribution.length === 0 ? (
