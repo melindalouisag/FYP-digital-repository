@@ -8,6 +8,7 @@ import {
   getRepeatOptionLabel,
   type CalendarRepeatOption,
 } from './calendarUtils';
+import { ACTIVE_PUBLICATION_TYPES } from '../lib/uiLabels';
 import type { CalendarFormState } from './useCalendarEvents';
 
 interface CalendarEventModalProps {
@@ -21,7 +22,6 @@ interface CalendarEventModalProps {
   onChange: (updater: (current: CalendarFormState) => CalendarFormState) => void;
 }
 
-const PUBLICATION_TYPES: PublicationType[] = ['THESIS', 'ARTICLE', 'INTERNSHIP_REPORT', 'OTHER'];
 const REPEAT_OPTIONS: CalendarRepeatOption[] = ['NONE', 'DAILY', 'WEEKLY', 'MONTHLY', 'ANNUALLY'];
 
 export function CalendarEventModal({
@@ -205,7 +205,7 @@ export function CalendarEventModal({
                             publicationType: event.target.value as PublicationType,
                           }))}
                         >
-                          {PUBLICATION_TYPES.map((type) => (
+                          {ACTIVE_PUBLICATION_TYPES.map((type) => (
                             <option key={type} value={type}>
                               {getPublicationTypeLabel(type)}
                             </option>

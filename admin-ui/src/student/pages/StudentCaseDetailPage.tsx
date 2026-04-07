@@ -11,6 +11,7 @@ import { calendarApi } from '../../lib/api/calendar';
 import { studentApi } from '../../lib/api/student';
 import DownloadFilenameLink from '../../lib/components/DownloadFilenameLink';
 import CaseTimeline from '../../lib/components/CaseTimeline';
+import { getRoleDisplayLabel } from '../../lib/uiLabels';
 import type {
   CalendarEvent,
   CaseDetailPayload,
@@ -309,11 +310,7 @@ function buildFeedbackEntries(comments: WorkflowComment[], checklist: ChecklistR
 }
 
 function formatRoleLabel(role?: WorkflowComment['authorRole'] | TimelineItem['actorRole']) {
-  if (!role) {
-    return 'Reviewer';
-  }
-
-  return role.charAt(0) + role.slice(1).toLowerCase();
+  return role ? getRoleDisplayLabel(role) : 'Reviewer';
 }
 
 function formatSubmissionVersionStatus(version: SubmissionVersion): string {

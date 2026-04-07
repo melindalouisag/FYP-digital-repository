@@ -2,13 +2,8 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { defaultPath, type Role } from '../lib/api/auth';
 import { ApiError } from '../lib/api/http';
 import { useAuth } from '../lib/context/AuthContext';
+import { getRoleDisplayLabel } from '../lib/uiLabels';
 import { useState } from 'react';
-
-const ROLE_LABELS: Record<Role, string> = {
-  STUDENT: 'Student',
-  LECTURER: 'Lecturer',
-  ADMIN: 'Library Admin',
-};
 
 export default function RolePickerPage() {
   const navigate = useNavigate();
@@ -63,14 +58,14 @@ export default function RolePickerPage() {
               key={role}
               type="button"
               className={`btn ${role === 'ADMIN' ? 'btn-outline-primary' : 'btn-primary'}`}
-              style={{ borderRadius: '0.6rem' }}
-              onClick={() => void chooseRole(role)}
-              disabled={savingRole !== null}
-            >
-              {savingRole === role ? 'Opening...' : ROLE_LABELS[role]}
-            </button>
-          ))}
-        </div>
+            style={{ borderRadius: '0.6rem' }}
+            onClick={() => void chooseRole(role)}
+            disabled={savingRole !== null}
+          >
+            {savingRole === role ? 'Opening...' : getRoleDisplayLabel(role)}
+          </button>
+        ))}
+      </div>
       </div>
     </div>
   );

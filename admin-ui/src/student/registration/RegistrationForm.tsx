@@ -1,3 +1,5 @@
+import { getPublicationTypeLabel } from '../../calendar/calendarUtils';
+import { ACTIVE_PUBLICATION_TYPES } from '../../lib/uiLabels';
 import { supervisorLabel, type UseRegistrationFormResult } from './useRegistrationForm';
 
 interface RegistrationFormProps {
@@ -5,6 +7,10 @@ interface RegistrationFormProps {
 }
 
 export function RegistrationForm({ form }: RegistrationFormProps) {
+  const publicationTypeOptions = form.isEditMode && !ACTIVE_PUBLICATION_TYPES.includes(form.type)
+    ? [form.type, ...ACTIVE_PUBLICATION_TYPES]
+    : ACTIVE_PUBLICATION_TYPES;
+
   return (
     <form
       className="row g-3"
@@ -28,15 +34,16 @@ export function RegistrationForm({ form }: RegistrationFormProps) {
           onChange={(event) => form.setType(event.target.value as typeof form.type)}
           disabled={form.isEditMode}
         >
-          <option value="THESIS">THESIS</option>
-          <option value="ARTICLE">ARTICLE</option>
-          <option value="INTERNSHIP_REPORT" disabled>INTERNSHIP_REPORT (Not enabled yet)</option>
-          <option value="OTHER" disabled>OTHER (Not enabled yet)</option>
+          {publicationTypeOptions.map((publicationType) => (
+            <option key={publicationType} value={publicationType}>
+              {getPublicationTypeLabel(publicationType)}
+            </option>
+          ))}
         </select>
         <div className="form-text">
           {form.isEditMode
             ? 'Publication type cannot be changed for an existing registration.'
-            : 'Only THESIS and ARTICLE are currently enabled.'}
+            : 'Select the publication type for this registration.'}
         </div>
         {form.errors.publicationType && <div className="text-danger small mt-1">{form.errors.publicationType}</div>}
       </div>
@@ -101,7 +108,7 @@ export function RegistrationForm({ form }: RegistrationFormProps) {
               ? 'Loading supervisors...'
               : form.hasStudyProgram
                 ? 'Select supervisor'
-                : 'Complete onboarding first'}
+                : 'Complete onboarding to continue'}
           </option>
           {form.supervisors.map((supervisor) => (
             <option key={supervisor.id} value={supervisor.email}>
@@ -116,7 +123,7 @@ export function RegistrationForm({ form }: RegistrationFormProps) {
               : 'Complete onboarding to load supervisors.'}
           </div>
         )}
-        <div className="form-text">Choose the lecturer who should review this registration first.</div>
+        <div className="form-text">Choose the lecturer who should review this registration.</div>
         {form.errors.supervisorIds && <div className="text-danger small mt-1">{form.errors.supervisorIds}</div>}
       </div>
 

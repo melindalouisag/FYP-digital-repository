@@ -15,6 +15,7 @@ import DownloadFilenameLink from '../../lib/components/DownloadFilenameLink';
 import KeywordChipInput from '../../lib/components/KeywordChipInput';
 import { useAuth } from '../../lib/context/AuthContext';
 import { joinKeywordTokens, splitKeywordString } from '../../lib/keywords';
+import { getRoleDisplayLabel } from '../../lib/uiLabels';
 import type { CalendarEvent, CaseDetailPayload, ChecklistResult, SubmissionVersion, UserRole, WorkflowComment } from '../../lib/workflowTypes';
 import {
   canUploadSubmission,
@@ -264,7 +265,7 @@ export default function StudentCaseSubmissionPage() {
                   : uploadAllowed
                   ? (hasPreviousUploads
                     ? 'Upload the revised PDF and confirm that the metadata below matches the latest version.'
-                    : 'Upload the first approved PDF and complete the repository metadata below.')
+                    : 'Upload the approved PDF and complete the repository metadata below.')
                   : getStudentCaseGuidance(detail.case.status)}
               </div>
             </div>
@@ -283,7 +284,7 @@ export default function StudentCaseSubmissionPage() {
             <div>
               <div className="su-revision-panel-kicker">Revision Guidance</div>
               <h3 className="su-revision-panel-title mb-1">
-                {currentRevisionRole === 'ADMIN' ? 'Feedback from library' : 'Feedback from lecturer'}
+                {currentRevisionRole === 'ADMIN' ? 'Feedback from Library Administrator' : 'Feedback from Lecturer'}
               </h3>
               <div className="su-revision-panel-copy">
                 Review the comments below before uploading the corrected file and metadata.
@@ -296,7 +297,7 @@ export default function StudentCaseSubmissionPage() {
               {revisionComments.map((comment) => (
                 <div className="su-revision-comment-item" key={comment.id}>
                   <div className="su-revision-comment-meta">
-                    {comment.authorRole === 'ADMIN' ? 'Library feedback' : 'Lecturer feedback'}
+                    {`Feedback from ${getRoleDisplayLabel(comment.authorRole)}`}
                     {comment.createdAt ? ` • ${new Date(comment.createdAt).toLocaleString()}` : ''}
                   </div>
                   <div className="su-revision-comment-body">{comment.body}</div>
@@ -318,7 +319,7 @@ export default function StudentCaseSubmissionPage() {
                     <div className="su-revision-checklist-item" key={item.id}>
                       <div className="su-revision-checklist-title">{item.checklistItem.itemText}</div>
                       <div className="su-revision-checklist-meta">
-                        {item.checklistItem.section?.trim() || 'Library checklist requirement'}
+                        {item.checklistItem.section?.trim() || 'Library Administrator checklist requirement'}
                       </div>
                       {item.note?.trim() ? (
                         <div className="su-revision-checklist-note">{item.note.trim()}</div>
@@ -450,8 +451,8 @@ export default function StudentCaseSubmissionPage() {
             <div className="col-12">
               <button className="btn su-action-button su-action-button-primary" onClick={() => void onUpload()} disabled={!uploadAllowed || submissionDeadlinePassed || uploading}>
                 {uploading
-                  ? (hasPreviousUploads ? 'Uploading Revised File...' : 'Uploading First File...')
-                  : (hasPreviousUploads ? 'Upload Revised File' : 'Upload First File')}
+                  ? (hasPreviousUploads ? 'Uploading Revised File...' : 'Uploading File...')
+                  : (hasPreviousUploads ? 'Upload Revised File' : 'Upload File')}
               </button>
             </div>
           </div>

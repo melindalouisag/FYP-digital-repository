@@ -62,8 +62,8 @@ export default function StudentRegistrationsPage() {
 
   const openCreateRegistrationConfirm = () => {
     openConfirm({
-      title: 'Start New Publication Registration?',
-      message: 'You are about to start a new publication registration. Continue to the registration form?',
+      title: 'Open Register Publication?',
+      message: 'You are about to open Register Publication and create a new publication record. Continue?',
       confirmLabel: 'Continue',
       onConfirm: (close) => {
         close();
@@ -76,8 +76,8 @@ export default function StudentRegistrationsPage() {
     <>
       <ShellLayout title="Register Publication">
         <div className="d-flex justify-content-end align-items-center mb-4">
-          <button className="btn btn-primary" style={{ borderRadius: '999px' }} onClick={openCreateRegistrationConfirm}>
-            Create New Registration
+          <button className="btn btn-primary" style={{ borderRadius: '0.7rem' }} onClick={openCreateRegistrationConfirm}>
+            Register Publication
           </button>
         </div>
 
@@ -91,7 +91,7 @@ export default function StudentRegistrationsPage() {
             <h5>No Registration Records to Work On</h5>
             <p className="text-muted">Draft registrations, returned registrations, and registrations still in approval will appear here.</p>
             <button className="btn btn-primary" onClick={openCreateRegistrationConfirm}>
-              Create First Registration
+              Register Publication
             </button>
           </div>
         )}

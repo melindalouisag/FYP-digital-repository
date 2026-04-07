@@ -31,7 +31,7 @@ export default function RepositoryDetail() {
   const onDownload = async () => {
     if (!id) return;
     if (!user) {
-      setDownloadMessage('Please log in first to download this published file.');
+      setDownloadMessage('Please sign in with your university account to download this published file.');
       return;
     }
 
@@ -75,7 +75,7 @@ export default function RepositoryDetail() {
   }
 
   return (
-    <div className="min-vh-100" style={{ background: 'linear-gradient(180deg, #f0f6fa 0%, #fff 30%)' }}>
+    <div className="min-vh-100" style={{ background: '#f6f9fb' }}>
       <header className="su-app-header">
         <div className="container py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
           <Link to="/" className="d-flex align-items-center gap-2 text-decoration-none su-repository-brand-link" aria-label="Go to Digital Repository home">
@@ -99,7 +99,7 @@ export default function RepositoryDetail() {
                   <button
                     type="button"
                     className="btn btn-outline-light btn-sm"
-                    style={{ borderRadius: '999px' }}
+                    style={{ borderRadius: '0.7rem' }}
                     onClick={() => navigate(
                       user.role === 'STUDENT'
                         ? '/student/dashboard'
@@ -110,17 +110,17 @@ export default function RepositoryDetail() {
                   >
                     Dashboard
                   </button>
-                  <button type="button" className="btn btn-light btn-sm" style={{ borderRadius: '999px' }} onClick={() => void logout()}>
+                  <button type="button" className="btn btn-light btn-sm" style={{ borderRadius: '0.7rem' }} onClick={() => void logout()}>
                     Logout
                   </button>
                 </>
               ) : (
                 <>
-                  <button type="button" className="btn btn-outline-light btn-sm" style={{ borderRadius: '999px' }} onClick={() => navigate('/login')}>
-                    Sign In
+                  <button type="button" className="btn btn-outline-light btn-sm" style={{ borderRadius: '0.7rem' }} onClick={() => navigate('/login')}>
+                    Sign in
                   </button>
-                  <button type="button" className="btn btn-light btn-sm" style={{ borderRadius: '999px', fontWeight: 600 }} onClick={() => navigate('/register')}>
-                    Register
+                  <button type="button" className="btn btn-light btn-sm" style={{ borderRadius: '0.7rem', fontWeight: 600 }} onClick={() => navigate('/register')}>
+                    Use your university account
                   </button>
                 </>
               )}
@@ -165,16 +165,16 @@ export default function RepositoryDetail() {
               <button
                 type="button"
                 className="btn btn-primary"
-                style={{ borderRadius: '999px', padding: '0.5rem 1.5rem' }}
+                style={{ borderRadius: '0.7rem', padding: '0.5rem 1.5rem' }}
                 onClick={() => void onDownload()}
                 disabled={!user || downloadLoading}
-                title={!user ? 'Login is required to download files.' : undefined}
+                title={!user ? 'Sign-in with a university account is required to download files.' : undefined}
               >
                 {downloadLoading ? 'Downloading...' : 'Download PDF'}
               </button>
               {!user && (
                 <div className="d-flex align-items-center gap-2">
-                  <button className="btn btn-link btn-sm p-0" onClick={() => navigate('/login')}>Sign in to download</button>
+                  <button className="btn btn-link btn-sm p-0" onClick={() => navigate('/login')}>Sign in with university account</button>
                 </div>
               )}
             </div>

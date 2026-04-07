@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import ShellLayout from '../../ShellLayout';
 import { adminApi } from '../../lib/api/admin';
 import { useConfirmDialog } from '../../lib/components/useConfirmDialog';
+import { getRoleDisplayLabel } from '../../lib/uiLabels';
 import type {
   CaseDetailPayload,
   ChecklistItem,
@@ -207,7 +208,7 @@ function buildCommentGroups(comments: WorkflowComment[]): CommentGroup[] {
 }
 
 function formatCommentAuthorRole(role: WorkflowComment['authorRole']) {
-  return role.charAt(0) + role.slice(1).toLowerCase();
+  return getRoleDisplayLabel(role);
 }
 
 export default function AdminReviewDetailPage() {
@@ -560,7 +561,7 @@ export default function AdminReviewDetailPage() {
               )}
               {checklistItems.length === 0 && (
                 <div className="alert alert-warning mb-0">
-                  No checklist items found for this submission/template. Confirm template setup first.
+                  No checklist items found for this submission/template. Confirm template setup before continuing.
                 </div>
               )}
               {checklistSections.length > 0 && (
@@ -660,7 +661,7 @@ export default function AdminReviewDetailPage() {
               )}
               {decisionAllowed && !checklistSaved && (
                 <div className="alert alert-warning">
-                  Checklist results have not been saved yet. You can still approve the publication, but saving the checklist first is recommended.
+                  Checklist results have not been saved yet. You can still approve the publication, but saving the checklist before approval is recommended.
                 </div>
               )}
               <div className="mb-3">

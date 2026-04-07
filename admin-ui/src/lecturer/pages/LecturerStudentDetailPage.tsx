@@ -234,7 +234,7 @@ export default function LecturerStudentDetailPage() {
                         { label: 'Last Submission', value: renderTimestamp(c.latestSubmissionAt) },
                         { label: 'Lecturer Feedback', value: renderTimestamp(c.lastLecturerFeedbackAt) },
                         { label: 'Forwarded', value: renderTimestamp(c.lecturerForwardedAt) },
-                        { label: 'Library Feedback', value: renderTimestamp(c.lastLibraryFeedbackAt) },
+                        { label: 'Library Administrator Feedback', value: renderTimestamp(c.lastLibraryFeedbackAt) },
                       ].map((ts) => (
                         <div className="col-6 col-md-3" key={ts.label}>
                           <div className="p-2" style={{ background: '#f8fafc', borderRadius: '0.5rem', fontSize: '0.78rem' }}>

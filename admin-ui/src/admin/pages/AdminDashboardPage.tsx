@@ -13,6 +13,7 @@ import DashboardPanel from '../../lib/components/DashboardPanel';
 import DashboardProgressRingCard from '../../lib/components/DashboardProgressRingCard';
 import { adminApi } from '../../lib/api/admin';
 import type { AdminDashboardData, CalendarEvent, DashboardActionItem, DeadlineActionType, PublicationType } from '../../lib/workflowTypes';
+import { ACTIVE_PUBLICATION_TYPES } from '../../lib/uiLabels';
 import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 
 const EMPTY_DASHBOARD: AdminDashboardData = {
@@ -135,8 +136,8 @@ export default function AdminDashboardPage() {
 
   return (
     <ShellLayout
-      title="Admin Dashboard"
-      subtitle="Library administration overview for registration, review, clearance, and publishing"
+      title="Library Administrator Dashboard"
+      subtitle="Library administrator overview for registration, review, clearance, and publishing"
       sidebarBadges={{
         '/admin/registration-approvals': dashboard.registrationQueueCount,
         '/admin/review': dashboard.submissionReviewQueueCount,
@@ -258,7 +259,7 @@ export default function AdminDashboardPage() {
                     publicationType: event.target.value as PublicationType,
                   }))}
                 >
-                  {PUBLICATION_TYPE_OPTIONS.map((option) => (
+                  {ACTIVE_PUBLICATION_TYPES.map((option) => (
                     <option key={option} value={option}>
                       {getPublicationTypeLabel(option)}
                     </option>
@@ -323,8 +324,6 @@ export default function AdminDashboardPage() {
     </ShellLayout>
   );
 }
-
-const PUBLICATION_TYPE_OPTIONS: PublicationType[] = ['THESIS', 'ARTICLE', 'INTERNSHIP_REPORT', 'OTHER'];
 
 function createDeadlineFormState(): DeadlineFormState {
   return {

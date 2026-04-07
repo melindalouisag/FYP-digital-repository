@@ -146,7 +146,7 @@ export function ChecklistCategoryCard({
               <div className="border rounded p-3 mb-2">
                 <div className="row g-3 align-items-end">
                   <div className="col-lg-9">
-                    <div className="small text-muted">No items yet. Add the first item for this category.</div>
+                    <div className="small text-muted">No items yet. Add an item to this category.</div>
                   </div>
                   <div className="col-lg-3">
                     <label className="form-label small">Actions</label>

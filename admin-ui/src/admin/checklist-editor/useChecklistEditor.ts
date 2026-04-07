@@ -92,7 +92,7 @@ function appendItemToCategory(
       return {
         ...category,
         expanded: true,
-        errorCategoryTitle: 'Please enter a category title first.',
+        errorCategoryTitle: 'Please enter a category title.',
       };
     }
 
@@ -450,11 +450,11 @@ export function useChecklistEditor(): ChecklistEditorState {
       return false;
     }
     if (selectedTemplate.template.active) {
-      setError('Cannot edit active template; create a new draft first.');
+      setError('Cannot edit active template; create a new draft to continue.');
       return false;
     }
     if (!selectedTemplate.editLock?.ownedByCurrentUser) {
-      setError('Start editing this draft first to acquire the lock.');
+      setError('Start editing this draft to acquire the lock.');
       return false;
     }
 

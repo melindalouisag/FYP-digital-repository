@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ShellLayout from '../../ShellLayout';
 import { studentApi } from '../../lib/api/student';
+import { getRoleDisplayLabel } from '../../lib/uiLabels';
 import type { CaseDetailPayload, ChecklistResult } from '../../lib/workflowTypes';
 
 export default function StudentFeedbackPage() {
@@ -80,7 +81,7 @@ export default function StudentFeedbackPage() {
                 >
                   <div className="d-flex justify-content-between align-items-center mb-1">
                     <div className="fw-semibold small">
-                      {comment.authorRole}
+                      {getRoleDisplayLabel(comment.authorRole)}
                       {comment.authorEmail ? ` — ${comment.authorEmail}` : ''}
                     </div>
                     <div className="text-muted small">

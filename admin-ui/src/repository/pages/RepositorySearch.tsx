@@ -35,7 +35,7 @@ export default function RepositorySearchPage() {
                   <button
                     type="button"
                     className="btn btn-outline-light btn-sm"
-                    style={{ borderRadius: '999px' }}
+                    style={{ borderRadius: '0.7rem' }}
                     onClick={() => navigate(
                       user.role === 'STUDENT'
                         ? '/student/dashboard'
@@ -46,17 +46,17 @@ export default function RepositorySearchPage() {
                   >
                     Dashboard
                   </button>
-                  <button type="button" className="btn btn-light btn-sm" style={{ borderRadius: '999px' }} onClick={() => void logout()}>
+                  <button type="button" className="btn btn-light btn-sm" style={{ borderRadius: '0.7rem' }} onClick={() => void logout()}>
                     Logout
                   </button>
                 </>
               ) : (
                 <>
-                  <button type="button" className="btn btn-outline-light btn-sm" style={{ borderRadius: '999px' }} onClick={() => navigate('/login')}>
-                    Sign In
+                  <button type="button" className="btn btn-outline-light btn-sm" style={{ borderRadius: '0.7rem' }} onClick={() => navigate('/login')}>
+                    Sign in
                   </button>
-                  <button type="button" className="btn btn-light btn-sm" style={{ borderRadius: '999px', fontWeight: 600 }} onClick={() => navigate('/register')}>
-                    Register
+                  <button type="button" className="btn btn-light btn-sm" style={{ borderRadius: '0.7rem', fontWeight: 600 }} onClick={() => navigate('/register')}>
+                    Use your university account
                   </button>
                 </>
               )}

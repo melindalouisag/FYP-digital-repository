@@ -168,7 +168,7 @@ export function validateChecklistCategories(
     const title = category.title.trim();
 
     if (!title) {
-      nextCategory.errorCategoryTitle = 'Please enter a category title first.';
+      nextCategory.errorCategoryTitle = 'Please enter a category title.';
       hasError = true;
       categoryHasError = true;
       if (!firstFocusTarget) {

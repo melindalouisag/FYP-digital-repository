@@ -4,6 +4,7 @@ import { notificationsApi } from './lib/api/notifications';
 import ThemeSwitch from './theme/ThemeSwitch';
 import type { NotificationItem } from './lib/workflowTypes';
 import { useAuth } from './lib/context/AuthContext';
+import { formatRoleList, getRoleDisplayLabel } from './lib/uiLabels';
 import { useTheme } from './theme/ThemeContext';
 
 interface ShellLayoutProps {
@@ -61,7 +62,7 @@ export default function ShellLayout({ title, children, sidebarBadges }: ShellLay
   const accountRef = useRef<HTMLDivElement | null>(null);
   const notificationRef = useRef<HTMLDivElement | null>(null);
   const links = roleLinks(user?.role);
-  const roleLabel = user?.role ? user.role.charAt(0) + user.role.slice(1).toLowerCase() : 'Guest';
+  const roleLabel = getRoleDisplayLabel(user?.role);
   const currentYear = new Date().getFullYear();
   const userId = user?.id ?? null;
   const userRole = user?.role ?? null;
@@ -295,7 +296,7 @@ export default function ShellLayout({ title, children, sidebarBadges }: ShellLay
                   <div className="su-account-meta">Current role: {roleLabel}</div>
                   {availableRoles.length > 0 ? (
                     <div className="su-account-meta">
-                      Available access: {availableRoles.join(', ')}
+                      Available access: {formatRoleList(availableRoles)}
                     </div>
                   ) : null}
                   <button

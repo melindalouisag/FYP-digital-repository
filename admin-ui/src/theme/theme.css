@@ -15,8 +15,8 @@
   --sidebar-link: #29465d;
   --sidebar-hover-bg: #e5f3f8;
   --sidebar-active-text: #ffffff;
-  --auth-bg-start: #edf4f9;
-  --auth-bg-end: #d8e7f1;
+  --auth-bg-start: #f4f8fb;
+  --auth-bg-end: #eaf1f6;
   --shadow-color: rgba(15, 47, 74, 0.08);
   --table-head-text: #355066;
   --table-striped-bg: #f4f7fa;
@@ -55,7 +55,7 @@ a {
 }
 
 .su-app-header {
-  background: linear-gradient(90deg, var(--su-navy) 0%, var(--su-navy-2) 100%);
+  background: linear-gradient(90deg, var(--su-navy) 0%, #163f61 100%);
 }
 
 .su-sidebar {
@@ -81,11 +81,12 @@ a {
   background: var(--card);
   color: var(--text);
   border-color: var(--border);
-  box-shadow: 0 8px 24px var(--shadow-color);
+  box-shadow: 0 6px 18px var(--shadow-color);
 }
 
 .su-page-title {
   color: var(--text);
+  font-weight: 700;
 }
 
 .su-page-subtitle,
@@ -157,7 +158,7 @@ a {
 }
 
 .auth-shell {
-  background: linear-gradient(140deg, var(--auth-bg-start) 0%, var(--auth-bg-end) 100%);
+  background: linear-gradient(180deg, var(--auth-bg-start) 0%, var(--auth-bg-end) 100%);
 }
 
 .auth-card {
@@ -180,7 +181,7 @@ a {
   gap: 0.5rem;
   padding: 0.35rem 0.6rem;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 0.75rem;
   background: var(--card);
-  box-shadow: 0 6px 18px var(--shadow-color);
+  box-shadow: 0 4px 14px var(--shadow-color);
 }
