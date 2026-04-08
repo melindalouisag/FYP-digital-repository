@@ -1536,6 +1536,12 @@ body {
   gap: 0.55rem;
 }
 
+.su-revision-checklist-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
 .su-revision-comment-item,
 .su-revision-checklist-item {
   border: 1px solid rgba(15, 47, 74, 0.08);
@@ -1573,11 +1579,84 @@ body {
   margin-bottom: 0.6rem;
 }
 
+.su-revision-category-card {
+  border: 1px solid rgba(15, 47, 74, 0.08);
+  border-radius: 0.9rem;
+  background: rgba(255, 255, 255, 0.72);
+  overflow: hidden;
+}
+
+.su-revision-category-toggle {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.82rem 0.9rem;
+  text-align: left;
+}
+
+.su-revision-category-toggle:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.su-revision-category-icon {
+  color: #6d8295;
+  padding-top: 0.08rem;
+}
+
+.su-revision-category-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.su-revision-category-title {
+  color: var(--su-navy);
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.su-revision-category-count {
+  color: #6d8295;
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
+.su-revision-category-body {
+  border-top: 1px solid rgba(15, 47, 74, 0.08);
+  padding: 0.82rem 0.9rem 0.9rem;
+}
+
+.su-revision-checklist-detail + .su-revision-checklist-detail {
+  margin-top: 0.48rem;
+}
+
+.su-revision-checklist-label {
+  color: #5d7387;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin-bottom: 0.16rem;
+  text-transform: uppercase;
+}
+
 .su-revision-checklist-note {
   color: #42586c;
   font-size: 0.77rem;
   line-height: 1.5;
   margin-top: 0.28rem;
+}
+
+.su-revision-checklist-guidance {
+  color: #42586c;
+  font-size: 0.77rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
 }
 
 .su-submission-version-item,
@@ -1862,8 +1941,13 @@ body {
 }
 
 [data-theme="dark"] .su-revision-comment-item,
-[data-theme="dark"] .su-revision-checklist-item {
+[data-theme="dark"] .su-revision-checklist-item,
+[data-theme="dark"] .su-revision-category-card {
   background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .su-revision-category-body {
   border-color: rgba(255, 255, 255, 0.08);
 }
 

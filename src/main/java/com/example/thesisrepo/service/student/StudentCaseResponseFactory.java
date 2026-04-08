@@ -102,7 +102,8 @@ public class StudentCaseResponseFactory {
       new ChecklistResultResponse.ChecklistItemResponse(
         item.getId(),
         item.getSection(),
-        item.getItemText()
+        item.getItemText(),
+        item.getGuidanceText()
       ),
       result.getPassFail(),
       result.getNote()

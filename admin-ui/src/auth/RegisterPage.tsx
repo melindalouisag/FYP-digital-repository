@@ -17,9 +17,12 @@ function RegisterPage() {
         <h2 className="h4 mb-2 fw-bold">Register</h2>
 
         <div className="p-3 mb-3" style={{ background: "#f0f6fa", borderRadius: "0.75rem", border: "1px solid #d5e3ed" }}>
-          <p className="text-muted small mb-2"><strong>Institutional access</strong></p>
+          <div className="d-flex align-items-center justify-content-center gap-2 text-muted small mb-2">
+            <InfoIcon />
+            <strong>Institutional access</strong>
+          </div>
           <p className="text-muted small mb-0">
-            New students can register using their Sampoerna University Microsoft account to create their profile before using the repository system.
+            Register your account using your Sampoerna University email and create your profile before using the repository system.
           </p>
         </div>
 
@@ -38,6 +41,21 @@ function RegisterPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function InfoIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 16 16"
+      fill="none"
+      style={{ width: "0.9rem", height: "0.9rem", color: "#5d7387" }}
+    >
+      <circle cx="8" cy="8" r="6.25" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M8 7.15v3.4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="8" cy="4.8" r="0.8" fill="currentColor" />
+    </svg>
   );
 }
 

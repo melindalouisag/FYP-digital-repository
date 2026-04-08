@@ -102,6 +102,7 @@ export interface ChecklistResult {
     id: number;
     section?: string | null;
     itemText: string;
+    guidanceText?: string | null;
   };
   passFail: 'PASS' | 'FAIL';
   note?: string | null;

@@ -11,7 +11,8 @@ public record ChecklistResultResponse(
   public record ChecklistItemResponse(
     Long id,
     String section,
-    String itemText
+    String itemText,
+    String guidanceText
   ) {
   }
 }

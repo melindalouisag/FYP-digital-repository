@@ -51,6 +51,7 @@ export default function StudentCaseSubmissionPage() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [keywordTouched, setKeywordTouched] = useState(false);
+  const [expandedChecklistSections, setExpandedChecklistSections] = useState<string[]>([]);
 
   const load = useCallback(async () => {
     if (!caseId) return;
@@ -160,6 +161,10 @@ export default function StudentCaseSubmissionPage() {
     ),
     [checklistResults, currentRevisionRole]
   );
+  const groupedFailedChecklistItems = useMemo(
+    () => groupChecklistItemsBySection(failedChecklistItems),
+    [failedChecklistItems]
+  );
   const showRevisionPanel = Boolean(currentRevisionRole);
   const submissionDeadline = useMemo(
     () => (detail ? findLatestDeadline(calendarEvents, detail.case.type, 'SUBMISSION_DEADLINE') : null),
@@ -177,6 +182,17 @@ export default function StudentCaseSubmissionPage() {
         : { ...prev, metadataKeywords: joinedKeywords }
     ));
   }, [keywordTokens]);
+
+  useEffect(() => {
+    const nextKeys = groupedFailedChecklistItems.map((group) => group.key);
+    setExpandedChecklistSections((prev) => {
+      if (nextKeys.length === 0) {
+        return [];
+      }
+      const preserved = prev.filter((key) => nextKeys.includes(key));
+      return preserved.length > 0 ? preserved : [nextKeys[0]];
+    });
+  }, [groupedFailedChecklistItems]);
 
   const validateFile = (candidate: File | null): string => {
     if (!candidate) {
@@ -286,9 +302,6 @@ export default function StudentCaseSubmissionPage() {
               <h3 className="su-revision-panel-title mb-1">
                 {currentRevisionRole === 'ADMIN' ? 'Feedback from Library Administrator' : 'Feedback from Lecturer'}
               </h3>
-              <div className="su-revision-panel-copy">
-                Review the comments below before uploading the corrected file and metadata.
-              </div>
             </div>
           </div>
 
@@ -313,19 +326,66 @@ export default function StudentCaseSubmissionPage() {
           {currentRevisionRole === 'ADMIN' ? (
             <div className="su-revision-section">
               <div className="su-revision-section-title">Checklist items to revise</div>
-              {failedChecklistItems.length > 0 ? (
-                <div className="su-revision-checklist">
-                  {failedChecklistItems.map((item) => (
-                    <div className="su-revision-checklist-item" key={item.id}>
-                      <div className="su-revision-checklist-title">{item.checklistItem.itemText}</div>
-                      <div className="su-revision-checklist-meta">
-                        {item.checklistItem.section?.trim() || 'Library Administrator checklist requirement'}
+              {groupedFailedChecklistItems.length > 0 ? (
+                <div className="su-revision-checklist-groups">
+                  {groupedFailedChecklistItems.map((group) => {
+                    const expanded = expandedChecklistSections.includes(group.key);
+                    return (
+                      <div className="su-revision-category-card" key={group.key}>
+                        <button
+                          type="button"
+                          className="su-revision-category-toggle"
+                          aria-expanded={expanded}
+                          onClick={() => {
+                            setExpandedChecklistSections((prev) => (
+                              prev.includes(group.key)
+                                ? prev.filter((key) => key !== group.key)
+                                : [...prev, group.key]
+                            ));
+                          }}
+                        >
+                          <span className="su-revision-category-icon">
+                            <ChevronIcon expanded={expanded} />
+                          </span>
+                          <span className="su-revision-category-copy">
+                            <span className="su-revision-category-title">{group.title}</span>
+                            <span className="su-revision-category-count">
+                              {group.items.length} checklist item{group.items.length === 1 ? '' : 's'}
+                            </span>
+                          </span>
+                        </button>
+
+                        {expanded ? (
+                          <div className="su-revision-category-body">
+                            <div className="su-revision-checklist">
+                              {group.items.map((item) => (
+                                <div className="su-revision-checklist-item" key={item.id}>
+                                  <div className="su-revision-checklist-title">{item.checklistItem.itemText}</div>
+                                  <div className="su-revision-checklist-meta">{group.title}</div>
+
+                                  <div className="su-revision-checklist-detail">
+                                    <div className="su-revision-checklist-label">Feedback</div>
+                                    <div className="su-revision-checklist-note">
+                                      {item.note?.trim() || 'No additional comment provided.'}
+                                    </div>
+                                  </div>
+
+                                  {item.checklistItem.guidanceText?.trim() ? (
+                                    <div className="su-revision-checklist-detail">
+                                      <div className="su-revision-checklist-label">Guidance</div>
+                                      <div className="su-revision-checklist-guidance">
+                                        {item.checklistItem.guidanceText.trim()}
+                                      </div>
+                                    </div>
+                                  ) : null}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
-                      {item.note?.trim() ? (
-                        <div className="su-revision-checklist-note">{item.note.trim()}</div>
-                      ) : null}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="su-revision-empty-copy">
@@ -531,4 +591,40 @@ function buildCurrentRevisionComments(
   return currentCycleComments.length > 0
     ? currentCycleComments
     : sameRoleComments.slice(-3);
+}
+
+function groupChecklistItemsBySection(items: ChecklistResult[]) {
+  const groups = new Map<string, { key: string; title: string; items: ChecklistResult[] }>();
+
+  items.forEach((item) => {
+    const title = item.checklistItem.section?.trim() || 'General Requirements';
+    const key = title.toLowerCase();
+    const existing = groups.get(key);
+    if (existing) {
+      existing.items.push(item);
+      return;
+    }
+    groups.set(key, { key, title, items: [item] });
+  });
+
+  return Array.from(groups.values());
+}
+
+function ChevronIcon({ expanded }: { expanded: boolean }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 16 16"
+      fill="none"
+      style={{ width: '0.95rem', height: '0.95rem' }}
+    >
+      <path
+        d={expanded ? 'M3.5 6 8 10.5 12.5 6' : 'M6 3.5 10.5 8 6 12.5'}
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
 }
