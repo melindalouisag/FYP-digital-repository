@@ -55,6 +55,10 @@ export default function StudentRegistrationsPage() {
     const start = page * PAGE_SIZE;
     return registrationCases.slice(start, start + PAGE_SIZE);
   }, [page, registrationCases]);
+  const hasAnyRegistrationHistory = cases.length > 0;
+  const emptyStateActionLabel = hasAnyRegistrationHistory
+    ? 'New Registration'
+    : 'Create Your First Registration';
   const pageStart = registrationCases.length === 0 ? 0 : page * PAGE_SIZE + 1;
   const pageEnd = pageStart === 0 ? 0 : pageStart + visibleCases.length - 1;
   const hasPrevious = page > 0;
@@ -77,7 +81,7 @@ export default function StudentRegistrationsPage() {
       <ShellLayout title="Register Publication">
         <div className="d-flex justify-content-end align-items-center mb-4">
           <button className="btn btn-primary" style={{ borderRadius: '0.7rem' }} onClick={openCreateRegistrationConfirm}>
-            Register Publication
+            New Registration
           </button>
         </div>
 
@@ -91,7 +95,7 @@ export default function StudentRegistrationsPage() {
             <h5>No Registration Records to Work On</h5>
             <p className="text-muted">Draft registrations, returned registrations, and registrations still in approval will appear here.</p>
             <button className="btn btn-primary" onClick={openCreateRegistrationConfirm}>
-              Register Publication
+              {emptyStateActionLabel}
             </button>
           </div>
         )}

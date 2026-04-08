@@ -511,8 +511,8 @@ export default function StudentCaseSubmissionPage() {
             <div className="col-12">
               <button className="btn su-action-button su-action-button-primary" onClick={() => void onUpload()} disabled={!uploadAllowed || submissionDeadlinePassed || uploading}>
                 {uploading
-                  ? (hasPreviousUploads ? 'Uploading Revised File...' : 'Uploading File...')
-                  : (hasPreviousUploads ? 'Upload Revised File' : 'Upload File')}
+                  ? 'Uploading...'
+                  : 'Upload'}
               </button>
             </div>
           </div>
