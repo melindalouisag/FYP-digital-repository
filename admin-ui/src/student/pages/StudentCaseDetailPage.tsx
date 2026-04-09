@@ -299,9 +299,9 @@ function buildFeedbackEntries(comments: WorkflowComment[], checklist: ChecklistR
     .map((item) => ({
       key: `checklist-${item.id}`,
       title: item.checklistItem.itemText,
-      detail: item.note?.trim() || 'Revision is required for this checklist item.',
+      detail: item.note?.trim() || 'Revision is required for this template item.',
       meta: [
-        item.passFail === 'FAIL' ? 'Checklist revision' : 'Checklist note',
+        item.passFail === 'FAIL' ? 'Template item revision' : 'Template item note',
         item.checklistItem.section ?? null,
       ].filter(Boolean).join(' • '),
     }));

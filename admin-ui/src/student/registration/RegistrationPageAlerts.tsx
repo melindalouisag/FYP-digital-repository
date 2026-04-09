@@ -60,7 +60,7 @@ export function RegistrationPageAlerts({
           <div className="su-revision-panel-header">
             <div>
               <div className="su-revision-panel-kicker">Action Required</div>
-              <h3 className="su-revision-panel-title mb-1">What needs revision</h3>
+              <h3 className="su-revision-panel-title mb-1">Comments from reviewer</h3>
               <div className="su-revision-panel-copy">
                 Review this feedback before updating the registration form below.
               </div>

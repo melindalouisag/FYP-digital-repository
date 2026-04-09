@@ -126,7 +126,7 @@ export function RepositorySearchFilters({
               id="repository-search-keywords"
               values={keywordTokens}
               onChange={onKeywordTokensChange}
-              placeholder="Type one keyword and press Enter"
+              placeholder="Enter keywords separated by commas"
             />
           </div>
 

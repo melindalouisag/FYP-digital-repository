@@ -6,7 +6,7 @@ import PortalIcon from '../../lib/components/PortalIcon';
 import { useConfirmDialog } from '../../lib/components/useConfirmDialog';
 import { studentSidebarIcons } from '../../lib/portalIcons';
 import type { CaseSummary } from '../../lib/workflowTypes';
-import { formatStatus, getStudentCaseGuidance, statusBadgeClass } from '../../lib/workflowUi';
+import { formatStatus, getWorkflowNextAction, statusBadgeClass } from '../../lib/workflowUi';
 import {
   isNavigationActivationKey,
   isRegistrationWorkspaceCase,
@@ -141,7 +141,9 @@ export default function StudentRegistrationsPage() {
                       <td className="text-muted small">{c.updatedAt ? new Date(c.updatedAt).toLocaleString() : 'N/A'}</td>
                       <td>
                         <div className="fw-semibold small text-body-secondary">{navigationTarget.label}</div>
-                        <div className="small text-muted mt-1">{getStudentCaseGuidance(c.status)}</div>
+                        {navigationTarget.label !== getWorkflowNextAction(c.status) ? (
+                          <div className="small text-muted mt-1">{getWorkflowNextAction(c.status)}</div>
+                        ) : null}
                       </td>
                     </tr>
                   );

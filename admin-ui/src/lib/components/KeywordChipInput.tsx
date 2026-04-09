@@ -12,21 +12,32 @@ export default function KeywordChipInput({
   id,
   values,
   onChange,
-  placeholder = 'Type a keyword and press Enter',
+  placeholder = 'Enter keywords separated by commas',
   disabled = false,
 }: KeywordChipInputProps) {
   const [draft, setDraft] = useState('');
 
-  const addToken = (rawValue: string) => {
-    const token = rawValue.trim();
-    if (!token) {
-      return;
-    }
+  const appendTokens = (rawValues: string[]) => {
+    const nextValues = [...values];
 
-    const exists = values.some((value) => value.toLowerCase() === token.toLowerCase());
-    if (!exists) {
-      onChange([...values, token]);
+    rawValues.forEach((rawValue) => {
+      const token = rawValue.trim();
+      if (!token) {
+        return;
+      }
+      const exists = nextValues.some((value) => value.toLowerCase() === token.toLowerCase());
+      if (!exists) {
+        nextValues.push(token);
+      }
+    });
+
+    if (nextValues.length !== values.length) {
+      onChange(nextValues);
     }
+  };
+
+  const commitDraft = (rawValue: string) => {
+    appendTokens(rawValue.split(','));
     setDraft('');
   };
 
@@ -64,18 +75,27 @@ export default function KeywordChipInput({
         id={id}
         className="form-control"
         value={draft}
-        onChange={(event) => setDraft(event.target.value)}
-        onBlur={() => addToken(draft)}
+        onChange={(event) => {
+          const nextDraft = event.target.value;
+          if (nextDraft.includes(',')) {
+            const parts = nextDraft.split(',');
+            const trailingDraft = parts.pop() ?? '';
+            appendTokens(parts);
+            setDraft(trailingDraft);
+            return;
+          }
+          setDraft(nextDraft);
+        }}
+        onBlur={() => commitDraft(draft)}
         onKeyDown={(event) => {
           if (event.key === 'Enter') {
             event.preventDefault();
-            addToken(draft);
+            commitDraft(draft);
           }
         }}
         placeholder={placeholder}
         disabled={disabled}
       />
-      <div className="form-text">Press Enter to add each keyword.</div>
     </div>
   );
 }

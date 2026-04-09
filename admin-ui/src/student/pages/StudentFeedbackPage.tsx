@@ -99,7 +99,7 @@ export default function StudentFeedbackPage() {
       {!loading && checklist.length > 0 && (
         <div className="su-card">
           <div className="card-body p-4">
-            <h3 className="h6 su-page-title mb-3">Checklist Outcomes</h3>
+            <h3 className="h6 su-page-title mb-3">Template Item Outcomes</h3>
             <div className="vstack gap-2">
               {checklist.map((result) => (
                 <div

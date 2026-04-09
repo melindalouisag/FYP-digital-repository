@@ -20,7 +20,6 @@ import type { CalendarEvent, CaseDetailPayload, ChecklistResult, SubmissionVersi
 import {
   canUploadSubmission,
   formatStatus,
-  getStudentCaseGuidance,
   statusBadgeClass,
 } from '../../lib/workflowUi';
 
@@ -269,7 +268,7 @@ export default function StudentCaseSubmissionPage() {
         </div>
       ) : null}
 
-      {detail && (
+      {detail && !showRevisionPanel && (
         <div className="card shadow-sm mb-3">
           <div className="card-body d-flex flex-wrap justify-content-between align-items-start gap-3">
             <div>
@@ -279,10 +278,8 @@ export default function StudentCaseSubmissionPage() {
                 {submissionDeadlinePassed
                   ? 'The submission deadline has passed for this publication.'
                   : uploadAllowed
-                  ? (hasPreviousUploads
-                    ? 'Upload the revised PDF and confirm that the metadata below matches the latest version.'
-                    : 'Upload the approved PDF and complete the repository metadata below.')
-                  : getStudentCaseGuidance(detail.case.status)}
+                  ? 'Upload the PDF and complete the repository metadata below.'
+                  : null}
               </div>
             </div>
             {submissionDeadlinePassed ? (
@@ -298,24 +295,28 @@ export default function StudentCaseSubmissionPage() {
         <div className="su-revision-panel mb-3">
           <div className="su-revision-panel-header">
             <div>
-              <div className="su-revision-panel-kicker">Revision Guidance</div>
               <h3 className="su-revision-panel-title mb-1">
-                {currentRevisionRole === 'ADMIN' ? 'Feedback from Library Administrator' : 'Feedback from Lecturer'}
+                {formatStatus(detail.case.status)}
               </h3>
             </div>
           </div>
 
           {revisionComments.length > 0 ? (
-            <div className="su-revision-comment-list">
-              {revisionComments.map((comment) => (
-                <div className="su-revision-comment-item" key={comment.id}>
-                  <div className="su-revision-comment-meta">
-                    {`Feedback from ${getRoleDisplayLabel(comment.authorRole)}`}
-                    {comment.createdAt ? ` • ${new Date(comment.createdAt).toLocaleString()}` : ''}
+            <div className="su-revision-section">
+              <div className="su-revision-section-title">
+                {currentRevisionRole === 'ADMIN' ? 'Library comments' : 'Supervisor comments'}
+              </div>
+              <div className="su-revision-comment-list">
+                {revisionComments.map((comment) => (
+                  <div className="su-revision-comment-item" key={comment.id}>
+                    <div className="su-revision-comment-meta">
+                      {getRoleDisplayLabel(comment.authorRole)}
+                      {comment.createdAt ? ` • ${new Date(comment.createdAt).toLocaleString()}` : ''}
+                    </div>
+                    <div className="su-revision-comment-body">{comment.body}</div>
                   </div>
-                  <div className="su-revision-comment-body">{comment.body}</div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           ) : (
             <div className="su-revision-empty-copy">
@@ -325,7 +326,7 @@ export default function StudentCaseSubmissionPage() {
 
           {currentRevisionRole === 'ADMIN' ? (
             <div className="su-revision-section">
-              <div className="su-revision-section-title">Checklist items to revise</div>
+              <div className="su-revision-section-title">Template items to revise</div>
               {groupedFailedChecklistItems.length > 0 ? (
                 <div className="su-revision-checklist-groups">
                   {groupedFailedChecklistItems.map((group) => {
@@ -350,7 +351,7 @@ export default function StudentCaseSubmissionPage() {
                           <span className="su-revision-category-copy">
                             <span className="su-revision-category-title">{group.title}</span>
                             <span className="su-revision-category-count">
-                              {group.items.length} checklist item{group.items.length === 1 ? '' : 's'}
+                              {group.items.length} template item{group.items.length === 1 ? '' : 's'}
                             </span>
                           </span>
                         </button>
@@ -363,12 +364,11 @@ export default function StudentCaseSubmissionPage() {
                                   <div className="su-revision-checklist-title">{item.checklistItem.itemText}</div>
                                   <div className="su-revision-checklist-meta">{group.title}</div>
 
-                                  <div className="su-revision-checklist-detail">
-                                    <div className="su-revision-checklist-label">Feedback</div>
+                                  {item.note?.trim() ? (
                                     <div className="su-revision-checklist-note">
-                                      {item.note?.trim() || 'No additional comment provided.'}
+                                      {item.note.trim()}
                                     </div>
-                                  </div>
+                                  ) : null}
 
                                   {item.checklistItem.guidanceText?.trim() ? (
                                     <div className="su-revision-checklist-detail">
@@ -389,7 +389,7 @@ export default function StudentCaseSubmissionPage() {
                 </div>
               ) : (
                 <div className="su-revision-empty-copy">
-                  No failed checklist items are recorded for this revision request.
+                  No template items are recorded for this revision request.
                 </div>
               )}
             </div>
@@ -490,13 +490,12 @@ export default function StudentCaseSubmissionPage() {
                   }
                 }}
                 disabled={!uploadAllowed || submissionDeadlinePassed || uploading}
-                placeholder="Type one keyword and press Enter"
+                placeholder="Enter keywords separated by commas"
               />
-              {keywordError ? (
-                <div className="text-danger small mt-2">{keywordError}</div>
-              ) : (
-                <div className="form-text">Please enter at least 3 keywords.</div>
-              )}
+              <div className="form-text">Enter keywords separated by commas</div>
+              <div className="form-text">Example: digital repository, ETD, library automation</div>
+              {keywordError ? <div className="text-danger small mt-2">{keywordError}</div> : null}
+              {!keywordError ? <div className="form-text">Please enter at least 3 keywords</div> : null}
             </div>
             <div className="col-12">
               <label className="form-label">Abstract</label>

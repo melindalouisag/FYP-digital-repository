@@ -457,7 +457,7 @@ function buildRegistrationFeedback(detail: CaseDetailPayload): RegistrationFeedb
     ?.filter((comment) => comment.authorRole === 'LECTURER' || comment.authorRole === 'ADMIN')
     .map((comment) => ({
       key: `comment-${comment.id}`,
-      sourceLabel: comment.authorRole === 'ADMIN' ? 'Feedback from Library Administrator' : 'Feedback from Lecturer',
+      sourceLabel: comment.authorRole === 'ADMIN' ? 'Library comments' : 'Supervisor comments',
       body: comment.body,
       createdAt: comment.createdAt,
     })) ?? [];
@@ -468,7 +468,7 @@ function buildRegistrationFeedback(detail: CaseDetailPayload): RegistrationFeedb
     if (!duplicate) {
       entries.push({
         key: 'registration-supervisor-note',
-        sourceLabel: 'Feedback from Lecturer',
+        sourceLabel: 'Supervisor comments',
         body: supervisorDecisionNote,
         createdAt: detail.registration?.supervisorDecisionAt ?? undefined,
       });

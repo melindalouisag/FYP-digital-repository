@@ -31,21 +31,21 @@ const WORKFLOW_STATUS_PRESENTATION: Record<CaseStatus, WorkflowStatusPresentatio
     badgeClass: 'bg-secondary-subtle text-secondary-emphasis',
   },
   REGISTRATION_PENDING: {
-    label: 'Waiting for supervisor approval',
-    description: 'The registration has been submitted and is awaiting supervisor review.',
-    nextAction: 'No student action is needed right now. Monitor this registration for supervisor feedback.',
+    label: 'Registration under review',
+    description: 'Wait for the review result.',
+    nextAction: 'Wait for the review result.',
     tone: 'warning',
-    actor: 'Lecturer',
+    actor: 'Supervisor',
     stage: 'registration',
     progressPercent: 20,
     badgeClass: 'bg-warning-subtle text-warning-emphasis',
   },
   REGISTRATION_APPROVED: {
     label: 'Supervisor approved',
-    description: 'Supervisor review is complete and a Library Administrator will verify the registration next.',
-    nextAction: 'Wait for Library Administrator verification before the submission page opens.',
+    description: 'Wait for the review result.',
+    nextAction: 'Wait for the review result.',
     tone: 'warning',
-    actor: 'Library Administrator',
+    actor: 'Library',
     stage: 'registration',
     progressPercent: 30,
     badgeClass: 'bg-warning-subtle text-warning-emphasis',
@@ -61,19 +61,19 @@ const WORKFLOW_STATUS_PRESENTATION: Record<CaseStatus, WorkflowStatusPresentatio
     badgeClass: 'bg-success-subtle text-success-emphasis',
   },
   UNDER_SUPERVISOR_REVIEW: {
-    label: 'Under supervisor review',
-    description: 'Your latest submission is being reviewed by the assigned supervisor.',
-    nextAction: 'Wait for supervisor review and check the activity timeline for updates.',
+    label: 'File under review',
+    description: 'Wait for the review result.',
+    nextAction: 'Wait for the review result.',
     tone: 'warning',
-    actor: 'Lecturer',
+    actor: 'Supervisor',
     stage: 'supervisor',
     progressPercent: 55,
     badgeClass: 'bg-warning-subtle text-warning-emphasis',
   },
   NEEDS_REVISION_SUPERVISOR: {
-    label: 'Supervisor revision requested',
-    description: 'A supervisor requested changes to the uploaded submission.',
-    nextAction: 'Review the feedback and upload a revised PDF submission.',
+    label: 'File needs revision',
+    description: 'Revise your file and upload the updated version.',
+    nextAction: 'Revise your file and upload the updated version.',
     tone: 'danger',
     actor: 'Student',
     stage: 'supervisor',
@@ -82,38 +82,38 @@ const WORKFLOW_STATUS_PRESENTATION: Record<CaseStatus, WorkflowStatusPresentatio
   },
   READY_TO_FORWARD: {
     label: 'Ready for library handoff',
-    description: 'Supervisor review is complete and the publication is ready to move into library review.',
-    nextAction: 'No student action is needed. This publication is waiting for the library handoff.',
+    description: 'Wait for the review result.',
+    nextAction: 'Wait for the review result.',
     tone: 'warning',
-    actor: 'Lecturer',
+    actor: 'Supervisor',
     stage: 'supervisor',
     progressPercent: 65,
     badgeClass: 'bg-warning-subtle text-warning-emphasis',
   },
   FORWARDED_TO_LIBRARY: {
-    label: 'Forwarded to library',
-    description: 'The publication has been handed to the library and will enter review.',
-    nextAction: 'Wait for Library Administrator review.',
+    label: 'Sent for library review',
+    description: 'Wait for the review result.',
+    nextAction: 'Wait for the review result.',
     tone: 'warning',
-    actor: 'Library Administrator',
+    actor: 'Library',
     stage: 'library',
     progressPercent: 70,
     badgeClass: 'bg-warning-subtle text-warning-emphasis',
   },
   UNDER_LIBRARY_REVIEW: {
-    label: 'Under library review',
-    description: 'A Library Administrator is checking the submission, metadata, and checklist requirements.',
-    nextAction: 'Wait for Library Administrator review. Open the publication record if you need the latest checklist history.',
+    label: 'File under review',
+    description: 'Wait for the review result.',
+    nextAction: 'Wait for the review result.',
     tone: 'warning',
-    actor: 'Library Administrator',
+    actor: 'Library',
     stage: 'library',
     progressPercent: 75,
     badgeClass: 'bg-warning-subtle text-warning-emphasis',
   },
   NEEDS_REVISION_LIBRARY: {
-    label: 'Library revision requested',
-    description: 'Library review found changes that must be addressed before clearance.',
-    nextAction: 'Review the checklist feedback and upload a revised PDF submission.',
+    label: 'File formatting needs revision',
+    description: 'Revise your file formatting and upload the updated version.',
+    nextAction: 'Revise your file formatting and upload the updated version.',
     tone: 'danger',
     actor: 'Student',
     stage: 'library',
@@ -121,9 +121,9 @@ const WORKFLOW_STATUS_PRESENTATION: Record<CaseStatus, WorkflowStatusPresentatio
     badgeClass: 'bg-danger-subtle text-danger-emphasis',
   },
   APPROVED_FOR_CLEARANCE: {
-    label: 'Approved for clearance',
-    description: 'Submission review is complete and the publication is ready for the final student clearance step.',
-    nextAction: 'Open the clearance form and submit it.',
+    label: 'Ready for clearance',
+    description: 'Complete the clearance step.',
+    nextAction: 'Complete the clearance step.',
     tone: 'success',
     actor: 'Student',
     stage: 'library',
@@ -132,38 +132,38 @@ const WORKFLOW_STATUS_PRESENTATION: Record<CaseStatus, WorkflowStatusPresentatio
   },
   CLEARANCE_SUBMITTED: {
     label: 'Clearance submitted',
-    description: 'The clearance form has been submitted and is waiting for approval.',
-    nextAction: 'Wait for clearance approval.',
+    description: 'Wait for the review result.',
+    nextAction: 'Wait for the review result.',
     tone: 'warning',
-    actor: 'Library Administrator',
+    actor: 'Library',
     stage: 'clearance',
     progressPercent: 90,
     badgeClass: 'bg-warning-subtle text-warning-emphasis',
   },
   CLEARANCE_APPROVED: {
-    label: 'Clearance approved',
-    description: 'All review and clearance steps are complete.',
-    nextAction: 'Wait for the final publishing step.',
+    label: 'Ready for publication',
+    description: 'Wait for the review result.',
+    nextAction: 'Wait for the review result.',
     tone: 'success',
-    actor: 'Library Administrator',
+    actor: 'Library',
     stage: 'clearance',
     progressPercent: 95,
     badgeClass: 'bg-success-subtle text-success-emphasis',
   },
   READY_TO_PUBLISH: {
     label: 'Ready to publish',
-    description: 'The item is ready for repository publication.',
-    nextAction: 'Wait for the Library Administrator to publish the repository item.',
+    description: 'Wait for the review result.',
+    nextAction: 'Wait for the review result.',
     tone: 'success',
-    actor: 'Library Administrator',
+    actor: 'Library',
     stage: 'publish',
     progressPercent: 98,
     badgeClass: 'bg-success-subtle text-success-emphasis',
   },
   PUBLISHED: {
     label: 'Published',
-    description: 'The repository item is live and the workflow is complete.',
-    nextAction: 'Review the published result and share the repository link if needed.',
+    description: 'Your publication is now available in the repository.',
+    nextAction: 'Your publication is now available in the repository.',
     tone: 'success',
     actor: 'Repository',
     stage: 'publish',
@@ -171,9 +171,9 @@ const WORKFLOW_STATUS_PRESENTATION: Record<CaseStatus, WorkflowStatusPresentatio
     badgeClass: 'bg-success-subtle text-success-emphasis',
   },
   REJECTED: {
-    label: 'Registration rejected',
-    description: 'The registration was rejected and must be corrected on the same record.',
-    nextAction: 'Review the feedback, update the registration details, and resubmit the same registration.',
+    label: 'Registration needs revision',
+    description: 'Revise your registration and submit it again.',
+    nextAction: 'Revise your registration and submit it again.',
     tone: 'danger',
     actor: 'Student',
     stage: 'rejected',
@@ -212,6 +212,22 @@ export function getStudentCaseGuidance(status: CaseStatus): string {
 
 export function getWorkflowResponsibleActor(status: CaseStatus): string {
   return getWorkflowStatusPresentation(status).actor;
+}
+
+export function getStudentWorkflowOwnerLabel(status: CaseStatus): string | null {
+  const actor = getWorkflowResponsibleActor(status);
+
+  if (actor === 'Student') {
+    return 'Action needed from you';
+  }
+  if (actor === 'Supervisor') {
+    return 'Current reviewer: Supervisor';
+  }
+  if (actor === 'Library') {
+    return 'Current reviewer: Library';
+  }
+
+  return null;
 }
 
 export function getWorkflowToneClass(status: CaseStatus): string {

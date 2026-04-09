@@ -1,7 +1,11 @@
 import DashboardPanel from '../../lib/components/DashboardPanel';
 import PortalIcon from '../../lib/components/PortalIcon';
 import { studentSidebarIcons } from '../../lib/portalIcons';
-import { getWorkflowStatusPresentation, statusBadgeClass } from '../../lib/workflowUi';
+import {
+  getStudentWorkflowOwnerLabel,
+  getWorkflowStatusPresentation,
+  statusBadgeClass,
+} from '../../lib/workflowUi';
 import type { CaseSummary } from '../../lib/workflowTypes';
 import { resolveStudentCaseNavigation } from '../caseNavigation';
 
@@ -48,9 +52,11 @@ export function StudentNextActionPanel({
                         {caseSummary.title || 'Untitled Publication'}
                       </div>
                       <div className="su-dashboard-item-support">{presentation.nextAction}</div>
-                      <div className="small text-muted mt-1">
-                        Responsible now: {presentation.actor}
-                      </div>
+                      {getStudentWorkflowOwnerLabel(caseSummary.status) ? (
+                        <div className="small text-muted mt-1">
+                          {getStudentWorkflowOwnerLabel(caseSummary.status)}
+                        </div>
+                      ) : null}
                     </div>
                     <span className={`badge status-badge ${statusBadgeClass(caseSummary.status)}`}>
                       {presentation.label}
