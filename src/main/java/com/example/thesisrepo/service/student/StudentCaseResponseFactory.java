@@ -9,7 +9,7 @@ import com.example.thesisrepo.publication.ClearanceForm;
 import com.example.thesisrepo.publication.PublicationCase;
 import com.example.thesisrepo.publication.PublicationRegistration;
 import com.example.thesisrepo.publication.WorkflowComment;
-import com.example.thesisrepo.user.StaffRegistry;
+import com.example.thesisrepo.service.SupervisorDirectoryService;
 import com.example.thesisrepo.user.User;
 import com.example.thesisrepo.web.dto.AssignedSupervisorResponse;
 import com.example.thesisrepo.web.dto.ChecklistResultResponse;
@@ -38,14 +38,13 @@ public class StudentCaseResponseFactory {
     );
   }
 
-  public StudentSupervisorResponse toSupervisorResponse(StaffRegistry staff) {
-    String name = hasText(staff.getFullName()) ? staff.getFullName() : staff.getEmail();
+  public StudentSupervisorResponse toSupervisorResponse(SupervisorDirectoryService.SupervisorDirectoryEntry supervisor) {
     return new StudentSupervisorResponse(
-      staff.getId(),
-      staff.getEmail(),
-      name,
-      null,
-      staff.getStudyProgram()
+      supervisor.userId(),
+      supervisor.email(),
+      supervisor.name(),
+      supervisor.faculty(),
+      supervisor.studyProgram()
     );
   }
 

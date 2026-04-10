@@ -1,69 +1,81 @@
 package com.example.thesisrepo.service;
 
-import com.example.thesisrepo.user.Role;
+import com.example.thesisrepo.profile.LecturerProfile;
+import com.example.thesisrepo.profile.LecturerProfileRepository;
 import com.example.thesisrepo.user.StaffRegistry;
 import com.example.thesisrepo.user.StaffRegistryRepository;
+import com.example.thesisrepo.user.User;
+import com.example.thesisrepo.user.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 
 @Service
+@RequiredArgsConstructor
 public class SupervisorDirectoryService {
 
+  private final UserRepository users;
   private final StaffRegistryRepository staffRegistryRepository;
+  private final LecturerProfileRepository lecturerProfiles;
+  private final UserRoleService userRoles;
 
-  public SupervisorDirectoryService(StaffRegistryRepository staffRegistryRepository) {
-    this.staffRegistryRepository = staffRegistryRepository;
-  }
-
-  /**
-   * List all LECTURER entries from staff_registry, optionally filtered by faculty and/or studyProgram.
-   */
-  public List<StaffRegistry> listActiveSupervisors(String faculty, String studyProgram) {
-    return staffRegistryRepository.findAll().stream()
-      .filter(s -> s.getRole() == Role.LECTURER)
-      .filter(s -> matchesStudyProgram(s.getStudyProgram(), studyProgram))
+  public List<SupervisorDirectoryEntry> listActiveSupervisors(String faculty, String studyProgram) {
+    return users.findAll().stream()
+      .filter(userRoles::isLecturerCapable)
+      .map(this::toEntry)
+      .filter(entry -> matchesStudyProgram(entry.studyProgram(), studyProgram))
+      .filter(entry -> matchesFaculty(entry.faculty(), faculty))
+      .sorted(Comparator.comparing(SupervisorDirectoryEntry::name, String.CASE_INSENSITIVE_ORDER))
       .toList();
   }
 
-  /**
-   * Find a lecturer by email.
-   */
-  public StaffRegistry findActiveByEmail(String email) {
+  public SupervisorDirectoryEntry findActiveByEmail(String email) {
     String normalizedEmail = normalize(email);
-    return staffRegistryRepository.findByEmailIgnoreCase(normalizedEmail)
-      .filter(s -> s.getRole() == Role.LECTURER)
+    return users.findByEmailIgnoreCase(normalizedEmail)
+      .filter(userRoles::isLecturerCapable)
+      .map(this::toEntry)
       .orElse(null);
   }
 
-  /**
-   * Check if a supervisor matches the student's study program.
-   */
-  public boolean isEligibleForStudent(StaffRegistry supervisor, String studentFaculty, String studentStudyProgram) {
+  public boolean isEligibleForStudent(SupervisorDirectoryEntry supervisor, String studentFaculty, String studentStudyProgram) {
     if (supervisor == null) {
       return false;
     }
-    return matchesStudyProgram(supervisor.getStudyProgram(), studentStudyProgram);
+    return matchesStudyProgram(supervisor.studyProgram(), studentStudyProgram);
   }
 
-  /**
-   * Build display name: use fullName from DB, or derive from email.
-   */
-  public String displayName(StaffRegistry entry) {
-    if (entry == null) {
-      return "";
+  private SupervisorDirectoryEntry toEntry(User user) {
+    LecturerProfile lecturerProfile = lecturerProfiles.findByUserId(user.getId()).orElse(null);
+    StaffRegistry staffEntry = staffRegistryRepository.findByEmailIgnoreCase(normalize(user.getEmail())).orElse(null);
+
+    return new SupervisorDirectoryEntry(
+      user.getId(),
+      user.getEmail(),
+      resolveDisplayName(user.getEmail(), lecturerProfile, staffEntry),
+      resolveFaculty(lecturerProfile),
+      resolveStudyProgram(lecturerProfile, staffEntry)
+    );
+  }
+
+  private static String resolveDisplayName(String email, LecturerProfile lecturerProfile, StaffRegistry staffEntry) {
+    if (lecturerProfile != null && StringUtils.hasText(lecturerProfile.getName())) {
+      return lecturerProfile.getName().trim();
     }
-    if (StringUtils.hasText(entry.getFullName())) {
-      return entry.getFullName().trim();
+    if (staffEntry != null && StringUtils.hasText(staffEntry.getFullName())) {
+      return staffEntry.getFullName().trim();
     }
-    String email = normalize(entry.getEmail());
-    int separator = email.indexOf('@');
+
+    String normalizedEmail = normalize(email);
+    int separator = normalizedEmail.indexOf('@');
     if (separator <= 0) {
-      return email;
+      return normalizedEmail;
     }
-    String localPart = email.substring(0, separator);
+
+    String localPart = normalizedEmail.substring(0, separator);
     String[] chunks = localPart.split("[._-]+");
     StringBuilder builder = new StringBuilder();
     for (String chunk : chunks) {
@@ -77,6 +89,30 @@ public class SupervisorDirectoryService {
         .append(chunk.substring(1));
     }
     return builder.isEmpty() ? localPart : builder.toString();
+  }
+
+  private static String resolveFaculty(LecturerProfile lecturerProfile) {
+    if (lecturerProfile != null && StringUtils.hasText(lecturerProfile.getFaculty())) {
+      return lecturerProfile.getFaculty().trim();
+    }
+    return null;
+  }
+
+  private static String resolveStudyProgram(LecturerProfile lecturerProfile, StaffRegistry staffEntry) {
+    if (lecturerProfile != null && StringUtils.hasText(lecturerProfile.getDepartment())) {
+      return lecturerProfile.getDepartment().trim();
+    }
+    if (staffEntry != null && StringUtils.hasText(staffEntry.getStudyProgram())) {
+      return staffEntry.getStudyProgram().trim();
+    }
+    return null;
+  }
+
+  private static boolean matchesFaculty(String entryFaculty, String requestedFaculty) {
+    if (!StringUtils.hasText(requestedFaculty)) {
+      return true;
+    }
+    return normalize(entryFaculty).equals(normalize(requestedFaculty));
   }
 
   private static boolean matchesStudyProgram(String entryProgram, String requestedProgram) {
@@ -98,5 +134,14 @@ public class SupervisorDirectoryService {
 
   private static String normalize(String value) {
     return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+  }
+
+  public record SupervisorDirectoryEntry(
+    Long userId,
+    String email,
+    String name,
+    String faculty,
+    String studyProgram
+  ) {
   }
 }

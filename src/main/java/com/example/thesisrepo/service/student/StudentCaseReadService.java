@@ -15,11 +15,9 @@ import com.example.thesisrepo.publication.repo.SubmissionVersionRepository;
 import com.example.thesisrepo.publication.repo.WorkflowCommentRepository;
 import com.example.thesisrepo.service.SubmissionDownloadResponseService;
 import com.example.thesisrepo.service.SubmissionService;
+import com.example.thesisrepo.service.SupervisorDirectoryService;
 import com.example.thesisrepo.service.workflow.CaseTimelineService;
 import com.example.thesisrepo.service.workflow.PublicationWorkflowGateService;
-import com.example.thesisrepo.user.Role;
-import com.example.thesisrepo.user.StaffRegistry;
-import com.example.thesisrepo.user.StaffRegistryRepository;
 import com.example.thesisrepo.user.User;
 import com.example.thesisrepo.web.dto.ChecklistResultResponse;
 import com.example.thesisrepo.web.dto.PagedResponse;
@@ -38,7 +36,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -63,8 +60,8 @@ public class StudentCaseReadService {
   private final ChecklistResultRepository checklistResults;
   private final ClearanceFormRepository clearances;
   private final StudentProfileRepository studentProfiles;
-  private final StaffRegistryRepository staffRegistry;
   private final SubmissionService submissionService;
+  private final SupervisorDirectoryService supervisorDirectoryService;
   private final PublicationWorkflowGateService workflowGates;
   private final CaseTimelineService timelineService;
   private final SubmissionDownloadResponseService submissionDownloadResponseService;
@@ -99,11 +96,10 @@ public class StudentCaseReadService {
       return List.of();
     }
 
-    return staffRegistry.findAll().stream()
-      .filter(staff -> staff.getRole() == Role.LECTURER)
-      .filter(staff -> normalizeStudyProgram(staff.getStudyProgram()).equals(normalizeStudyProgram(studentProgram)))
+    return supervisorDirectoryService
+      .listActiveSupervisors(null, studentProgram)
+      .stream()
       .map(responseFactory::toSupervisorResponse)
-      .sorted(Comparator.comparing(StudentSupervisorResponse::name, String.CASE_INSENSITIVE_ORDER))
       .toList();
   }
 
@@ -177,13 +173,5 @@ public class StudentCaseReadService {
 
   private static String normalize(String value) {
     return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
-  }
-
-  private static String normalizeStudyProgram(String value) {
-    String normalized = normalize(value);
-    if (normalized.endsWith("systems")) {
-      return normalized.substring(0, normalized.length() - 1);
-    }
-    return normalized;
   }
 }

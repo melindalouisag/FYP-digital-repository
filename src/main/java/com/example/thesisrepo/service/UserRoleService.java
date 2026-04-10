@@ -39,6 +39,9 @@ public class UserRoleService {
     if (user.getRoles() != null) {
       roles.addAll(user.getRoles());
     }
+    if (user.getRole() != null) {
+      roles.add(user.getRole());
+    }
 
     String normalizedEmail = normalizeEmail(user.getEmail());
     if (normalizedEmail.endsWith(STUDENT_DOMAIN) || studentProfiles.findByUserId(user.getId()).isPresent()) {
@@ -50,11 +53,23 @@ public class UserRoleService {
       .filter(role -> role == Role.LECTURER || role == Role.ADMIN)
       .ifPresent(roles::add);
 
-    if (roles.isEmpty() && user.getRole() != null) {
-      roles.add(user.getRole());
+    return sortRoles(roles);
+  }
+
+  public boolean isLecturerCapable(User user) {
+    if (user == null) {
+      return false;
+    }
+    if (user.getRoles() != null && user.getRoles().contains(Role.LECTURER)) {
+      return true;
+    }
+    if (user.getRole() == Role.LECTURER) {
+      return true;
     }
 
-    return sortRoles(roles);
+    return staffRegistry.findByEmailIgnoreCase(normalizeEmail(user.getEmail()))
+      .map(entry -> entry.getRole() == Role.LECTURER)
+      .orElse(false);
   }
 
   public void syncAssignedRoles(User user, Set<Role> roles) {

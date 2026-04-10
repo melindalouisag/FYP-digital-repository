@@ -12,6 +12,8 @@ import com.example.thesisrepo.publication.PublicationType;
 import com.example.thesisrepo.publication.repo.CaseSupervisorRepository;
 import com.example.thesisrepo.publication.repo.PublicationCaseRepository;
 import com.example.thesisrepo.service.RegistrationService;
+import com.example.thesisrepo.service.SupervisorDirectoryService;
+import com.example.thesisrepo.service.UserRoleService;
 import com.example.thesisrepo.user.AuthProvider;
 import com.example.thesisrepo.user.Role;
 import com.example.thesisrepo.user.StaffRegistry;
@@ -44,6 +46,8 @@ public class RegistrationSupportService {
   private final UserRepository users;
   private final StaffRegistryRepository staffRegistry;
   private final PasswordEncoder passwordEncoder;
+  private final UserRoleService userRoles;
+  private final SupervisorDirectoryService supervisorDirectoryService;
 
   public String requireStudentProgram(User student) {
     StudentProfile studentProfile = studentProfiles.findByUserId(student.getId()).orElse(null);
@@ -128,25 +132,16 @@ public class RegistrationSupportService {
   }
 
   public void validateSupervisorForStudent(User supervisor, String studentProgram) {
-    if (supervisor.getRole() != Role.LECTURER) {
+    if (!userRoles.isLecturerCapable(supervisor)) {
       throw new ResponseStatusException(BAD_REQUEST, "Supervisor must be a lecturer.");
     }
 
-    StaffRegistry staffEntry = staffRegistry.findByEmailIgnoreCase(supervisor.getEmail()).orElse(null);
-    LecturerProfile lecturerProfile = lecturerProfiles.findByUserId(supervisor.getId()).orElse(null);
-
-    String supervisorProgram = "";
-    if (staffEntry != null && staffEntry.getStudyProgram() != null) {
-      supervisorProgram = normalize(staffEntry.getStudyProgram());
-    } else if (lecturerProfile != null && lecturerProfile.getDepartment() != null) {
-      supervisorProgram = normalize(lecturerProfile.getDepartment());
-    }
-
-    if (supervisorProgram.isBlank()) {
+    SupervisorDirectoryService.SupervisorDirectoryEntry supervisorEntry = supervisorDirectoryService.findActiveByEmail(supervisor.getEmail());
+    if (supervisorEntry == null || normalize(supervisorEntry.studyProgram()).isBlank()) {
       throw new ResponseStatusException(BAD_REQUEST, "Supervisor study program is not configured.");
     }
 
-    if (!normalizeStudyProgram(supervisorProgram).equals(normalizeStudyProgram(studentProgram))) {
+    if (!supervisorDirectoryService.isEligibleForStudent(supervisorEntry, null, studentProgram)) {
       throw new ResponseStatusException(BAD_REQUEST, "Supervisor must be from the same study program.");
     }
   }
@@ -216,40 +211,48 @@ public class RegistrationSupportService {
   }
 
   private User findOrProvisionLecturer(String email) {
-    return users.findByEmailIgnoreCase(email).orElseGet(() -> {
-      StaffRegistry staff = staffRegistry.findByEmailIgnoreCase(email)
-        .orElseThrow(() -> new ResponseStatusException(BAD_REQUEST, "Supervisor not found in staff registry."));
-      if (staff.getRole() != Role.LECTURER) {
+    User existingUser = users.findByEmailIgnoreCase(email).orElse(null);
+    if (existingUser != null) {
+      if (!userRoles.isLecturerCapable(existingUser)) {
         throw new ResponseStatusException(BAD_REQUEST, "Selected staff is not a lecturer.");
       }
+      userRoles.syncAssignedRoles(existingUser, userRoles.resolveAvailableRoles(existingUser));
+      ensureLecturerProfile(existingUser, staffRegistry.findByEmailIgnoreCase(email).orElse(null));
+      return existingUser;
+    }
 
-      User newUser = users.save(User.builder()
-        .email(email)
-        .role(Role.LECTURER)
-        .roles(Set.of(Role.LECTURER))
-        .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))
-        .authProvider(AuthProvider.AAD)
-        .emailVerified(true)
-        .build());
+    StaffRegistry staff = staffRegistry.findByEmailIgnoreCase(email)
+      .orElseThrow(() -> new ResponseStatusException(BAD_REQUEST, "Supervisor not found in staff registry."));
+    if (staff.getRole() != Role.LECTURER) {
+      throw new ResponseStatusException(BAD_REQUEST, "Selected staff is not a lecturer.");
+    }
 
-      lecturerProfiles.save(LecturerProfile.builder()
-        .user(newUser)
-        .name(staff.getFullName())
-        .department(staff.getStudyProgram())
-        .build());
-      return newUser;
-    });
+    User newUser = users.save(User.builder()
+      .email(email)
+      .role(Role.LECTURER)
+      .roles(Set.of(Role.LECTURER))
+      .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))
+      .authProvider(AuthProvider.AAD)
+      .emailVerified(true)
+      .build());
+
+    ensureLecturerProfile(newUser, staff);
+    return newUser;
+  }
+
+  private void ensureLecturerProfile(User user, StaffRegistry staff) {
+    if (staff == null || lecturerProfiles.findByUserId(user.getId()).isPresent()) {
+      return;
+    }
+
+    lecturerProfiles.save(LecturerProfile.builder()
+      .user(user)
+      .name(staff.getFullName())
+      .department(staff.getStudyProgram())
+      .build());
   }
 
   private static String normalize(String value) {
     return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
-  }
-
-  private static String normalizeStudyProgram(String value) {
-    String normalized = normalize(value);
-    if (normalized.endsWith("systems")) {
-      return normalized.substring(0, normalized.length() - 1);
-    }
-    return normalized;
   }
 }
