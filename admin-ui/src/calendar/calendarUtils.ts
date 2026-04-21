@@ -1,4 +1,4 @@
-import type { CalendarEvent, DeadlineActionType, PublicationType } from '../lib/workflowTypes';
+import type { CalendarEvent, DeadlineActionType, PublicationType } from '@/types/workflow';
 
 export interface CalendarDay {
   iso: string;

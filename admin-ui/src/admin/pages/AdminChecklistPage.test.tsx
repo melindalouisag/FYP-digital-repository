@@ -15,12 +15,12 @@ const checklistApiMocks = vi.hoisted(() => ({
   newDraft: vi.fn(),
 }));
 
-vi.mock('../../lib/context/AuthContext', () => ({
+vi.mock('@/auth/AuthContext', () => ({
   useAuth: authMocks.useAuth,
 }));
 
-vi.mock('../../lib/api/checklist', async () => {
-  const actual = await vi.importActual<typeof import('../../lib/api/checklist')>('../../lib/api/checklist');
+vi.mock('@/services/api/checklist', async () => {
+  const actual = await vi.importActual<typeof import('@/services/api/checklist')>('@/services/api/checklist');
   return {
     ...actual,
     checklistApi: {

@@ -6,6 +6,7 @@ import com.example.thesisrepo.service.ClearanceService;
 import com.example.thesisrepo.service.CurrentUserService;
 import com.example.thesisrepo.service.LibraryReviewService;
 import com.example.thesisrepo.service.dashboard.AdminDashboardService;
+import com.example.thesisrepo.service.admin.AdminStudentTrackingService;
 import com.example.thesisrepo.service.PublishingService;
 import com.example.thesisrepo.service.RegistrationService;
 import com.example.thesisrepo.service.StorageService;
@@ -18,6 +19,8 @@ import com.example.thesisrepo.web.dto.AdminPublishDetailDto;
 import com.example.thesisrepo.web.dto.AdminPublishQueueDto;
 import com.example.thesisrepo.web.dto.AdminRegistrationApprovalDto;
 import com.example.thesisrepo.web.dto.AdminStudentGroupDto;
+import com.example.thesisrepo.web.dto.AdminStudentTrackingDetailResponse;
+import com.example.thesisrepo.web.dto.AdminStudentTrackingGroupDto;
 import com.example.thesisrepo.web.dto.CaseStatusResponse;
 import com.example.thesisrepo.web.dto.OperationResultResponse;
 import com.example.thesisrepo.web.dto.PagedResponse;
@@ -58,6 +61,7 @@ public class AdminWorkflowController {
   private final ClearanceService clearanceService;
   private final PublishingService publishingService;
   private final AdminDashboardService adminDashboardService;
+  private final AdminStudentTrackingService adminStudentTrackingService;
   private final PublicationWorkflowGateService workflowGates;
   private final StorageService storageService;
 
@@ -105,6 +109,19 @@ public class AdminWorkflowController {
   @GetMapping("/review-queue-grouped")
   public List<AdminStudentGroupDto> reviewQueueGrouped() {
     return libraryReviewService.reviewQueueGrouped();
+  }
+
+  @GetMapping("/students")
+  public List<AdminStudentTrackingGroupDto> students() {
+    return adminStudentTrackingService.listStudents();
+  }
+
+  @GetMapping("/students/{studentUserId}")
+  public AdminStudentTrackingDetailResponse studentDetail(
+    @PathVariable Long studentUserId,
+    @RequestParam(required = false) Long caseId
+  ) {
+    return adminStudentTrackingService.studentDetail(studentUserId, caseId);
   }
 
   @GetMapping("/cases/{caseId}")

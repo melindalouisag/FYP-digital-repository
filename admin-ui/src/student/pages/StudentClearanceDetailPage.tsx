@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { studentApi } from '@/services/api/student';
+import type { CaseDetailPayload } from '@/types/workflow';
+import { canSubmitClearance, formatStatus, statusBadgeClass } from '@/utils/workflowUi';
 import ShellLayout from '../../ShellLayout';
-import { studentApi } from '../../lib/api/student';
-import type { CaseDetailPayload } from '../../lib/workflowTypes';
-import { canSubmitClearance, formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 
 export default function StudentClearanceDetailPage() {
   const { caseId } = useParams();
@@ -105,7 +105,7 @@ export default function StudentClearanceDetailPage() {
                 onClick={() => void onSubmit()}
                 disabled={submitting || !canSubmitClearance(detail.case.status)}
               >
-                {submitting ? 'Submitting...' : 'Submit Clearance'}
+                {submitting ? 'Submitting...' : 'Submit for Review'}
               </button>
               <button
                 className="btn btn-outline-secondary"

@@ -9,18 +9,22 @@ import com.example.thesisrepo.publication.PublicationRegistration;
 import com.example.thesisrepo.publication.PublicationType;
 import com.example.thesisrepo.publication.SubmissionVersion;
 import com.example.thesisrepo.publication.WorkflowComment;
+import com.example.thesisrepo.publication.repo.CaseSupervisorRepository;
+import com.example.thesisrepo.publication.repo.ChecklistResultRepository;
 import com.example.thesisrepo.publication.repo.ClearanceFormRepository;
 import com.example.thesisrepo.publication.repo.PublicationCaseRepository;
 import com.example.thesisrepo.publication.repo.PublicationRegistrationRepository;
 import com.example.thesisrepo.publication.repo.SubmissionVersionRepository;
 import com.example.thesisrepo.publication.repo.WorkflowCommentRepository;
 import com.example.thesisrepo.service.SubmissionService;
+import com.example.thesisrepo.service.student.StudentCaseResponseFactory;
 import com.example.thesisrepo.service.workflow.CaseTimelineService;
 import com.example.thesisrepo.service.workflow.PublicationWorkflowGateService;
 import com.example.thesisrepo.user.User;
 import com.example.thesisrepo.web.dto.AdminCaseDetailResponse;
 import com.example.thesisrepo.web.dto.AdminCaseQueueDto;
 import com.example.thesisrepo.web.dto.AdminStudentGroupDto;
+import com.example.thesisrepo.web.dto.ChecklistResultResponse;
 import com.example.thesisrepo.web.dto.ClearanceResponse;
 import com.example.thesisrepo.web.dto.PagedResponse;
 import com.example.thesisrepo.web.dto.RegistrationDetailResponse;
@@ -47,12 +51,15 @@ public class LibraryReviewReadService {
   private final PublicationCaseRepository cases;
   private final SubmissionVersionRepository submissionVersions;
   private final WorkflowCommentRepository comments;
+  private final ChecklistResultRepository checklistResults;
   private final PublicationRegistrationRepository registrations;
+  private final CaseSupervisorRepository caseSupervisors;
   private final ClearanceFormRepository clearances;
   private final StudentProfileRepository studentProfiles;
   private final PublicationWorkflowGateService workflowGates;
   private final CaseTimelineService timelineService;
   private final SubmissionService submissionService;
+  private final StudentCaseResponseFactory responseFactory;
 
   @Transactional(readOnly = true)
   public PagedResponse<StudentCaseSummaryResponse> reviewQueue(Pageable pageable, CaseStatus status, PublicationType type) {
@@ -134,10 +141,14 @@ public class LibraryReviewReadService {
     return new AdminCaseDetailResponse(
       toCaseSummaryResponse(publicationCase, registration),
       toRegistrationResponse(registration),
+      caseSupervisors.findByPublicationCase(publicationCase).stream()
+        .map(responseFactory::toAssignedSupervisor)
+        .toList(),
       submissionService.listSubmissionDetails(publicationCase),
       comments.findByPublicationCaseOrderByCreatedAtAsc(publicationCase).stream()
         .map(this::toWorkflowCommentResponse)
         .toList(),
+      latestChecklistResults(publicationCase),
       clearances.findByPublicationCase(publicationCase)
         .map(this::toClearanceResponse)
         .orElse(null),
@@ -231,5 +242,17 @@ public class LibraryReviewReadService {
 
   private static boolean hasText(String value) {
     return value != null && !value.isBlank();
+  }
+
+  private List<ChecklistResultResponse> latestChecklistResults(PublicationCase publicationCase) {
+    SubmissionVersion latestSubmission = submissionVersions.findTopByPublicationCaseOrderByVersionNumberDesc(publicationCase)
+      .orElse(null);
+    if (latestSubmission == null) {
+      return List.of();
+    }
+
+    return checklistResults.findBySubmissionVersion(latestSubmission).stream()
+      .map(responseFactory::toChecklistResultResponse)
+      .toList();
   }
 }

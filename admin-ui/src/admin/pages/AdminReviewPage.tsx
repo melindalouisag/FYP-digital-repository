@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { adminApi } from '@/services/api/admin';
+import EmptyState from '@/shared/ui/EmptyState';
+import StatusBadge from '@/shared/ui/StatusBadge';
+import type { AdminStudentReviewGroup } from '@/types/workflow';
+import { formatFacultyName } from '@/utils/facultyLabel';
 import ShellLayout from '../../ShellLayout';
-import { adminApi } from '../../lib/api/admin';
-import PortalIcon from '../../lib/components/PortalIcon';
-import { adminSidebarIcons } from '../../lib/portalIcons';
-import type { AdminStudentReviewGroup } from '../../lib/workflowTypes';
+import { resolvePrimaryCase } from '../studentTracking';
 
 export default function AdminReviewPage() {
   const navigate = useNavigate();
@@ -12,85 +14,178 @@ export default function AdminReviewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const load = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      setGroups(await adminApi.reviewQueueGrouped());
-    } catch (err) {
-      setGroups([]);
-      setError(err instanceof Error ? err.message : 'Failed to load review queue.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        setGroups(await adminApi.reviewQueueGrouped());
+      } catch (err) {
+        setGroups([]);
+        setError(err instanceof Error ? err.message : 'Failed to load review queue.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     void load();
   }, []);
 
   const rows = useMemo(() => (
     groups.map((group) => {
-      const latestActivity = group.cases.reduce((latest, item) => {
-        const next = item.latestSubmissionAt || item.updatedAt || null;
-        if (!next) return latest;
-        if (!latest) return next;
-        return new Date(next) > new Date(latest) ? next : latest;
-      }, null as string | null);
-      return { ...group, caseCount: group.cases.length, latestActivity };
-    })
+      const primaryCase = resolvePrimaryCase(group.cases);
+      return {
+        studentUserId: group.studentUserId,
+        studentName: group.studentName,
+        studentIdNumber: group.studentIdNumber || 'Not available',
+        faculty: formatFacultyName(group.faculty),
+        program: group.program || 'Not available',
+        title: primaryCase?.title?.trim() || 'Untitled publication',
+        status: primaryCase?.status,
+        updatedAt: primaryCase?.updatedAt ?? primaryCase?.latestSubmissionAt ?? null,
+        reviewCaseCount: group.cases.length,
+      };
+    }).sort((left, right) => compareReviewRows(left.status, right.status, left.updatedAt, right.updatedAt))
   ), [groups]);
 
+  const revisionRequiredCount = rows.filter((row) => row.status === 'NEEDS_REVISION_LIBRARY').length;
+
   return (
-    <ShellLayout title="Submission Review" subtitle="Review library-stage publications grouped by student">
-      {error && <div className="alert alert-danger">{error}</div>}
+    <ShellLayout
+      title="Submission Review"
+      subtitle="Review submissions that have already been sent to the library and open each student record for checklist processing."
+    >
+      {error ? <div className="alert alert-danger">{error}</div> : null}
 
-      {loading && (
-        <div className="text-center py-5">
-          <div className="su-spinner mx-auto mb-3" />
-          <div className="text-muted">Loading review queue...</div>
+      <div className="su-summary-grid mb-4">
+        <div className="su-summary-card">
+          <div className="su-secondary-text">Total Students</div>
+          <div className="su-summary-value">{rows.length}</div>
         </div>
-      )}
-
-      {!loading && rows.length === 0 && (
-        <div className="su-empty-state">
-          <div className="su-empty-icon">
-            <PortalIcon src={adminSidebarIcons.submission} size={40} />
-          </div>
-          <h5>No Publications Awaiting Library Review</h5>
-          <p className="text-muted">No publications are waiting for library checklist review.</p>
+        <div className="su-summary-card">
+          <div className="su-secondary-text">Pending Review</div>
+          <div className="su-summary-value">{rows.length}</div>
         </div>
-      )}
-
-      <div className="row g-3">
-        {rows.map((group, index) => (
-          <div className="col-lg-6" key={group.studentUserId}>
-            <div
-              className="su-card su-card-clickable h-100 fade-in"
-              role="button"
-              onClick={() => navigate(`/admin/review/students/${group.studentUserId}`)}
-              style={{ animationDelay: `${index * 0.05}s` }}
-            >
-              <div className="card-body p-4">
-                <div className="d-flex justify-content-between align-items-start mb-2">
-                  <div>
-                    <h3 className="h6 mb-1 fw-bold">{group.studentName}</h3>
-                    <div className="su-meta-item">
-                      <strong>Student ID:</strong> {group.studentIdNumber || 'N/A'} • {[group.faculty, group.program].filter(Boolean).join(' / ') || 'N/A'}
-                    </div>
-                  </div>
-                  <span className="badge bg-primary-subtle text-primary-emphasis" style={{ borderRadius: '999px' }}>
-                    {group.caseCount} publication{group.caseCount > 1 ? 's' : ''}
-                  </span>
-                </div>
-                <div className="text-muted small">
-                  Latest activity: {group.latestActivity ? new Date(group.latestActivity).toLocaleString() : 'N/A'}
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
+        <div className="su-summary-card">
+          <div className="su-secondary-text">Cases in Queue</div>
+          <div className="su-summary-value">{groups.reduce((sum, group) => sum + group.cases.length, 0)}</div>
+        </div>
+        <div className="su-summary-card">
+          <div className="su-secondary-text">Revision Required</div>
+          <div className="su-summary-value">{revisionRequiredCount}</div>
+        </div>
       </div>
+
+      <section className="su-section">
+        <div className="su-section-header">
+          <div>
+            <h2 className="su-section-title mb-1">Action Required</h2>
+            <p className="su-secondary-text mb-0">Student records are sorted by the most recent library-stage activity.</p>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="text-center py-5">
+            <div className="su-spinner mx-auto mb-3" />
+            <div className="text-muted">Loading review queue...</div>
+          </div>
+        ) : rows.length === 0 ? (
+          <EmptyState
+            title="No submissions awaiting review"
+            description="Library review cases will appear here after supervisors forward them to the library."
+          />
+        ) : (
+          <div className="su-table-shell">
+            <table className="table align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Student Name</th>
+                  <th>Student ID</th>
+                  <th>Program</th>
+                  <th>Publication Title</th>
+                  <th>Status</th>
+                  <th>Last Updated</th>
+                  <th className="text-end">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr
+                    key={row.studentUserId}
+                    className="su-table-row-clickable"
+                    tabIndex={0}
+                    onClick={() => navigate(`/admin/review/students/${row.studentUserId}`)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        navigate(`/admin/review/students/${row.studentUserId}`);
+                      }
+                    }}
+                  >
+                    <td>
+                      <div className="fw-semibold">{row.studentName}</div>
+                      <div className="su-secondary-text">{row.reviewCaseCount} case{row.reviewCaseCount === 1 ? '' : 's'}</div>
+                    </td>
+                    <td>{row.studentIdNumber}</td>
+                    <td>{row.program}</td>
+                    <td>
+                      <div className="su-table-title">{row.title}</div>
+                      <div className="su-secondary-text">{row.faculty}</div>
+                    </td>
+                    <td>{row.status ? <StatusBadge status={row.status} /> : null}</td>
+                    <td>{row.updatedAt ? new Date(row.updatedAt).toLocaleString() : 'Not available'}</td>
+                    <td className="text-end">
+                      <button
+                        type="button"
+                        className="btn btn-outline-secondary"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          navigate(`/admin/review/students/${row.studentUserId}`);
+                        }}
+                      >
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </ShellLayout>
   );
+}
+
+function compareReviewRows(
+  leftStatus: string | undefined,
+  rightStatus: string | undefined,
+  leftUpdatedAt: string | null,
+  rightUpdatedAt: string | null
+) {
+  const priorityDelta = reviewPriority(leftStatus) - reviewPriority(rightStatus);
+  if (priorityDelta !== 0) {
+    return priorityDelta;
+  }
+
+  return compareDates(rightUpdatedAt, leftUpdatedAt);
+}
+
+function reviewPriority(status?: string) {
+  switch (status) {
+    case 'NEEDS_REVISION_LIBRARY':
+      return 0;
+    case 'UNDER_LIBRARY_REVIEW':
+      return 1;
+    case 'FORWARDED_TO_LIBRARY':
+      return 2;
+    default:
+      return 3;
+  }
+}
+
+function compareDates(left?: string | null, right?: string | null) {
+  const leftValue = left ? Date.parse(left) || 0 : 0;
+  const rightValue = right ? Date.parse(right) || 0 : 0;
+  return leftValue - rightValue;
 }

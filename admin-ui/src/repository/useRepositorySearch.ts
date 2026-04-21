@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { publicRepositoryApi, type RepositoryItemSummary, type RepositorySearchParams } from '../lib/api/publicRepository';
-import { masterApi, type Faculty, type Program } from '../lib/api/master';
-import { joinKeywordTokens } from '../lib/keywords';
-import type { PagedResponse } from '../lib/workflowTypes';
+import { masterApi, type Faculty, type Program } from '@/services/api/master';
+import { publicRepositoryApi, type RepositoryItemSummary, type RepositorySearchParams } from '@/services/api/publicRepository';
+import type { PagedResponse } from '@/types/workflow';
+import { joinKeywordTokens } from '@/utils/keywords';
 
 const INITIAL_FILTERS: RepositorySearchParams = {
   title: '',

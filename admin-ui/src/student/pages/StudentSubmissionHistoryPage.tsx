@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { studentApi } from '@/services/api/student';
+import DownloadFilenameLink from '@/shared/ui/DownloadFilenameLink';
+import type { CaseDetailPayload, SubmissionVersion } from '@/types/workflow';
 import ShellLayout from '../../ShellLayout';
-import { studentApi } from '../../lib/api/student';
-import DownloadFilenameLink from '../../lib/components/DownloadFilenameLink';
-import type { CaseDetailPayload, SubmissionVersion } from '../../lib/workflowTypes';
 
 export default function StudentSubmissionHistoryPage() {
   const { caseId } = useParams();

@@ -1,11 +1,11 @@
 import type { KeyboardEvent } from 'react';
+import type { CaseStatus, CaseSummary } from '@/types/workflow';
 import {
   canEditRegistration,
   canSubmitClearance,
   canUploadSubmission,
   getStudentCaseNextText,
-} from '../lib/workflowUi';
-import type { CaseStatus, CaseSummary } from '../lib/workflowTypes';
+} from '@/utils/workflowUi';
 
 export type StudentCaseNavigationContext = 'dashboard' | 'registrations' | 'submissions';
 

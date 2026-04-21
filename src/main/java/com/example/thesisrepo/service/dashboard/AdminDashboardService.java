@@ -29,6 +29,11 @@ public class AdminDashboardService {
   );
   private static final Set<CaseStatus> CLEARANCE_QUEUE_STATUSES = EnumSet.of(CaseStatus.CLEARANCE_SUBMITTED);
   private static final Set<CaseStatus> PUBLISH_QUEUE_STATUSES = EnumSet.of(CaseStatus.READY_TO_PUBLISH);
+  private static final Set<CaseStatus> REVISION_REQUIRED_STATUSES = EnumSet.of(
+    CaseStatus.NEEDS_REVISION_SUPERVISOR,
+    CaseStatus.NEEDS_REVISION_LIBRARY,
+    CaseStatus.REJECTED
+  );
   private static final Set<CaseStatus> ACTIONABLE_STATUSES = EnumSet.of(
     CaseStatus.REGISTRATION_APPROVED,
     CaseStatus.FORWARDED_TO_LIBRARY,
@@ -64,6 +69,7 @@ public class AdminDashboardService {
       countByStatuses(allCases, REVIEW_QUEUE_STATUSES),
       countByStatuses(allCases, CLEARANCE_QUEUE_STATUSES),
       countByStatuses(allCases, PUBLISH_QUEUE_STATUSES),
+      countByStatuses(allCases, REVISION_REQUIRED_STATUSES),
       needsActionNow(allCases),
       DashboardWorkflowSupport.stageDistribution(allCases),
       recentActivity(caseById)

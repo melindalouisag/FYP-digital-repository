@@ -1,4 +1,4 @@
-import type { ChecklistTemplateResponse } from '../../lib/workflowTypes';
+import type { ChecklistTemplateResponse } from '@/types/workflow';
 import type { CategoryDraft } from './types';
 import { ChecklistTemplateHeader } from './ChecklistTemplateHeader';
 import { ChecklistCategoryCard } from './ChecklistCategoryCard';

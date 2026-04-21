@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { studentApi } from '@/services/api/student';
+import type { CaseDetailPayload, ChecklistResult } from '@/types/workflow';
+import { getRoleDisplayLabel } from '@/utils/uiLabels';
 import ShellLayout from '../../ShellLayout';
-import { studentApi } from '../../lib/api/student';
-import { getRoleDisplayLabel } from '../../lib/uiLabels';
-import type { CaseDetailPayload, ChecklistResult } from '../../lib/workflowTypes';
 
 export default function StudentFeedbackPage() {
   const { caseId } = useParams();

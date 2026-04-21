@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { checklistApi, type ChecklistTemplateSummary } from '@/services/api/checklist';
+import { useConfirmDialog } from '@/shared/ui/useConfirmDialog';
+import type { PublicationType } from '@/types/workflow';
 import ShellLayout from '../../ShellLayout';
-import { checklistApi, type ChecklistTemplateSummary } from '../../lib/api/checklist';
-import { useConfirmDialog } from '../../lib/components/useConfirmDialog';
-import type { PublicationType } from '../../lib/workflowTypes';
 
 type TemplateMap = Record<PublicationType, ChecklistTemplateSummary[]>;
 

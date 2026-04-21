@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { CalendarEvent } from '../lib/workflowTypes';
+import type { CalendarEvent } from '@/types/workflow';
 import { buildCalendarMonthDays, getWeekdayLabels } from './calendarUtils';
 
 interface CalendarMonthGridProps {

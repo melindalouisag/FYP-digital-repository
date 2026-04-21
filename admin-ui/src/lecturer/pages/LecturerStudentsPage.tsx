@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { lecturerApi, type LecturerStudentGroup } from '@/services/api/lecturer';
+import PortalIcon from '@/shared/ui/PortalIcon';
+import { lecturerSidebarIcons } from '@/utils/portalIcons';
 import ShellLayout from '../../ShellLayout';
-import { lecturerApi, type LecturerStudentGroup } from '../../lib/api/lecturer';
-import PortalIcon from '../../lib/components/PortalIcon';
-import { lecturerSidebarIcons } from '../../lib/portalIcons';
 
 export default function LecturerStudentsPage() {
   const navigate = useNavigate();

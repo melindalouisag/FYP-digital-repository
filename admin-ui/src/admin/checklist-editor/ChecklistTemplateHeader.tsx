@@ -1,4 +1,4 @@
-import type { ChecklistTemplateResponse } from '../../lib/workflowTypes';
+import type { ChecklistTemplateResponse } from '@/types/workflow';
 
 interface ChecklistTemplateHeaderProps {
   template: ChecklistTemplateResponse;

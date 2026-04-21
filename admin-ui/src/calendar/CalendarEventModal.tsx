@@ -1,14 +1,14 @@
 import type { FormEvent } from 'react';
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import type { PublicationType } from '../lib/workflowTypes';
+import type { PublicationType } from '@/types/workflow';
+import { ACTIVE_PUBLICATION_TYPES } from '@/utils/uiLabels';
 import {
   getDeadlineActionLabel,
   getPublicationTypeLabel,
   getRepeatOptionLabel,
   type CalendarRepeatOption,
 } from './calendarUtils';
-import { ACTIVE_PUBLICATION_TYPES } from '../lib/uiLabels';
 import type { CalendarFormState } from './useCalendarEvents';
 
 interface CalendarEventModalProps {

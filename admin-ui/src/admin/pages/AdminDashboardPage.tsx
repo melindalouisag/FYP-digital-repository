@@ -1,5 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { adminApi } from '@/services/api/admin';
+import { calendarApi } from '@/services/api/calendar';
+import EmptyState from '@/shared/ui/EmptyState';
+import StatusBadge from '@/shared/ui/StatusBadge';
+import type {
+  AdminDashboardData,
+  CalendarEvent,
+  DashboardActivityItem,
+  DashboardActionItem,
+  DeadlineActionType,
+  PublicationType,
+} from '@/types/workflow';
+import { ACTIVE_PUBLICATION_TYPES } from '@/utils/uiLabels';
 import ShellLayout from '../../ShellLayout';
 import {
   compareCalendarEvents,
@@ -8,13 +21,6 @@ import {
   getPublicationTypeLabel,
   toDateInputValue,
 } from '../../calendar/calendarUtils';
-import { calendarApi } from '../../lib/api/calendar';
-import DashboardPanel from '../../lib/components/DashboardPanel';
-import DashboardProgressRingCard from '../../lib/components/DashboardProgressRingCard';
-import { adminApi } from '../../lib/api/admin';
-import type { AdminDashboardData, CalendarEvent, DashboardActionItem, DeadlineActionType, PublicationType } from '../../lib/workflowTypes';
-import { ACTIVE_PUBLICATION_TYPES } from '../../lib/uiLabels';
-import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 
 const EMPTY_DASHBOARD: AdminDashboardData = {
   workflowProgressPercent: 0,
@@ -25,6 +31,7 @@ const EMPTY_DASHBOARD: AdminDashboardData = {
   submissionReviewQueueCount: 0,
   clearanceQueueCount: 0,
   publishingQueueCount: 0,
+  revisionRequiredCount: 0,
   needsActionNow: [],
   stageDistribution: [],
   recentActivity: [],
@@ -53,11 +60,7 @@ export default function AdminDashboardPage() {
   const loadDeadlines = useCallback(async () => {
     try {
       const rows = await calendarApi.listEvents();
-      setDeadlineEvents(
-        rows
-          .filter((event) => event.eventType === 'DEADLINE')
-          .sort(compareCalendarEvents)
-      );
+      setDeadlineEvents(rows.filter((event) => event.eventType === 'DEADLINE').sort(compareCalendarEvents));
       setDeadlineLoadError('');
     } catch {
       setDeadlineEvents([]);
@@ -86,24 +89,20 @@ export default function AdminDashboardPage() {
     void loadDeadlines();
   }, [loadDeadlines]);
 
-  const maxStageCount = useMemo(
-    () => Math.max(...dashboard.stageDistribution.map((item) => item.count), 1),
-    [dashboard.stageDistribution]
-  );
-  const upcomingDeadlines = useMemo(
-    () => deadlineEvents
-      .filter((event) => {
-        const rawTime = event.eventTime.length === 5 ? `${event.eventTime}:00` : event.eventTime;
-        return new Date(`${event.eventDate}T${rawTime}`).getTime() >= Date.now();
-      })
-      .slice(0, 4),
-    [deadlineEvents]
-  );
-  const completionPercent = useMemo(() => (
-    dashboard.totalStudentCount > 0
-      ? Math.round((dashboard.publishedStudentCount / dashboard.totalStudentCount) * 100)
-      : null
-  ), [dashboard.publishedStudentCount, dashboard.totalStudentCount]);
+  const totalCases = useMemo(() => (
+    dashboard.stageDistribution.reduce((sum, item) => sum + item.count, 0)
+  ), [dashboard.stageDistribution]);
+  const pendingActions = dashboard.registrationQueueCount
+    + dashboard.submissionReviewQueueCount
+    + dashboard.clearanceQueueCount
+    + dashboard.publishingQueueCount;
+  const completedCases = dashboard.stageDistribution.find((item) => item.label === 'Published')?.count ?? 0;
+  const upcomingDeadlines = deadlineEvents
+    .filter((event) => {
+      const rawTime = event.eventTime.length === 5 ? `${event.eventTime}:00` : event.eventTime;
+      return new Date(`${event.eventDate}T${rawTime}`).getTime() >= Date.now();
+    })
+    .slice(0, 4);
 
   const saveDeadline = async () => {
     if (!deadlineForm.title.trim()) {
@@ -136,8 +135,8 @@ export default function AdminDashboardPage() {
 
   return (
     <ShellLayout
-      title="Library Administrator Dashboard"
-      subtitle="Library administrator overview for registration, review, clearance, and publishing"
+      title="Dashboard"
+      subtitle="Administrative overview for registration, submission review, clearance, and publication release."
       sidebarBadges={{
         '/admin/registration-approvals': dashboard.registrationQueueCount,
         '/admin/review': dashboard.submissionReviewQueueCount,
@@ -145,100 +144,138 @@ export default function AdminDashboardPage() {
         '/admin/publish': dashboard.publishingQueueCount,
       }}
     >
-      {error && <div className="alert alert-danger">{error}</div>}
+      {error ? <div className="alert alert-danger">{error}</div> : null}
 
-      <div className="su-dashboard-grid su-dashboard-grid-3 mb-4">
-        <DashboardProgressRingCard
-          title="Repository Completion"
-          progressPercent={completionPercent}
-          loading={loading}
-          emptyText="No workflow records yet."
-          primaryText={`${dashboard.publishedStudentCount} of ${dashboard.totalStudentCount} students published`}
-          secondaryText={`${dashboard.activeCaseCount} active publication${dashboard.activeCaseCount === 1 ? '' : 's'}`}
-        />
-        <DashboardPanel title="Needs Action Now" className="w-100">
-          {loading ? (
-            <p className="su-dashboard-empty-copy mb-0">Loading dashboard data.</p>
-          ) : dashboard.needsActionNow.length === 0 ? (
-            <p className="su-dashboard-empty-copy mb-0">No urgent queue items right now.</p>
-          ) : (
-            <div className="su-dashboard-list">
-              {dashboard.needsActionNow.map((item) => (
-                <button
-                  className="su-dashboard-item-button"
-                  type="button"
-                  key={`${item.queueKey}-${item.caseId}`}
-                  onClick={() => navigate(resolveAdminQueuePath(item))}
-                >
-                  <div className="su-dashboard-list-item">
-                    <div className="d-flex justify-content-between gap-2 align-items-start">
-                      <div className="min-w-0">
-                        <div className="su-dashboard-item-title su-text-truncate">{item.title}</div>
-                        <div className="su-dashboard-item-support">
-                          {item.detail}
-                        </div>
-                        <div className="su-dashboard-item-meta">
-                          {item.queueLabel}
-                          {item.updatedAt ? ` • Updated ${new Date(item.updatedAt).toLocaleString()}` : ''}
-                        </div>
-                      </div>
-                      <span className={`badge status-badge ${statusBadgeClass(item.status)}`}>
-                        {formatStatus(item.status)}
-                      </span>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </DashboardPanel>
-        <DashboardPanel title="Workflow Stage Overview" className="w-100">
-          {loading ? (
-            <p className="su-dashboard-empty-copy mb-0">Loading dashboard data.</p>
-          ) : dashboard.stageDistribution.length === 0 ? (
-            <p className="su-dashboard-empty-copy mb-0">No workflow records available.</p>
-          ) : (
-            <div className="su-dashboard-bars">
-              {dashboard.stageDistribution.map((item) => (
-                <div className="su-dashboard-bar-row" key={item.label}>
-                  <div className="d-flex justify-content-between gap-2 mb-2">
-                    <span className="su-dashboard-bar-label">{item.label}</span>
-                    <span className="su-dashboard-bar-value">{item.count}</span>
-                  </div>
-                  <div className="su-dashboard-bar-track" aria-hidden="true">
-                    <div
-                      className="su-dashboard-bar-fill"
-                      style={{ width: `${maxStageCount === 0 ? 0 : (item.count / maxStageCount) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </DashboardPanel>
+      <div className="su-summary-grid mb-4">
+        <SummaryCard label="Total Cases" value={totalCases} />
+        <SummaryCard label="Pending Actions" value={pendingActions} />
+        <SummaryCard label="Completed" value={completedCases} />
+        <SummaryCard label="Revision Required" value={dashboard.revisionRequiredCount} />
       </div>
 
-      <div className="mb-4">
-        <DashboardPanel title="Add Event" className="su-dashboard-panel-auto-height" bodyClassName="su-dashboard-panel-body-auto-height">
-          {deadlineError ? <div className="alert alert-danger py-2 mb-0">{deadlineError}</div> : null}
-          {deadlineMessage ? <div className="alert alert-success py-2 mb-0">{deadlineMessage}</div> : null}
-          {deadlineLoadError ? <div className="alert alert-warning py-2 mb-0">{deadlineLoadError}</div> : null}
+      <section className="su-section">
+        <div className="su-section-header">
+          <div>
+            <h2 className="su-section-title mb-1">Action Required</h2>
+            <p className="su-secondary-text mb-0">Items are ordered by the most urgent administrative queue.</p>
+          </div>
+        </div>
 
-          <div className="su-dashboard-form-panel">
-            <div className="row g-2">
-              <div className="col-12 col-xl-4">
-                <label className="form-label mb-1">Deadline title</label>
+        {loading ? (
+          <div className="text-center py-5">
+            <div className="su-spinner mx-auto mb-3" />
+            <div className="text-muted">Loading dashboard data...</div>
+          </div>
+        ) : dashboard.needsActionNow.length === 0 ? (
+          <EmptyState
+            title="No actions pending"
+            description="Urgent queue items will appear here when a workflow step needs administrative attention."
+          />
+        ) : (
+          <div className="su-table-shell">
+            <table className="table align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Status</th>
+                  <th>Queue</th>
+                  <th>Last Updated</th>
+                  <th className="text-end">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dashboard.needsActionNow.map((item) => (
+                  <tr
+                    key={`${item.queueKey}-${item.caseId}`}
+                    className="su-table-row-clickable"
+                    tabIndex={0}
+                    onClick={() => navigate(resolveAdminQueuePath(item))}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        navigate(resolveAdminQueuePath(item));
+                      }
+                    }}
+                  >
+                    <td>
+                      <div className="su-table-title">{item.title}</div>
+                      <div className="su-secondary-text">{item.detail}</div>
+                    </td>
+                    <td><StatusBadge status={item.status} /></td>
+                    <td>{item.queueLabel}</td>
+                    <td>{item.updatedAt ? new Date(item.updatedAt).toLocaleString() : 'Not available'}</td>
+                    <td className="text-end">
+                      <button
+                        type="button"
+                        className="btn btn-outline-secondary"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          navigate(resolveAdminQueuePath(item));
+                        }}
+                      >
+                        Open
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <div className="su-support-grid">
+        <section className="su-support-card">
+          <div className="su-section-header">
+            <div>
+              <h2 className="su-section-title mb-1">Recent Activity</h2>
+              <p className="su-secondary-text mb-0">Latest workflow updates across the repository.</p>
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="text-muted">Loading activity...</div>
+          ) : dashboard.recentActivity.length === 0 ? (
+            <EmptyState
+              title="No recent activity"
+              description="Recent workflow events will appear here after cases move between stages."
+            />
+          ) : (
+            <div className="su-support-list">
+              {dashboard.recentActivity.map((item) => (
+                <ActivityRow key={`${item.caseId}-${item.occurredAt ?? item.detail}`} item={item} />
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="su-support-card">
+          <div className="su-section-header">
+            <div>
+              <h2 className="su-section-title mb-1">Administrative Calendar</h2>
+              <p className="su-secondary-text mb-0">Manage upcoming registration and submission deadlines.</p>
+            </div>
+          </div>
+
+          {deadlineError ? <div className="alert alert-danger py-2">{deadlineError}</div> : null}
+          {deadlineMessage ? <div className="alert alert-success py-2">{deadlineMessage}</div> : null}
+          {deadlineLoadError ? <div className="alert alert-warning py-2">{deadlineLoadError}</div> : null}
+
+          <div className="su-form-section mb-3">
+            <div className="su-form-grid">
+              <div className="su-form-field-full">
+                <label className="form-label mb-1">Deadline Title</label>
                 <input
-                  className="form-control form-control-sm"
+                  className="form-control"
                   value={deadlineForm.title}
-                  placeholder="Input event title..."
+                  placeholder="Enter deadline title"
                   onChange={(event) => setDeadlineForm((current) => ({ ...current, title: event.target.value }))}
                 />
               </div>
-              <div className="col-6 col-xl-2">
+              <div>
                 <label className="form-label mb-1">Action</label>
                 <select
-                  className="form-select form-select-sm"
+                  className="form-select"
                   value={deadlineForm.deadlineAction}
                   onChange={(event) => setDeadlineForm((current) => ({
                     ...current,
@@ -249,101 +286,120 @@ export default function AdminDashboardPage() {
                   <option value="SUBMISSION_DEADLINE">Submission deadline</option>
                 </select>
               </div>
-              <div className="col-6 col-xl-2">
-                <label className="form-label mb-1">Type</label>
+              <div>
+                <label className="form-label mb-1">Publication Type</label>
                 <select
-                  className="form-select form-select-sm"
+                  className="form-select"
                   value={deadlineForm.publicationType}
                   onChange={(event) => setDeadlineForm((current) => ({
                     ...current,
                     publicationType: event.target.value as PublicationType,
                   }))}
                 >
-                  {ACTIVE_PUBLICATION_TYPES.map((option) => (
-                    <option key={option} value={option}>
-                      {getPublicationTypeLabel(option)}
-                    </option>
+                  {ACTIVE_PUBLICATION_TYPES.map((type) => (
+                    <option key={type} value={type}>{getPublicationTypeLabel(type)}</option>
                   ))}
                 </select>
               </div>
-              <div className="col-6 col-xl-2">
+              <div>
                 <label className="form-label mb-1">Date</label>
                 <input
-                  className="form-control form-control-sm"
+                  className="form-control"
                   type="date"
                   value={deadlineForm.eventDate}
                   onChange={(event) => setDeadlineForm((current) => ({ ...current, eventDate: event.target.value }))}
                 />
               </div>
-              <div className="col-6 col-xl-2">
+              <div>
                 <label className="form-label mb-1">Time</label>
                 <input
-                  className="form-control form-control-sm"
+                  className="form-control"
                   type="time"
                   value={deadlineForm.eventTime}
                   onChange={(event) => setDeadlineForm((current) => ({ ...current, eventTime: event.target.value }))}
                 />
               </div>
-              <div className="col-12 d-flex justify-content-end">
-                <button
-                  type="button"
-                  className="btn btn-primary btn-sm"
-                  onClick={() => void saveDeadline()}
-                  disabled={deadlineSaving}
-                >
-                  {deadlineSaving ? 'Saving...' : 'Save deadline'}
-                </button>
-              </div>
+            </div>
+            <div className="su-form-actions mt-3">
+              <button type="button" className="btn btn-primary" disabled={deadlineSaving} onClick={() => void saveDeadline()}>
+                {deadlineSaving ? 'Saving...' : 'Save Deadline'}
+              </button>
             </div>
           </div>
 
-          <div className="su-dashboard-subsection">
-            <h3 className="su-dashboard-subtitle">Upcoming deadlines</h3>
-            {upcomingDeadlines.length > 0 ? (
-              <div className="su-dashboard-list">
-                {upcomingDeadlines.map((event) => (
-                  <div className="su-dashboard-list-item" key={event.id}>
-                    <div className="d-flex justify-content-between gap-2 align-items-start">
-                      <div className="min-w-0">
-                        <div className="su-dashboard-item-title">{event.title}</div>
-                        <div className="su-dashboard-item-support">
-                          {getDeadlineActionLabel(event.deadlineAction)} • {getPublicationTypeLabel(event.publicationType)}
-                        </div>
-                        <div className="su-dashboard-item-meta">{formatCalendarEventSchedule(event)}</div>
-                      </div>
-                    </div>
+          {upcomingDeadlines.length === 0 ? (
+            <EmptyState
+              title="No upcoming deadlines"
+              description="Create a deadline to add it to the administrative calendar."
+            />
+          ) : (
+            <div className="su-support-list">
+              {upcomingDeadlines.map((event) => (
+                <div key={event.id} className="su-support-list-item">
+                  <div className="fw-semibold">{event.title}</div>
+                  <div className="su-secondary-text">
+                    {getDeadlineActionLabel(event.deadlineAction)} • {getPublicationTypeLabel(event.publicationType)}
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="su-dashboard-empty-copy mb-0">No deadlines scheduled.</p>
-            )}
-          </div>
-        </DashboardPanel>
+                  <div className="su-secondary-text">{formatCalendarEventSchedule(event)}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
     </ShellLayout>
   );
 }
 
-function createDeadlineFormState(): DeadlineFormState {
-  return {
-    title: '',
-    deadlineAction: 'REGISTRATION_DEADLINE',
-    publicationType: 'THESIS',
-    eventDate: toDateInputValue(new Date()),
-    eventTime: '17:00',
-  };
+function SummaryCard({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="su-summary-card">
+      <div className="su-secondary-text">{label}</div>
+      <div className="su-summary-value">{value}</div>
+    </div>
+  );
 }
 
-function resolveAdminQueuePath(item: DashboardActionItem): string {
+function ActivityRow({ item }: { item: DashboardActivityItem }) {
+  return (
+    <div className="su-support-list-item">
+      <div className="d-flex flex-wrap justify-content-between align-items-start gap-2">
+        <div>
+          <div className="fw-semibold">{item.title}</div>
+          <div className="su-secondary-text">
+            {item.subtitle ? `${item.subtitle} • ` : ''}
+            {item.occurredAt ? new Date(item.occurredAt).toLocaleString() : 'Not available'}
+          </div>
+          <div className="su-table-title">{item.detail}</div>
+        </div>
+        <StatusBadge status={item.status} />
+      </div>
+    </div>
+  );
+}
+
+function resolveAdminQueuePath(item: DashboardActionItem) {
   switch (item.queueKey) {
     case 'registration':
       return '/admin/registration-approvals';
     case 'review':
-      return '/admin/review';
+      return `/admin/review/${item.caseId}`;
     case 'clearance':
       return '/admin/clearance';
     case 'publishing':
-      return '/admin/publish';
+      return `/admin/publish/${item.caseId}`;
+    default:
+      return '/admin/dashboard';
   }
+}
+
+function createDeadlineFormState(): DeadlineFormState {
+  const now = new Date();
+  return {
+    title: '',
+    deadlineAction: 'REGISTRATION_DEADLINE',
+    publicationType: ACTIVE_PUBLICATION_TYPES[0],
+    eventDate: toDateInputValue(now),
+    eventTime: '09:00',
+  };
 }

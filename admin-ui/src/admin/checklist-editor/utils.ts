@@ -1,6 +1,6 @@
-import { ApiError } from '../../lib/api/http';
-import type { ChecklistEditorItem } from '../../lib/api/checklist';
-import type { ChecklistTemplateResponse } from '../../lib/workflowTypes';
+import { ApiError } from '@/services/api/http';
+import type { ChecklistEditorItem } from '@/services/api/checklist';
+import type { ChecklistTemplateResponse } from '@/types/workflow';
 import type { CategoryDraft, ItemDraft, ReusableItemSuggestion } from './types';
 
 export function newCategory(partial?: Partial<CategoryDraft>): CategoryDraft {

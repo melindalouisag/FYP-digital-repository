@@ -1,17 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import {
-  findLatestDeadline,
-  formatCalendarEventSchedule,
-  getPublicationTypeLabel,
-  isDeadlinePassed,
-} from '../../calendar/calendarUtils';
-import ShellLayout from '../../ShellLayout';
-import { calendarApi } from '../../lib/api/calendar';
-import { studentApi } from '../../lib/api/student';
-import DownloadFilenameLink from '../../lib/components/DownloadFilenameLink';
-import CaseTimeline from '../../lib/components/CaseTimeline';
-import { getRoleDisplayLabel } from '../../lib/uiLabels';
+import { calendarApi } from '@/services/api/calendar';
+import { studentApi } from '@/services/api/student';
+import CaseTimeline from '@/shared/ui/CaseTimeline';
+import DownloadFilenameLink from '@/shared/ui/DownloadFilenameLink';
 import type {
   CalendarEvent,
   CaseDetailPayload,
@@ -20,14 +12,22 @@ import type {
   SubmissionVersion,
   TimelineItem,
   WorkflowComment,
-} from '../../lib/workflowTypes';
+} from '@/types/workflow';
+import { getRoleDisplayLabel } from '@/utils/uiLabels';
 import {
   canSubmitClearance,
   formatStageName,
   formatStatus,
   getStageIndex,
   getStageKey,
-} from '../../lib/workflowUi';
+} from '@/utils/workflowUi';
+import {
+  findLatestDeadline,
+  formatCalendarEventSchedule,
+  getPublicationTypeLabel,
+  isDeadlinePassed,
+} from '../../calendar/calendarUtils';
+import ShellLayout from '../../ShellLayout';
 
 const STAGES = ['registration', 'supervisor', 'library', 'clearance', 'publish'] as const;
 const CLEARANCE_ACTION_STATUSES = new Set<CaseStatus>([
@@ -95,7 +95,7 @@ export default function StudentCaseDetailPage() {
   const versions = detail?.versions ?? detail?.submissions ?? [];
   const isRejected = stageKey === 'rejected';
   const showClearanceAction = Boolean(status && CLEARANCE_ACTION_STATUSES.has(status));
-  const clearanceButtonLabel = status && canSubmitClearance(status) ? 'Submit clearance' : 'Open clearance';
+  const clearanceButtonLabel = status && canSubmitClearance(status) ? 'Submit for Review' : 'Open Clearance';
   const pageTitle = detail?.case.title?.trim() ? detail.case.title : 'Untitled Publication';
   const pageSubtitle = detail
     ? `${getPublicationTypeLabel(detail.case.type)} • Current status: ${formatStatus(detail.case.status)}`

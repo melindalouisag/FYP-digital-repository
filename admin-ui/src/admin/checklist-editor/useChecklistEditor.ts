@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { checklistApi, type ChecklistEditorItem } from '../../lib/api/checklist';
-import { useConfirmDialog } from '../../lib/components/useConfirmDialog';
-import type { ChecklistTemplateResponse } from '../../lib/workflowTypes';
+import { checklistApi, type ChecklistEditorItem } from '@/services/api/checklist';
+import { useConfirmDialog } from '@/shared/ui/useConfirmDialog';
+import type { ChecklistTemplateResponse } from '@/types/workflow';
 import type { CategoryDraft, FocusTarget } from './types';
 import {
   categoriesFromTemplate,

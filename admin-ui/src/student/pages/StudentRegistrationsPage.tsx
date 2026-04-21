@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { studentApi } from '@/services/api/student';
+import PortalIcon from '@/shared/ui/PortalIcon';
+import { useConfirmDialog } from '@/shared/ui/useConfirmDialog';
+import type { CaseSummary } from '@/types/workflow';
+import { studentSidebarIcons } from '@/utils/portalIcons';
+import { formatStatus, getWorkflowNextAction, statusBadgeClass } from '@/utils/workflowUi';
 import ShellLayout from '../../ShellLayout';
-import { studentApi } from '../../lib/api/student';
-import PortalIcon from '../../lib/components/PortalIcon';
-import { useConfirmDialog } from '../../lib/components/useConfirmDialog';
-import { studentSidebarIcons } from '../../lib/portalIcons';
-import type { CaseSummary } from '../../lib/workflowTypes';
-import { formatStatus, getWorkflowNextAction, statusBadgeClass } from '../../lib/workflowUi';
 import {
   isNavigationActivationKey,
   isRegistrationWorkspaceCase,

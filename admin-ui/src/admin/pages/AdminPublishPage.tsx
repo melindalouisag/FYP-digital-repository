@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { adminApi } from '@/services/api/admin';
+import EmptyState from '@/shared/ui/EmptyState';
+import StatusBadge from '@/shared/ui/StatusBadge';
+import { useConfirmDialog } from '@/shared/ui/useConfirmDialog';
+import type { AdminPublishQueueItem, PagedResponse } from '@/types/workflow';
 import ShellLayout from '../../ShellLayout';
-import { adminApi } from '../../lib/api/admin';
-import PortalIcon from '../../lib/components/PortalIcon';
-import { useConfirmDialog } from '../../lib/components/useConfirmDialog';
-import { adminSidebarIcons } from '../../lib/portalIcons';
-import type { AdminPublishQueueItem, PagedResponse } from '../../lib/workflowTypes';
-import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 
 const PAGE_SIZE = 10;
 
@@ -30,64 +29,20 @@ export default function AdminPublishPage() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
-  const load = async (requestedPage: number) => {
-    setLoading(true);
-    setError('');
-    try {
-      const response = await adminApi.publishQueue({ page: requestedPage, size: PAGE_SIZE });
-      if (response.totalPages > 0 && requestedPage >= response.totalPages) {
-        setPage(response.totalPages - 1);
-        return;
-      }
-      setPageData(response);
-    } catch (err) {
-      setPageData(EMPTY_PAGE);
-      setError(err instanceof Error ? err.message : 'Failed to load publish queue.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    void load(page);
+    void load(page, setLoading, setError, setPageData, setPage);
   }, [page]);
-
-  const publishCase = async (caseId: number) => {
-    setWorkingCaseId(caseId);
-    setError('');
-    setMessage('');
-    try {
-      await adminApi.publish(caseId);
-      setMessage('Submission published to repository.');
-      await load(page);
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Publish action failed.');
-      return false;
-    } finally {
-      setWorkingCaseId(null);
-    }
-  };
-
-  const cases = pageData.items;
-  const pageStart = pageData.totalElements === 0 ? 0 : pageData.page * pageData.size + 1;
-  const pageEnd = pageStart === 0 ? 0 : pageStart + cases.length - 1;
-  const displayCaseTitle = (value?: string | null) => value?.trim() || 'Untitled submission';
 
   const openPublishConfirm = (publicationCase: AdminPublishQueueItem) => {
     openConfirm({
-      title: 'Confirm Publish',
-      message: (
-        <div className="vstack gap-2">
-          <div>
-            This will publish <strong>{displayCaseTitle(publicationCase.title)}</strong> to the repository.
-          </div>
-          <div>Please confirm that the metadata and uploaded file are ready for release.</div>
-        </div>
-      ),
-      confirmLabel: 'Confirm Publish',
+      title: 'Publish record',
+      message: `Publish "${displayCaseTitle(publicationCase.title)}" to the repository?`,
+      confirmLabel: 'Publish',
       onConfirm: async (close) => {
-        const success = await publishCase(publicationCase.caseId);
+        const success = await publishCase(publicationCase.caseId, setWorkingCaseId, setError, setMessage, async () => {
+          await adminApi.publish(publicationCase.caseId);
+          await load(page, setLoading, setError, setPageData, setPage);
+        });
         if (success) {
           close();
         }
@@ -95,113 +50,197 @@ export default function AdminPublishPage() {
     });
   };
 
+  const pageStart = pageData.totalElements === 0 ? 0 : pageData.page * pageData.size + 1;
+  const pageEnd = pageStart === 0 ? 0 : pageStart + pageData.items.length - 1;
+
   return (
     <>
-      <ShellLayout title="Publishing" subtitle="Review publications that are ready for repository release and publish them when metadata is complete">
-        {error && <div className="alert alert-danger" style={{ borderRadius: '0.75rem' }}>{error}</div>}
-        {message && <div className="alert alert-success" style={{ borderRadius: '0.75rem' }}>{message}</div>}
+      <ShellLayout
+        title="Publishing"
+        subtitle="Review repository-ready submissions and publish them once the final record is complete."
+      >
+        {error ? <div className="alert alert-danger">{error}</div> : null}
+        {message ? <div className="alert alert-success">{message}</div> : null}
 
-        {loading && (
-          <div className="text-center py-5">
-            <div className="su-spinner mx-auto mb-3" />
-            <div className="text-muted">Loading publish queue...</div>
+        <div className="su-summary-grid mb-4">
+          <div className="su-summary-card">
+            <div className="su-secondary-text">Ready for Publication</div>
+            <div className="su-summary-value">{pageData.totalElements}</div>
           </div>
-        )}
-
-        {!loading && cases.length === 0 && (
-          <div className="su-empty-state">
-            <div className="su-empty-icon">
-              <PortalIcon src={adminSidebarIcons.publishing} size={40} />
-            </div>
-            <h5>No Publications Ready for Publication</h5>
-            <p className="text-muted">No publications are ready for publication at this time.</p>
+          <div className="su-summary-card">
+            <div className="su-secondary-text">Visible Rows</div>
+            <div className="su-summary-value">{pageData.items.length}</div>
           </div>
-        )}
-
-        <div className="vstack gap-3">
-          {cases.map((c, index) => (
-            <div
-              className="su-card su-card-clickable fade-in"
-              key={c.caseId}
-              role="button"
-              onClick={() => navigate(`/admin/publish/${c.caseId}`)}
-              style={{ animationDelay: `${index * 0.05}s` }}
-            >
-              <div className="card-body p-4">
-                <div className="d-flex flex-wrap justify-content-between align-items-center gap-2">
-                  <div>
-                    <h5 className="fw-bold mb-1">{displayCaseTitle(c.title)}</h5>
-                    <div className="d-flex flex-wrap gap-2 align-items-center">
-                      <span className="badge bg-dark-subtle text-dark-emphasis" style={{ borderRadius: '999px' }}>{c.type}</span>
-                      <span className={`badge status-badge ${statusBadgeClass(c.status)}`}>{formatStatus(c.status)}</span>
-                      <span className="text-muted small">Updated: {c.updatedAt ? new Date(c.updatedAt).toLocaleString() : 'N/A'}</span>
-                    </div>
-                  </div>
-                  <div className="d-flex flex-wrap gap-2">
-                    <button
-                      className="btn btn-sm su-action-button su-action-button-primary"
-                      disabled={workingCaseId === c.caseId || c.status !== 'READY_TO_PUBLISH'}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        openPublishConfirm(c);
-                      }}
-                    >
-                      {workingCaseId === c.caseId ? 'Publishing...' : 'Publish to Repository'}
-                    </button>
-                    <button
-                      className="btn btn-sm su-action-button su-action-button-secondary"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        navigate(`/admin/publish/${c.caseId}`);
-                      }}
-                    >
-                      Open Publishing Detail
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
+          <div className="su-summary-card">
+            <div className="su-secondary-text">Current Page</div>
+            <div className="su-summary-value">{pageData.totalElements === 0 ? 0 : pageData.page + 1}</div>
+          </div>
+          <div className="su-summary-card">
+            <div className="su-secondary-text">Action Required</div>
+            <div className="su-summary-value">{pageData.items.length}</div>
+          </div>
         </div>
 
-        {!loading && pageData.totalElements > 0 && (
-          <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-4">
-            <div className="text-muted small">
-              Showing {pageStart}-{pageEnd} of {pageData.totalElements}
+        <section className="su-section">
+          <div className="su-section-header">
+            <div>
+              <h2 className="su-section-title mb-1">Action Required</h2>
+              <p className="su-secondary-text mb-0">Open the publishing detail page or publish the record directly from this queue.</p>
             </div>
-            <nav aria-label="Publish queue pagination">
-              <ul className="pagination pagination-sm mb-0">
-                <li className={`page-item ${!pageData.hasPrevious || loading ? 'disabled' : ''}`}>
-                  <button
-                    className="page-link"
-                    type="button"
-                    onClick={() => setPage((current) => Math.max(current - 1, 0))}
-                    disabled={!pageData.hasPrevious || loading}
-                  >
-                    Previous
-                  </button>
-                </li>
-                <li className="page-item disabled">
-                  <span className="page-link">
-                    Page {pageData.page + 1} of {Math.max(pageData.totalPages, 1)}
-                  </span>
-                </li>
-                <li className={`page-item ${!pageData.hasNext || loading ? 'disabled' : ''}`}>
-                  <button
-                    className="page-link"
-                    type="button"
-                    onClick={() => setPage((current) => current + 1)}
-                    disabled={!pageData.hasNext || loading}
-                  >
-                    Next
-                  </button>
-                </li>
-              </ul>
-            </nav>
           </div>
-        )}
+
+          {loading ? (
+            <div className="text-center py-5">
+              <div className="su-spinner mx-auto mb-3" />
+              <div className="text-muted">Loading publish queue...</div>
+            </div>
+          ) : pageData.items.length === 0 ? (
+            <EmptyState
+              title="No publications ready for publication"
+              description="Finalized records will appear here when they are ready for repository release."
+            />
+          ) : (
+            <div className="su-table-shell">
+              <table className="table align-middle mb-0">
+                <thead>
+                  <tr>
+                    <th>Title</th>
+                    <th>Status</th>
+                    <th>Last Updated</th>
+                    <th className="text-end">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageData.items.map((item) => {
+                    const busy = workingCaseId === item.caseId;
+                    return (
+                      <tr
+                        key={item.caseId}
+                        className="su-table-row-clickable"
+                        tabIndex={0}
+                        onClick={() => navigate(`/admin/publish/${item.caseId}`)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            navigate(`/admin/publish/${item.caseId}`);
+                          }
+                        }}
+                      >
+                        <td>
+                          <div className="su-table-title">{displayCaseTitle(item.title)}</div>
+                          <div className="su-secondary-text">{item.type}</div>
+                        </td>
+                        <td><StatusBadge status={item.status} /></td>
+                        <td>{item.updatedAt ? new Date(item.updatedAt).toLocaleString() : 'Not available'}</td>
+                        <td className="text-end">
+                          <div className="d-flex flex-wrap justify-content-end gap-2">
+                            <button
+                              type="button"
+                              className="btn btn-primary"
+                              disabled={busy}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                openPublishConfirm(item);
+                              }}
+                            >
+                              {busy ? 'Publishing...' : 'Publish'}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-outline-secondary"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                navigate(`/admin/publish/${item.caseId}`);
+                              }}
+                            >
+                              View
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        {!loading && pageData.totalElements > 0 ? (
+          <div className="d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div className="su-secondary-text">Showing {pageStart}-{pageEnd} of {pageData.totalElements}</div>
+            <div className="d-flex gap-2">
+              <button
+                type="button"
+                className="btn btn-outline-secondary"
+                disabled={!pageData.hasPrevious || loading}
+                onClick={() => setPage((current) => Math.max(current - 1, 0))}
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                className="btn btn-outline-secondary"
+                disabled={!pageData.hasNext || loading}
+                onClick={() => setPage((current) => current + 1)}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        ) : null}
       </ShellLayout>
       {confirmDialog}
     </>
   );
+}
+
+async function load(
+  requestedPage: number,
+  setLoading: (value: boolean) => void,
+  setError: (value: string) => void,
+  setPageData: (value: PagedResponse<AdminPublishQueueItem>) => void,
+  setPage: (value: number) => void
+) {
+  setLoading(true);
+  setError('');
+  try {
+    const response = await adminApi.publishQueue({ page: requestedPage, size: PAGE_SIZE });
+    if (response.totalPages > 0 && requestedPage >= response.totalPages) {
+      setPage(response.totalPages - 1);
+      return;
+    }
+    setPageData(response);
+  } catch (err) {
+    setPageData(EMPTY_PAGE);
+    setError(err instanceof Error ? err.message : 'Failed to load publish queue.');
+  } finally {
+    setLoading(false);
+  }
+}
+
+async function publishCase(
+  caseId: number,
+  setWorkingCaseId: (value: number | null) => void,
+  setError: (value: string) => void,
+  setMessage: (value: string) => void,
+  action: () => Promise<void>
+) {
+  setWorkingCaseId(caseId);
+  setError('');
+  setMessage('');
+  try {
+    await action();
+    setMessage('Publication published to the repository.');
+    return true;
+  } catch (err) {
+    setError(err instanceof Error ? err.message : 'Publish action failed.');
+    return false;
+  } finally {
+    setWorkingCaseId(null);
+  }
+}
+
+function displayCaseTitle(value?: string | null) {
+  return value?.trim() || 'Untitled submission';
 }

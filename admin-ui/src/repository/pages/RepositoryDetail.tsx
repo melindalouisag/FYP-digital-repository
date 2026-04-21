@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { publicRepositoryApi, type RepositoryItemDetail } from '../../lib/api/publicRepository';
+import { useAuth } from '@/auth/AuthContext';
+import { publicRepositoryApi, type RepositoryItemDetail } from '@/services/api/publicRepository';
 import ThemeSwitch from '../../theme/ThemeSwitch';
-import { useAuth } from '../../lib/context/AuthContext';
 import { useTheme } from '../../theme/ThemeContext';
 
 export default function RepositoryDetail() {

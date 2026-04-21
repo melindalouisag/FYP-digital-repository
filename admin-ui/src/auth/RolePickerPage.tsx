@@ -1,9 +1,9 @@
 import { Navigate, useNavigate } from 'react-router-dom';
-import { defaultPath, type Role } from '../lib/api/auth';
-import { ApiError } from '../lib/api/http';
-import { useAuth } from '../lib/context/AuthContext';
-import { getRoleDisplayLabel } from '../lib/uiLabels';
 import { useState } from 'react';
+import { useAuth } from '@/auth/AuthContext';
+import { defaultPath, type Role } from '@/services/api/auth';
+import { ApiError } from '@/services/api/http';
+import { getRoleDisplayLabel } from '@/utils/uiLabels';
 
 export default function RolePickerPage() {
   const navigate = useNavigate();

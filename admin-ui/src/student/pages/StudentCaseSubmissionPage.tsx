@@ -1,4 +1,25 @@
-import { calendarApi } from '../../lib/api/calendar';
+import { useAuth } from '@/auth/AuthContext';
+import { ApiError } from '@/services/api/http';
+import { masterApi, type Faculty } from '@/services/api/master';
+import { studentApi, type SubmissionMetaPayload } from '@/services/api/student';
+import { calendarApi } from '@/services/api/calendar';
+import DownloadFilenameLink from '@/shared/ui/DownloadFilenameLink';
+import KeywordChipInput from '@/shared/ui/KeywordChipInput';
+import type {
+  CalendarEvent,
+  CaseDetailPayload,
+  ChecklistResult,
+  SubmissionVersion,
+  UserRole,
+  WorkflowComment,
+} from '@/types/workflow';
+import { joinKeywordTokens, splitKeywordString } from '@/utils/keywords';
+import { getRoleDisplayLabel } from '@/utils/uiLabels';
+import {
+  canUploadSubmission,
+  formatStatus,
+  statusBadgeClass,
+} from '@/utils/workflowUi';
 import {
   findLatestDeadline,
   formatCalendarEventSchedule,
@@ -8,20 +29,6 @@ import {
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import ShellLayout from '../../ShellLayout';
-import { studentApi, type SubmissionMetaPayload } from '../../lib/api/student';
-import { masterApi, type Faculty } from '../../lib/api/master';
-import { ApiError } from '../../lib/api/http';
-import DownloadFilenameLink from '../../lib/components/DownloadFilenameLink';
-import KeywordChipInput from '../../lib/components/KeywordChipInput';
-import { useAuth } from '../../lib/context/AuthContext';
-import { joinKeywordTokens, splitKeywordString } from '../../lib/keywords';
-import { getRoleDisplayLabel } from '../../lib/uiLabels';
-import type { CalendarEvent, CaseDetailPayload, ChecklistResult, SubmissionVersion, UserRole, WorkflowComment } from '../../lib/workflowTypes';
-import {
-  canUploadSubmission,
-  formatStatus,
-  statusBadgeClass,
-} from '../../lib/workflowUi';
 
 const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
 

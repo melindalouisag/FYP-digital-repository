@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
+import { lecturerApi, type LecturerApprovalQueueRow } from '@/services/api/lecturer';
+import PortalIcon from '@/shared/ui/PortalIcon';
+import { useConfirmDialog } from '@/shared/ui/useConfirmDialog';
+import type { PagedResponse } from '@/types/workflow';
+import { lecturerSidebarIcons } from '@/utils/portalIcons';
+import { formatStatus, statusBadgeClass } from '@/utils/workflowUi';
 import ShellLayout from '../../ShellLayout';
-import { lecturerApi, type LecturerApprovalQueueRow } from '../../lib/api/lecturer';
-import PortalIcon from '../../lib/components/PortalIcon';
-import { useConfirmDialog } from '../../lib/components/useConfirmDialog';
-import { lecturerSidebarIcons } from '../../lib/portalIcons';
-import type { PagedResponse } from '../../lib/workflowTypes';
-import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 
 const PAGE_SIZE = 10;
 
@@ -83,7 +83,7 @@ export default function LecturerApprovalsPage() {
 
   const openApproveConfirm = (row: LecturerApprovalQueueRow) => {
     openConfirm({
-      title: 'Confirm Approval',
+      title: 'Approve and Continue',
       message: (
         <div className="vstack gap-2">
           <div>
@@ -92,7 +92,7 @@ export default function LecturerApprovalsPage() {
           <div>Please confirm that the registration is ready for the next stage.</div>
         </div>
       ),
-      confirmLabel: 'Confirm Approval',
+      confirmLabel: 'Approve and Continue',
       onConfirm: async (close) => {
         const success = await approve(row.caseId);
         if (success) {
@@ -182,7 +182,7 @@ export default function LecturerApprovalsPage() {
                   </div>
                 </div>
                 <button className="btn btn-sm su-action-button su-action-button-primary" onClick={() => openApproveConfirm(row)}>
-                  Approve Registration
+                  Approve and Continue
                 </button>
               </div>
 

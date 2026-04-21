@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { calendarApi } from '../lib/api/calendar';
-import type { CalendarEvent, DeadlineActionType, PublicationType } from '../lib/workflowTypes';
+import { calendarApi } from '@/services/api/calendar';
+import type { CalendarEvent, DeadlineActionType, PublicationType } from '@/types/workflow';
 import {
   buildCalendarDescription,
   compareCalendarEvents,

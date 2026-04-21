@@ -17,12 +17,12 @@ const masterApiMocks = vi.hoisted(() => ({
   listPrograms: vi.fn(),
 }));
 
-vi.mock('../../lib/context/AuthContext', () => ({
+vi.mock('@/auth/AuthContext', () => ({
   useAuth: authMocks.useAuth,
 }));
 
-vi.mock('../../lib/api/publicRepository', async () => {
-  const actual = await vi.importActual<typeof import('../../lib/api/publicRepository')>('../../lib/api/publicRepository');
+vi.mock('@/services/api/publicRepository', async () => {
+  const actual = await vi.importActual<typeof import('@/services/api/publicRepository')>('@/services/api/publicRepository');
   return {
     ...actual,
     publicRepositoryApi: {
@@ -32,7 +32,7 @@ vi.mock('../../lib/api/publicRepository', async () => {
   };
 });
 
-vi.mock('../../lib/api/master', () => ({
+vi.mock('@/services/api/master', () => ({
   masterApi: masterApiMocks,
 }));
 

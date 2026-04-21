@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { notificationsApi } from './lib/api/notifications';
+import { useAuth } from '@/auth/AuthContext';
+import { notificationsApi } from '@/services/api/notifications';
+import type { NotificationItem } from '@/types/workflow';
+import { adminSidebarIcons, lecturerSidebarIcons, studentSidebarIcons } from '@/utils/portalIcons';
+import { formatRoleList, getRoleDisplayLabel } from '@/utils/uiLabels';
 import ThemeSwitch from './theme/ThemeSwitch';
-import type { NotificationItem } from './lib/workflowTypes';
-import { useAuth } from './lib/context/AuthContext';
-import { formatRoleList, getRoleDisplayLabel } from './lib/uiLabels';
 import { useTheme } from './theme/ThemeContext';
 
 interface ShellLayoutProps {
@@ -23,33 +24,34 @@ type LinkItem = {
 function roleLinks(role?: string): LinkItem[] {
   if (role === 'STUDENT') {
     return [
-      { label: 'Dashboard', path: '/student/dashboard', icon: '/icons/student/dashboard.png' },
-      { label: 'Register Publication', path: '/student/registrations', icon: '/icons/student/registration.png' },
-      { label: 'Submission', path: '/student/submissions', icon: '/icons/student/submission.png' },
+      { label: 'Dashboard', path: '/student/dashboard', icon: studentSidebarIcons.dashboard },
+      { label: 'Register Publication', path: '/student/registrations', icon: studentSidebarIcons.registration },
+      { label: 'Submission', path: '/student/submissions', icon: studentSidebarIcons.submission },
     ];
   }
   if (role === 'LECTURER') {
     return [
-      { label: 'Dashboard', path: '/lecturer/dashboard', icon: '/icons/lecturer/dashboard.png' },
-      { label: 'Registration Approval', path: '/lecturer/approvals', icon: '/icons/lecturer/maps-and-flags.png' },
-      { label: 'Submission Review', path: '/lecturer/review', icon: '/icons/lecturer/submission.png' },
-      { label: 'My Students', path: '/lecturer/students', icon: '/icons/lecturer/students.png' },
+      { label: 'Dashboard', path: '/lecturer/dashboard', icon: lecturerSidebarIcons.dashboard },
+      { label: 'Registration Approval', path: '/lecturer/approvals', icon: lecturerSidebarIcons.approvals },
+      { label: 'Submission Review', path: '/lecturer/review', icon: lecturerSidebarIcons.review },
+      { label: 'My Students', path: '/lecturer/students', icon: lecturerSidebarIcons.students },
     ];
   }
   if (role === 'ADMIN') {
     return [
-      { label: 'Dashboard', path: '/admin/dashboard', icon: '/icons/admin/dashboard.png' },
-      { label: 'Registration', path: '/admin/registration-approvals', icon: '/icons/admin/registration.png' },
-      { label: 'Submission Review', path: '/admin/review', icon: '/icons/admin/submission.png' },
-      { label: 'Clearance', path: '/admin/clearance', icon: '/icons/admin/clearance.png' },
-      { label: 'Publishing', path: '/admin/publish', icon: '/icons/admin/publishing.png' },
-      { label: 'Templates', path: '/admin/checklists', icon: '/icons/admin/template.png' },
+      { label: 'Dashboard', path: '/admin/dashboard', icon: adminSidebarIcons.dashboard },
+      { label: 'Registration', path: '/admin/registration-approvals', icon: adminSidebarIcons.registration },
+      { label: 'Submission Review', path: '/admin/review', icon: adminSidebarIcons.submission },
+      { label: 'Students', path: '/admin/students', icon: lecturerSidebarIcons.students },
+      { label: 'Clearance', path: '/admin/clearance', icon: adminSidebarIcons.clearance },
+      { label: 'Publishing', path: '/admin/publish', icon: adminSidebarIcons.publishing },
+      { label: 'Templates', path: '/admin/checklists', icon: adminSidebarIcons.template },
     ];
   }
   return [];
 }
 
-export default function ShellLayout({ title, children, sidebarBadges }: ShellLayoutProps) {
+export default function ShellLayout({ title, subtitle, children, sidebarBadges }: ShellLayoutProps) {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { theme, setTheme } = useTheme();
@@ -313,7 +315,7 @@ export default function ShellLayout({ title, children, sidebarBadges }: ShellLay
         </div>
       </header>
 
-      <div className="container-fluid flex-grow-1">
+      <div className="container-fluid flex-grow-1 su-app-shell">
         <div className="row min-vh-100">
           <aside className="col-12 col-lg-3 col-xl-2 su-sidebar p-3 p-lg-4">
             <nav className="nav flex-column gap-1">
@@ -352,10 +354,13 @@ export default function ShellLayout({ title, children, sidebarBadges }: ShellLay
           </aside>
 
           <main className="col-12 col-lg-9 col-xl-10 p-3 p-lg-4 fade-in">
-            <div className="mb-4">
-              <h2 className="mb-1 su-page-title" style={{ fontSize: '1.5rem' }}>{title}</h2>
+            <div className="su-page-shell">
+              <div className="su-page-header">
+                <h1 className="mb-0 su-page-title">{title}</h1>
+                {subtitle ? <p className="mb-0 su-page-subtitle">{subtitle}</p> : null}
+              </div>
+              {children}
             </div>
-            {children}
           </main>
         </div>
       </div>

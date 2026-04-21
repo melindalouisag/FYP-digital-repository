@@ -22,15 +22,15 @@ const masterApiMocks = vi.hoisted(() => ({
   listFaculties: vi.fn(),
 }));
 
-vi.mock('../../lib/context/AuthContext', () => ({
+vi.mock('@/auth/AuthContext', () => ({
   useAuth: authMocks.useAuth,
 }));
 
-vi.mock('../../lib/api/student', () => ({
+vi.mock('@/services/api/student', () => ({
   studentApi: studentApiMocks,
 }));
 
-vi.mock('../../lib/api/master', () => ({
+vi.mock('@/services/api/master', () => ({
   masterApi: masterApiMocks,
 }));
 

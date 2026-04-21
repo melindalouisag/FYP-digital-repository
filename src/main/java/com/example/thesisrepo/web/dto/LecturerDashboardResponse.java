@@ -10,6 +10,7 @@ public record LecturerDashboardResponse(
   long registrationApprovalCount,
   long submissionReviewCount,
   long studentCount,
+  long revisionRequiredCount,
   List<DashboardStageCountResponse> stageDistribution,
   List<DashboardActivityItemResponse> recentActivity
 ) {

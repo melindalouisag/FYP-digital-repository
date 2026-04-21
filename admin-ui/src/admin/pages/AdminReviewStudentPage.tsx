@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { adminApi } from '@/services/api/admin';
+import CaseTimeline from '@/shared/ui/CaseTimeline';
+import type { AdminStudentReviewGroup, TimelineItem } from '@/types/workflow';
+import { formatStatus, statusBadgeClass } from '@/utils/workflowUi';
 import ShellLayout from '../../ShellLayout';
-import { adminApi } from '../../lib/api/admin';
-import CaseTimeline from '../../lib/components/CaseTimeline';
-import type { AdminStudentReviewGroup, TimelineItem } from '../../lib/workflowTypes';
-import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
 
 export default function AdminReviewStudentPage() {
   const navigate = useNavigate();

@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import type { AuthUser } from '../lib/api/auth';
+import type { AuthUser } from '@/services/api/auth';
 
 interface ProtectedRouteProps {
   user: AuthUser | null;

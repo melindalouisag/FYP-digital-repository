@@ -28,6 +28,11 @@ public class LecturerDashboardService {
     CaseStatus.NEEDS_REVISION_SUPERVISOR,
     CaseStatus.READY_TO_FORWARD
   );
+  private static final Set<CaseStatus> REVISION_REQUIRED_STATUSES = EnumSet.of(
+    CaseStatus.NEEDS_REVISION_SUPERVISOR,
+    CaseStatus.NEEDS_REVISION_LIBRARY,
+    CaseStatus.REJECTED
+  );
 
   private static final List<AuditEventType> RECENT_ACTIVITY_TYPES = List.of(
     AuditEventType.REGISTRATION_SUBMITTED,
@@ -64,6 +69,7 @@ public class LecturerDashboardService {
       caseSupervisors.findPendingApprovalsForLecturer(lecturer.getId()).size(),
       submissionReviewCount,
       studentCount,
+      supervisedCases.stream().filter(c -> REVISION_REQUIRED_STATUSES.contains(c.getStatus())).count(),
       DashboardWorkflowSupport.stageDistribution(supervisedCases),
       recentActivity(supervisedCases, registrationByCaseId)
     );

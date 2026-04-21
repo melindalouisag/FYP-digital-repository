@@ -11,6 +11,7 @@ public record AdminDashboardResponse(
   long submissionReviewQueueCount,
   long clearanceQueueCount,
   long publishingQueueCount,
+  long revisionRequiredCount,
   List<DashboardActionItemResponse> needsActionNow,
   List<DashboardStageCountResponse> stageDistribution,
   List<DashboardActivityItemResponse> recentActivity

@@ -9,5 +9,6 @@ import java.util.Optional;
 
 public interface SubmissionVersionRepository extends JpaRepository<SubmissionVersion, Long> {
   List<SubmissionVersion> findByPublicationCaseOrderByVersionNumberDesc(PublicationCase publicationCase);
+  List<SubmissionVersion> findByPublicationCaseIn(List<PublicationCase> publicationCases);
   Optional<SubmissionVersion> findTopByPublicationCaseOrderByVersionNumberDesc(PublicationCase publicationCase);
 }

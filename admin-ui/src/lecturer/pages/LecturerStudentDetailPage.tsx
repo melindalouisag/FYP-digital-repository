@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { lecturerApi, type LecturerCaseWorkItem, type LecturerStudentGroup, type LecturerSubmissionVersion } from '@/services/api/lecturer';
+import CaseTimeline from '@/shared/ui/CaseTimeline';
+import DownloadFilenameLink from '@/shared/ui/DownloadFilenameLink';
+import { useConfirmDialog } from '@/shared/ui/useConfirmDialog';
+import type { TimelineItem } from '@/types/workflow';
+import { formatStatus, statusBadgeClass } from '@/utils/workflowUi';
 import ShellLayout from '../../ShellLayout';
-import { lecturerApi, type LecturerCaseWorkItem, type LecturerStudentGroup, type LecturerSubmissionVersion } from '../../lib/api/lecturer';
-import CaseTimeline from '../../lib/components/CaseTimeline';
-import { useConfirmDialog } from '../../lib/components/useConfirmDialog';
-import DownloadFilenameLink from '../../lib/components/DownloadFilenameLink';
-import { formatStatus, statusBadgeClass } from '../../lib/workflowUi';
-import type { TimelineItem } from '../../lib/workflowTypes';
 
 const supervisorStatuses: Array<LecturerCaseWorkItem['status']> = [
   'UNDER_SUPERVISOR_REVIEW',
@@ -353,7 +353,7 @@ export default function LecturerStudentDetailPage() {
                             disabled={busy}
                             onClick={() => {
                               openConfirm({
-                                title: 'Confirm Approval and Forwarding',
+                                title: 'Forward to Library',
                                 message: (
                                   <div className="vstack gap-2">
                                     <div>
@@ -362,7 +362,7 @@ export default function LecturerStudentDetailPage() {
                                     <div>Please confirm that the submission is ready for the next stage.</div>
                                   </div>
                                 ),
-                                confirmLabel: 'Confirm Approval',
+                                confirmLabel: 'Forward to Library',
                                 onConfirm: async (close) => {
                                   const success = await runAction(
                                     c.caseId,
@@ -375,7 +375,7 @@ export default function LecturerStudentDetailPage() {
                               });
                             }}
                           >
-                            Approve and Forward to Library
+                            Forward to Library
                           </button>
                         </div>
                       </div>

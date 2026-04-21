@@ -1,4 +1,8 @@
-import { calendarApi } from '../../lib/api/calendar';
+import { useAuth } from '@/auth/AuthContext';
+import { calendarApi } from '@/services/api/calendar';
+import { masterApi, type Faculty } from '@/services/api/master';
+import { studentApi, type SupervisorRow } from '@/services/api/student';
+import type { CalendarEvent, CaseDetailPayload, CaseSummary, PublicationType } from '@/types/workflow';
 import {
   findLatestDeadline,
   formatCalendarEventSchedule,
@@ -9,10 +13,6 @@ import {
 } from '../../calendar/calendarUtils';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { masterApi, type Faculty } from '../../lib/api/master';
-import { studentApi, type SupervisorRow } from '../../lib/api/student';
-import { useAuth } from '../../lib/context/AuthContext';
-import type { CalendarEvent, CaseDetailPayload, CaseSummary, PublicationType } from '../../lib/workflowTypes';
 
 export type FormErrors = {
   title?: string;

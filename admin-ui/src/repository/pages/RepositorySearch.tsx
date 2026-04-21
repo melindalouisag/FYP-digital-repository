@@ -1,10 +1,11 @@
+import type { FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/auth/AuthContext';
+import { type Faculty, type Program } from '@/services/api/master';
+import type { RepositoryItemSummary, RepositorySearchParams } from '@/services/api/publicRepository';
+import KeywordChipInput from '@/shared/ui/KeywordChipInput';
 import ThemeSwitch from '../../theme/ThemeSwitch';
-import { useAuth } from '../../lib/context/AuthContext';
 import { useTheme } from '../../theme/ThemeContext';
-import { RepositorySearchFilters } from '../components/RepositorySearchFilters';
-import { RepositorySearchPagination } from '../components/RepositorySearchPagination';
-import { RepositorySearchResults } from '../components/RepositorySearchResults';
 import { useRepositorySearch } from '../useRepositorySearch';
 
 export default function RepositorySearchPage() {
@@ -140,6 +141,310 @@ export default function RepositorySearchPage() {
           <div>© {new Date().getFullYear()} — Digital Repository</div>
         </footer>
       </div>
+    </div>
+  );
+}
+
+interface RepositorySearchFiltersProps {
+  filters: RepositorySearchParams;
+  keywordTokens: string[];
+  faculties: Faculty[];
+  programs: Program[];
+  selectedFacultyId?: number;
+  selectedProgramId?: number;
+  yearOptions: number[];
+  loading: boolean;
+  activeFilterCount: number;
+  onKeywordTokensChange: (values: string[]) => void;
+  onChange: (key: keyof RepositorySearchParams, value: string) => void;
+  onFacultyChange: (value: string) => void;
+  onProgramChange: (value: string) => void;
+  onSearch: (event: FormEvent<HTMLFormElement>) => void;
+  onReset: () => void;
+}
+
+interface RepositorySearchResultsProps {
+  results: RepositoryItemSummary[];
+  loading: boolean;
+  totalElements: number;
+}
+
+interface RepositorySearchPaginationProps {
+  loading: boolean;
+  hasPrevious: boolean;
+  hasNext: boolean;
+  page: number;
+  totalPages: number;
+  pageStart: number;
+  pageEnd: number;
+  totalElements: number;
+  onPrevious: () => void;
+  onNext: () => void;
+}
+
+function SearchIcon({ size = 18, opacity = 0.8 }: { size?: number; opacity?: number }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      style={{ flexShrink: 0, opacity }}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" />
+    </svg>
+  );
+}
+
+function RepositorySearchFilters({
+  filters,
+  keywordTokens,
+  faculties,
+  programs,
+  selectedFacultyId,
+  selectedProgramId,
+  yearOptions,
+  loading,
+  activeFilterCount,
+  onKeywordTokensChange,
+  onChange,
+  onFacultyChange,
+  onProgramChange,
+  onSearch,
+  onReset,
+}: RepositorySearchFiltersProps) {
+  return (
+    <div className="su-card su-repository-search-card mb-4">
+      <div className="card-body p-4">
+        <h3 className="h6 su-page-title mb-3">
+          <span className="su-title-with-icon">
+            <SearchIcon />
+            <span>Search Repository</span>
+          </span>
+        </h3>
+        <form className="row g-3" onSubmit={onSearch}>
+          <div className="col-md-6">
+            <label className="form-label" htmlFor="repository-search-title">Title</label>
+            <input
+              id="repository-search-title"
+              className="form-control"
+              value={filters.title ?? ''}
+              onChange={(event) => onChange('title', event.target.value)}
+              placeholder="Search by publication title..."
+            />
+          </div>
+          <div className="col-md-6">
+            <label className="form-label" htmlFor="repository-search-author">Author</label>
+            <input
+              id="repository-search-author"
+              className="form-control"
+              value={filters.author ?? ''}
+              onChange={(event) => onChange('author', event.target.value)}
+              placeholder="Search by author name..."
+            />
+          </div>
+
+          <div className="col-md-3">
+            <label className="form-label" htmlFor="repository-search-faculty">Faculty</label>
+            <select
+              id="repository-search-faculty"
+              className="form-select"
+              value={selectedFacultyId ?? ''}
+              onChange={(event) => onFacultyChange(event.target.value)}
+            >
+              <option value="">Any faculty</option>
+              {faculties.map((faculty) => (
+                <option key={faculty.id} value={faculty.id}>{faculty.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="col-md-3">
+            <label className="form-label" htmlFor="repository-search-program">Study Program</label>
+            <select
+              id="repository-search-program"
+              className="form-select"
+              value={selectedProgramId ?? ''}
+              onChange={(event) => onProgramChange(event.target.value)}
+              disabled={!selectedFacultyId}
+            >
+              <option value="">Any study program</option>
+              {programs.map((program) => (
+                <option key={program.id} value={program.id}>{program.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="col-md-3">
+            <label className="form-label" htmlFor="repository-search-keywords">Keywords</label>
+            <KeywordChipInput
+              id="repository-search-keywords"
+              values={keywordTokens}
+              onChange={onKeywordTokensChange}
+              placeholder="Enter keywords separated by commas"
+            />
+          </div>
+
+          <div className="col-md-3">
+            <label className="form-label" htmlFor="repository-search-year">Year Published</label>
+            <select
+              id="repository-search-year"
+              className="form-select"
+              value={filters.year ?? ''}
+              onChange={(event) => onChange('year', event.target.value)}
+            >
+              <option value="">Any year</option>
+              {yearOptions.map((year) => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="col-12 d-flex flex-wrap gap-2 align-items-center">
+            <button className="btn btn-primary" type="submit" disabled={loading}>
+              {loading ? (
+                <><span className="su-spinner d-inline-block me-2" style={{ width: '1rem', height: '1rem', borderWidth: 2 }} /> Searching...</>
+              ) : (
+                <span className="su-label-with-icon">
+                  <SearchIcon />
+                  <span>Search Repository</span>
+                </span>
+              )}
+            </button>
+            <button className="btn btn-outline-secondary" type="button" onClick={onReset} disabled={loading}>
+              Reset Filters
+            </button>
+            {activeFilterCount > 0 && (
+              <span className="badge bg-primary-subtle text-primary-emphasis" style={{ borderRadius: '999px' }}>
+                {activeFilterCount} active filter{activeFilterCount > 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function RepositorySearchResults({
+  results,
+  loading,
+  totalElements,
+}: RepositorySearchResultsProps) {
+  return (
+    <>
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <h3 className="h5 mb-0 su-page-title">
+          <span className="su-title-with-icon">
+            <SearchIcon />
+            <span>Search Results</span>
+          </span>
+        </h3>
+        <span className="badge bg-secondary-subtle text-secondary-emphasis" style={{ borderRadius: '999px', fontSize: '0.8rem' }}>
+          {totalElements} item{totalElements !== 1 ? 's' : ''}
+        </span>
+      </div>
+
+      <div className="vstack gap-3">
+        {results.map((item, index) => (
+          <Link
+            to={`/repo/${item.id}`}
+            className="su-result-card fade-in d-block text-decoration-none text-reset"
+            key={item.id}
+            style={{ animationDelay: `${index * 0.04}s` }}
+            aria-label={`Open publication details for ${item.title}`}
+          >
+            <div className="d-flex justify-content-between align-items-start gap-3">
+              <div style={{ flex: 1 }}>
+                <h4 className="h6 mb-1 su-page-title" style={{ fontSize: '1rem' }}>{item.title}</h4>
+                <div className="d-flex flex-wrap gap-2 mb-2">
+                  <span className="badge bg-primary-subtle text-primary-emphasis" style={{ borderRadius: '999px', fontSize: '0.72rem' }}>
+                    Author: {item.authors || item.authorName || 'Unknown author'}
+                  </span>
+                  <span className="badge bg-secondary-subtle text-secondary-emphasis" style={{ borderRadius: '999px', fontSize: '0.72rem' }}>
+                    Faculty: {item.faculty || 'Unknown faculty'}
+                  </span>
+                  {item.program && (
+                    <span className="badge bg-secondary-subtle text-secondary-emphasis" style={{ borderRadius: '999px', fontSize: '0.72rem' }}>
+                      Program: {item.program}
+                    </span>
+                  )}
+                  {item.year && (
+                    <span className="badge bg-secondary-subtle text-secondary-emphasis" style={{ borderRadius: '999px', fontSize: '0.72rem' }}>
+                      Year: {item.year}
+                    </span>
+                  )}
+                </div>
+                {item.keywords && (
+                  <p className="mb-0 small text-muted">
+                    <strong>Keywords:</strong> {item.keywords}
+                  </p>
+                )}
+              </div>
+            </div>
+          </Link>
+        ))}
+
+        {!loading && results.length === 0 && (
+          <div className="su-empty-state">
+            <div className="su-empty-icon">
+              <SearchIcon size={40} opacity={0.7} />
+            </div>
+            <h5>No Publications Found</h5>
+            <p className="mb-0">Try adjusting your filters or search terms to discover more publications.</p>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+function RepositorySearchPagination({
+  loading,
+  hasPrevious,
+  hasNext,
+  page,
+  totalPages,
+  pageStart,
+  pageEnd,
+  totalElements,
+  onPrevious,
+  onNext,
+}: RepositorySearchPaginationProps) {
+  if (loading || totalElements === 0) {
+    return null;
+  }
+
+  return (
+    <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-4">
+      <div className="text-muted small">
+        Showing {pageStart}-{pageEnd} of {totalElements}
+      </div>
+      <nav aria-label="Repository search pagination">
+        <ul className="pagination pagination-sm mb-0">
+          <li className={`page-item ${!hasPrevious || loading ? 'disabled' : ''}`}>
+            <button className="page-link" type="button" onClick={onPrevious} disabled={!hasPrevious || loading}>
+              Previous
+            </button>
+          </li>
+          <li className="page-item disabled">
+            <span className="page-link">
+              Page {page + 1} of {Math.max(totalPages, 1)}
+            </span>
+          </li>
+          <li className={`page-item ${!hasNext || loading ? 'disabled' : ''}`}>
+            <button className="page-link" type="button" onClick={onNext} disabled={!hasNext || loading}>
+              Next
+            </button>
+          </li>
+        </ul>
+      </nav>
     </div>
   );
 }

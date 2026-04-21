@@ -1,8 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
+import type { AuthUser } from '@/services/api/auth';
 import { ProtectedRoute } from './ProtectedRoute';
-import type { AuthUser } from '../lib/api/auth';
 
 const baseUser: AuthUser = {
   id: 1,

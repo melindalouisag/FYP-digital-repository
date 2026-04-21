@@ -1,8 +1,8 @@
 import type { FormEvent } from 'react';
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useAuth } from '@/auth/AuthContext';
 import ShellLayout from '../../ShellLayout';
-import { useAuth } from '../../lib/context/AuthContext';
 import { CalendarEventModal } from '../CalendarEventModal';
 import { CalendarMonthGrid } from '../CalendarMonthGrid';
 import {

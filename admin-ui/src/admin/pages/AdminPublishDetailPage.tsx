@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { adminApi } from '@/services/api/admin';
+import DownloadFilenameLink from '@/shared/ui/DownloadFilenameLink';
+import { useConfirmDialog } from '@/shared/ui/useConfirmDialog';
+import type { AdminPublishDetail } from '@/types/workflow';
 import ShellLayout from '../../ShellLayout';
-import DownloadFilenameLink from '../../lib/components/DownloadFilenameLink';
-import { useConfirmDialog } from '../../lib/components/useConfirmDialog';
-import { adminApi } from '../../lib/api/admin';
-import type { AdminPublishDetail } from '../../lib/workflowTypes';
 
 export default function AdminPublishDetailPage() {
   const navigate = useNavigate();

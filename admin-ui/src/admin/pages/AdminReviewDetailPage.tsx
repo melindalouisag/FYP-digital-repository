@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import ShellLayout from '../../ShellLayout';
-import { adminApi } from '../../lib/api/admin';
-import { useConfirmDialog } from '../../lib/components/useConfirmDialog';
-import { getRoleDisplayLabel } from '../../lib/uiLabels';
+import { adminApi } from '@/services/api/admin';
+import { useConfirmDialog } from '@/shared/ui/useConfirmDialog';
 import type {
   CaseDetailPayload,
   ChecklistItem,
@@ -12,14 +10,16 @@ import type {
   PublicationType,
   SubmissionVersion,
   WorkflowComment,
-} from '../../lib/workflowTypes';
+} from '@/types/workflow';
+import { getRoleDisplayLabel } from '@/utils/uiLabels';
 import {
   canAdminDecide,
   canAdminSaveChecklist,
   formatStatus,
   isAdminReviewStage,
   isFinalizedForLibrary,
-} from '../../lib/workflowUi';
+} from '@/utils/workflowUi';
+import ShellLayout from '../../ShellLayout';
 
 type ChecklistDraftRow = {
   checklistItemId: number;
@@ -409,7 +409,7 @@ export default function AdminReviewDetailPage() {
 
   const openApproveConfirm = () => {
     openConfirm({
-      title: 'Confirm Approval for Clearance',
+      title: 'Approve and Continue',
       message: (
         <div className="vstack gap-2">
           <div>
@@ -422,7 +422,7 @@ export default function AdminReviewDetailPage() {
           ) : null}
         </div>
       ),
-      confirmLabel: 'Confirm Approval',
+      confirmLabel: 'Approve and Continue',
       onConfirm: async (close) => {
         const success = await approveCase();
         if (success) {
@@ -690,7 +690,7 @@ export default function AdminReviewDetailPage() {
                   disabled={working || !decisionAllowed}
                   onClick={openApproveConfirm}
                 >
-                  Approve for Clearance
+                  Approve and Continue
                 </button>
               </div>
           </ReviewCard>

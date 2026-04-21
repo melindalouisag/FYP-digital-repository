@@ -1,9 +1,9 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authApi, defaultPath } from '../lib/api/auth';
-import { ApiError, bootstrapCsrfToken } from '../lib/api/http';
-import { masterApi, type Faculty, type Program } from '../lib/api/master';
-import { useAuth } from '../lib/context/AuthContext';
+import { useAuth } from '@/auth/AuthContext';
+import { authApi, defaultPath } from '@/services/api/auth';
+import { ApiError, bootstrapCsrfToken } from '@/services/api/http';
+import { masterApi, type Faculty, type Program } from '@/services/api/master';
 
 type FormErrors = {
   name?: string;

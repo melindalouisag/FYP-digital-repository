@@ -1,6 +1,6 @@
 import { Suspense, lazy, type ReactNode } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { useAuth } from '../lib/context/AuthContext';
+import { useAuth } from '@/auth/AuthContext';
 import { ProtectedRoute } from './ProtectedRoute';
 import { RoleGuard } from './RoleGuard';
 
@@ -38,6 +38,9 @@ const AdminPublishPage = lazy(() => import('../admin/pages/AdminPublishPage'));
 const AdminPublishDetailPage = lazy(() => import('../admin/pages/AdminPublishDetailPage'));
 const AdminChecklistPage = lazy(() => import('../admin/pages/AdminChecklistPage'));
 const AdminChecklistEditorPage = lazy(() => import('../admin/pages/AdminChecklistEditorPage'));
+const AdminStudentsOverviewPage = lazy(() => import('../admin/pages/AdminStudentsOverviewPage'));
+const AdminStudentsListPage = lazy(() => import('../admin/pages/AdminStudentsListPage'));
+const AdminStudentProfilePage = lazy(() => import('../admin/pages/AdminStudentProfilePage'));
 
 const ROUTE_PATHS = {
   LECTURER_REVIEW: '/lecturer/review',
@@ -136,6 +139,9 @@ export function AppRoutes() {
     { path: '/admin/clearance', element: withSuspense(protectedElement(<AdminClearancePage />, ['ADMIN'])) },
     { path: '/admin/publish', element: withSuspense(protectedElement(<AdminPublishPage />, ['ADMIN'])) },
     { path: '/admin/publish/:caseId', element: withSuspense(protectedElement(<AdminPublishDetailPage />, ['ADMIN'])) },
+    { path: '/admin/students', element: withSuspense(protectedElement(<AdminStudentsOverviewPage />, ['ADMIN'])) },
+    { path: '/admin/students/:facultyCode', element: withSuspense(protectedElement(<AdminStudentsListPage />, ['ADMIN'])) },
+    { path: '/admin/students/:facultyCode/:studentUserId', element: withSuspense(protectedElement(<AdminStudentProfilePage />, ['ADMIN'])) },
     { path: '/admin/checklists', element: withSuspense(protectedElement(<AdminChecklistPage />, ['ADMIN'])) },
     { path: '/admin/checklists/:templateId/edit', element: withSuspense(protectedElement(<AdminChecklistEditorPage />, ['ADMIN'])) },
   ];

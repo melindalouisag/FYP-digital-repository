@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
-import { defaultPath, type AuthUser } from '../lib/api/auth';
+import { defaultPath, type AuthUser } from '@/services/api/auth';
 
 interface RoleGuardProps {
   user: AuthUser | null;
