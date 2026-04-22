@@ -318,16 +318,22 @@ export default function AdminDashboardPage() {
 }
 
 function ActivityRow({ item }: { item: DashboardActivityItem }) {
+  const primaryLabel = item.subtitle || item.title;
+  const secondaryLabel = item.subtitle ? item.title : item.detail;
+  const metadataParts = [
+    item.subtitle ? item.detail : null,
+    item.occurredAt ? new Date(item.occurredAt).toLocaleString() : 'Not available',
+  ].filter(Boolean);
+
   return (
     <div className="su-support-list-item">
       <div className="d-flex flex-wrap justify-content-between align-items-start gap-2">
-        <div>
-          <div className="fw-semibold">{item.title}</div>
-          <div className="su-secondary-text">
-            {item.subtitle ? `${item.subtitle} • ` : ''}
-            {item.occurredAt ? new Date(item.occurredAt).toLocaleString() : 'Not available'}
+        <div className="min-w-0 su-dashboard-activity-copy">
+          <div className="su-dashboard-activity-main">
+            <div className="su-dashboard-activity-primary">{primaryLabel}</div>
+            <div className="su-dashboard-activity-secondary">{secondaryLabel}</div>
           </div>
-          <div className="su-table-title">{item.detail}</div>
+          <div className="su-dashboard-activity-meta">{metadataParts.join(' • ')}</div>
         </div>
         <StatusBadge status={item.status} />
       </div>

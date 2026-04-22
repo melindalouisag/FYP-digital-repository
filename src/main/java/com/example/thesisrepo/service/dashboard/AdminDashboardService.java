@@ -1,5 +1,7 @@
 package com.example.thesisrepo.service.dashboard;
 
+import com.example.thesisrepo.profile.StudentProfile;
+import com.example.thesisrepo.profile.StudentProfileRepository;
 import com.example.thesisrepo.publication.*;
 import com.example.thesisrepo.publication.repo.AuditEventRepository;
 import com.example.thesisrepo.publication.repo.PublicationCaseRepository;
@@ -52,6 +54,7 @@ public class AdminDashboardService {
   private final PublicationCaseRepository cases;
   private final PublicationRegistrationRepository registrations;
   private final AuditEventRepository auditEvents;
+  private final StudentProfileRepository studentProfiles;
 
   public AdminDashboardResponse build() {
     List<PublicationCase> allCases = cases.findAll(
@@ -110,6 +113,16 @@ public class AdminDashboardService {
       return List.of();
     }
 
+    Map<Long, StudentProfile> profileByStudentId = studentProfiles.findByUserIdIn(
+      caseById.values().stream()
+        .map(PublicationCase::getStudent)
+        .filter(Objects::nonNull)
+        .map(student -> student.getId())
+        .filter(Objects::nonNull)
+        .distinct()
+        .toList()
+    ).stream().collect(Collectors.toMap(StudentProfile::getUserId, Function.identity()));
+
     Set<Long> caseIds = new LinkedHashSet<>();
     List<DashboardActivityItemResponse> items = auditEvents.findTop20ByEventTypeInOrderByCreatedAtDesc(RECENT_ACTIVITY_TYPES).stream()
       .map(event -> {
@@ -124,7 +137,7 @@ public class AdminDashboardService {
       .limit(10)
       .toList()
       .stream()
-      .map(event -> toActivity(event, caseById))
+      .map(event -> toActivity(event, caseById, profileByStudentId))
       .filter(Objects::nonNull)
       .limit(6)
       .toList();
@@ -150,17 +163,30 @@ public class AdminDashboardService {
       .toList();
   }
 
-  private DashboardActivityItemResponse toActivity(AuditEvent event, Map<Long, PublicationCase> caseById) {
+  private DashboardActivityItemResponse toActivity(
+    AuditEvent event,
+    Map<Long, PublicationCase> caseById,
+    Map<Long, StudentProfile> profileByStudentId
+  ) {
     PublicationCase publicationCase = caseById.get(event.getCaseId());
     if (publicationCase == null) {
       return null;
     }
 
+    StudentProfile studentProfile = publicationCase.getStudent() != null
+      ? profileByStudentId.get(publicationCase.getStudent().getId())
+      : null;
+    String studentName = studentProfile != null && studentProfile.getName() != null && !studentProfile.getName().isBlank()
+      ? studentProfile.getName()
+      : publicationCase.getStudent() != null && publicationCase.getStudent().getEmail() != null
+        ? publicationCase.getStudent().getEmail()
+        : null;
+
     return new DashboardActivityItemResponse(
       publicationCase.getId(),
       publicationCase.getStudent() != null ? publicationCase.getStudent().getId() : null,
       "Untitled Publication",
-      null,
+      studentName,
       describeAdminActivity(event.getEventType()),
       event.getCreatedAt(),
       publicationCase.getStatus()

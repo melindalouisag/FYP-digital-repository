@@ -125,15 +125,21 @@ export default function LecturerDashboardPage() {
 }
 
 function LecturerActivityItem({ item }: { item: DashboardActivityItem }) {
+  const primaryLabel = item.subtitle || item.title;
+  const secondaryLabel = item.subtitle ? item.title : item.detail;
+  const metadataParts = [
+    item.subtitle ? item.detail : null,
+    item.occurredAt ? new Date(item.occurredAt).toLocaleString() : 'No recent updates',
+  ].filter(Boolean);
+
   return (
     <div className="d-flex justify-content-between gap-3 align-items-start">
-      <div className="min-w-0">
-        <div className="su-dashboard-item-title">{item.title}</div>
-        <div className="su-dashboard-item-support">{item.detail}</div>
-        <div className="su-dashboard-item-meta">
-          {item.subtitle ? `${item.subtitle} • ` : ''}
-          {item.occurredAt ? new Date(item.occurredAt).toLocaleString() : 'No recent updates'}
+      <div className="min-w-0 su-dashboard-activity-copy">
+        <div className="su-dashboard-activity-main">
+          <div className="su-dashboard-activity-primary">{primaryLabel}</div>
+          <div className="su-dashboard-activity-secondary">{secondaryLabel}</div>
         </div>
+        <div className="su-dashboard-activity-meta">{metadataParts.join(' • ')}</div>
       </div>
       <div className="flex-shrink-0">
         <StatusBadge status={item.status} />
