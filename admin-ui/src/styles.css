@@ -3493,3 +3493,256 @@ body {
     flex-direction: column;
   }
 }
+
+/* ================================================================
+   Dashboard Layout Restore
+   ================================================================ */
+
+.su-dashboard-top-row {
+  align-items: stretch;
+}
+
+.su-dashboard-panel,
+.su-support-card,
+.su-publication-record-card {
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.su-dashboard-panel {
+  padding: 20px;
+  border: 1px solid #e5ecf2;
+  background: #fff;
+}
+
+.su-dashboard-panel-header {
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.su-dashboard-panel-title {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+}
+
+.su-dashboard-panel-actions {
+  gap: 8px;
+}
+
+.su-dashboard-panel-body {
+  gap: 12px;
+}
+
+.su-progress-ring-card-body {
+  gap: 16px;
+  min-height: 0;
+}
+
+.su-progress-ring {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: clamp(180px, 28vw, 220px);
+  aspect-ratio: 1;
+  padding: 0;
+  box-shadow: none;
+}
+
+.su-progress-ring-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+  overflow: visible;
+}
+
+.su-progress-ring-track,
+.su-progress-ring-fill {
+  fill: none;
+}
+
+.su-progress-ring-track {
+  stroke: #e7eef1;
+}
+
+.su-progress-ring-fill {
+  stroke: var(--su-teal);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1000ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: stroke-dashoffset;
+}
+
+.su-progress-ring-core {
+  position: absolute;
+  inset: 14%;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.su-progress-ring-value {
+  font-size: 32px;
+  font-weight: 700;
+}
+
+.su-progress-ring-primary {
+  max-width: 100%;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+}
+
+.su-progress-ring-secondary,
+.su-dashboard-empty-copy,
+.su-dashboard-item-meta,
+.su-publication-list-meta,
+.su-publication-record-meta,
+.su-dashboard-toolbar-meta,
+.su-dashboard-toolbar-label {
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.su-progress-ring-secondary {
+  max-width: 100%;
+}
+
+.su-progress-ring-select,
+.su-publication-filter-select,
+.su-dashboard-toolbar-select {
+  min-width: 160px;
+  border-radius: 999px;
+}
+
+.su-dashboard-panel-button {
+  gap: 12px;
+}
+
+.su-dashboard-next-action-callout {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--su-gray-50);
+  color: var(--su-navy);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 500;
+}
+
+.su-dashboard-list-item {
+  padding: 12px 0;
+}
+
+.su-dashboard-item-title,
+.su-publication-record-title {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+}
+
+.su-dashboard-item-support,
+.su-publication-record-support,
+.su-support-list-item .su-table-title {
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.su-dashboard-bars {
+  gap: 14px;
+}
+
+.su-dashboard-bar-label,
+.su-dashboard-bar-value {
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.su-dashboard-bar-track {
+  height: 8px;
+}
+
+.status-badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.su-publication-list {
+  gap: 12px;
+}
+
+.su-publication-record-card {
+  padding: 16px;
+  background: #fff;
+  transition: border-color var(--su-transition), background var(--su-transition);
+}
+
+.su-publication-record-card:hover,
+.su-publication-record-card:focus-visible {
+  transform: none;
+  box-shadow: none;
+  background: #fff;
+}
+
+.su-support-card {
+  padding: 20px;
+}
+
+.su-support-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.su-support-list-item {
+  padding: 12px 0;
+  border-top: 1px solid #edf2f6;
+}
+
+.su-support-list > :first-child .su-support-list-item,
+.su-support-list > .su-support-list-item:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.su-support-list > :last-child .su-support-list-item,
+.su-support-list > .su-support-list-item:last-child {
+  padding-bottom: 0;
+}
+
+.su-dashboard-toolbar-meta {
+  color: #5d7387;
+}
+
+.su-dashboard-toolbar-label {
+  color: var(--su-navy);
+  font-weight: 600;
+}
+
+[data-theme="dark"] .su-progress-ring-track {
+  stroke: rgba(255, 255, 255, 0.08);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .su-progress-ring-fill {
+    transition: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .su-dashboard-panel,
+  .su-support-card {
+    padding: 16px;
+  }
+
+  .su-progress-ring {
+    width: min(100%, 200px);
+  }
+
+  .su-dashboard-toolbar-select {
+    min-width: 132px;
+  }
+}

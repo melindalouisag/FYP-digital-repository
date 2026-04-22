@@ -2,8 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { adminApi } from '@/services/api/admin';
 import { calendarApi } from '@/services/api/calendar';
-import EmptyState from '@/shared/ui/EmptyState';
+import DashboardPanel from '@/shared/ui/DashboardPanel';
+import DashboardProgressRingCard from '@/shared/ui/DashboardProgressRingCard';
 import StatusBadge from '@/shared/ui/StatusBadge';
+import WorkflowStageOverviewCard from '@/shared/ui/WorkflowStageOverviewCard';
 import type {
   AdminDashboardData,
   CalendarEvent,
@@ -89,20 +91,19 @@ export default function AdminDashboardPage() {
     void loadDeadlines();
   }, [loadDeadlines]);
 
-  const totalCases = useMemo(() => (
-    dashboard.stageDistribution.reduce((sum, item) => sum + item.count, 0)
-  ), [dashboard.stageDistribution]);
-  const pendingActions = dashboard.registrationQueueCount
-    + dashboard.submissionReviewQueueCount
-    + dashboard.clearanceQueueCount
-    + dashboard.publishingQueueCount;
-  const completedCases = dashboard.stageDistribution.find((item) => item.label === 'Published')?.count ?? 0;
-  const upcomingDeadlines = deadlineEvents
-    .filter((event) => {
-      const rawTime = event.eventTime.length === 5 ? `${event.eventTime}:00` : event.eventTime;
-      return new Date(`${event.eventDate}T${rawTime}`).getTime() >= Date.now();
-    })
-    .slice(0, 4);
+  const completionPercent = useMemo(() => (
+    dashboard.totalStudentCount > 0
+      ? Math.round((dashboard.publishedStudentCount / dashboard.totalStudentCount) * 100)
+      : 0
+  ), [dashboard.publishedStudentCount, dashboard.totalStudentCount]);
+  const upcomingDeadlines = useMemo(() => (
+    deadlineEvents
+      .filter((event) => {
+        const rawTime = event.eventTime.length === 5 ? `${event.eventTime}:00` : event.eventTime;
+        return new Date(`${event.eventDate}T${rawTime}`).getTime() >= Date.now();
+      })
+      .slice(0, 4)
+  ), [deadlineEvents]);
 
   const saveDeadline = async () => {
     if (!deadlineForm.title.trim()) {
@@ -135,8 +136,8 @@ export default function AdminDashboardPage() {
 
   return (
     <ShellLayout
-      title="Dashboard"
-      subtitle="Administrative overview for registration, submission review, clearance, and publication release."
+      title="Library Admin Dashboard"
+      subtitle="Monitor repository completion, act on urgent queue items, and keep publication workflows moving."
       sidebarBadges={{
         '/admin/registration-approvals': dashboard.registrationQueueCount,
         '/admin/review': dashboard.submissionReviewQueueCount,
@@ -146,83 +147,54 @@ export default function AdminDashboardPage() {
     >
       {error ? <div className="alert alert-danger">{error}</div> : null}
 
-      <div className="su-summary-grid mb-4">
-        <SummaryCard label="Total Cases" value={totalCases} />
-        <SummaryCard label="Pending Actions" value={pendingActions} />
-        <SummaryCard label="Completed" value={completedCases} />
-        <SummaryCard label="Revision Required" value={dashboard.revisionRequiredCount} />
+      <div className="su-dashboard-grid su-dashboard-grid-3 su-dashboard-top-row mb-4">
+        <DashboardProgressRingCard
+          title="Repository Completion"
+          progressPercent={completionPercent}
+          loading={loading}
+          primaryText={`${dashboard.publishedStudentCount} of ${dashboard.totalStudentCount} students published`}
+          secondaryText={`${dashboard.activeCaseCount} active publication${dashboard.activeCaseCount === 1 ? '' : 's'}`}
+        />
+        <DashboardPanel title="Needs Action Now" className="w-100">
+          {loading ? (
+            <p className="su-dashboard-empty-copy mb-0">Loading dashboard data.</p>
+          ) : dashboard.needsActionNow.length === 0 ? (
+            <p className="su-dashboard-empty-copy mb-0">No urgent queue items right now.</p>
+          ) : (
+            <div className="su-dashboard-list">
+              {dashboard.needsActionNow.map((item) => (
+                <button
+                  className="su-dashboard-item-button"
+                  type="button"
+                  key={`${item.queueKey}-${item.caseId}`}
+                  onClick={() => navigate(resolveAdminQueuePath(item))}
+                >
+                  <div className="su-dashboard-list-item">
+                    <div className="d-flex justify-content-between gap-3 align-items-start">
+                      <div className="min-w-0">
+                        <div className="su-dashboard-item-title">{item.title}</div>
+                        <div className="su-dashboard-item-support">{item.detail}</div>
+                        <div className="su-dashboard-item-meta">
+                          {item.queueLabel}
+                          {item.updatedAt ? ` • Updated ${new Date(item.updatedAt).toLocaleString()}` : ''}
+                        </div>
+                      </div>
+                      <div className="flex-shrink-0">
+                        <StatusBadge status={item.status} />
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </DashboardPanel>
+        <WorkflowStageOverviewCard
+          loading={loading}
+          stageDistribution={dashboard.stageDistribution}
+          emptyText="No workflow records available."
+        />
       </div>
-
-      <section className="su-section">
-        <div className="su-section-header">
-          <div>
-            <h2 className="su-section-title mb-1">Action Required</h2>
-            <p className="su-secondary-text mb-0">Items are ordered by the most urgent administrative queue.</p>
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="text-center py-5">
-            <div className="su-spinner mx-auto mb-3" />
-            <div className="text-muted">Loading dashboard data...</div>
-          </div>
-        ) : dashboard.needsActionNow.length === 0 ? (
-          <EmptyState
-            title="No actions pending"
-            description="Urgent queue items will appear here when a workflow step needs administrative attention."
-          />
-        ) : (
-          <div className="su-table-shell">
-            <table className="table align-middle mb-0">
-              <thead>
-                <tr>
-                  <th>Title</th>
-                  <th>Status</th>
-                  <th>Queue</th>
-                  <th>Last Updated</th>
-                  <th className="text-end">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dashboard.needsActionNow.map((item) => (
-                  <tr
-                    key={`${item.queueKey}-${item.caseId}`}
-                    className="su-table-row-clickable"
-                    tabIndex={0}
-                    onClick={() => navigate(resolveAdminQueuePath(item))}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        navigate(resolveAdminQueuePath(item));
-                      }
-                    }}
-                  >
-                    <td>
-                      <div className="su-table-title">{item.title}</div>
-                      <div className="su-secondary-text">{item.detail}</div>
-                    </td>
-                    <td><StatusBadge status={item.status} /></td>
-                    <td>{item.queueLabel}</td>
-                    <td>{item.updatedAt ? new Date(item.updatedAt).toLocaleString() : 'Not available'}</td>
-                    <td className="text-end">
-                      <button
-                        type="button"
-                        className="btn btn-outline-secondary"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          navigate(resolveAdminQueuePath(item));
-                        }}
-                      >
-                        Open
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
 
       <div className="su-support-grid">
         <section className="su-support-card">
@@ -236,10 +208,7 @@ export default function AdminDashboardPage() {
           {loading ? (
             <div className="text-muted">Loading activity...</div>
           ) : dashboard.recentActivity.length === 0 ? (
-            <EmptyState
-              title="No recent activity"
-              description="Recent workflow events will appear here after cases move between stages."
-            />
+            <p className="su-dashboard-empty-copy mb-0">Recent workflow events will appear here after cases move between stages.</p>
           ) : (
             <div className="su-support-list">
               {dashboard.recentActivity.map((item) => (
@@ -328,10 +297,7 @@ export default function AdminDashboardPage() {
           </div>
 
           {upcomingDeadlines.length === 0 ? (
-            <EmptyState
-              title="No upcoming deadlines"
-              description="Create a deadline to add it to the administrative calendar."
-            />
+            <p className="su-dashboard-empty-copy mb-0">Create a deadline to add it to the administrative calendar.</p>
           ) : (
             <div className="su-support-list">
               {upcomingDeadlines.map((event) => (
@@ -348,15 +314,6 @@ export default function AdminDashboardPage() {
         </section>
       </div>
     </ShellLayout>
-  );
-}
-
-function SummaryCard({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="su-summary-card">
-      <div className="su-secondary-text">{label}</div>
-      <div className="su-summary-value">{value}</div>
-    </div>
   );
 }
 
