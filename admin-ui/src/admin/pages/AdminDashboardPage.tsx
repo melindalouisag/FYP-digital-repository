@@ -10,7 +10,6 @@ import type {
   AdminDashboardData,
   AdminStudentTrackingGroup,
   CalendarEvent,
-  DashboardActivityItem,
   DashboardActionItem,
   DeadlineActionType,
   PublicationType,
@@ -125,10 +124,6 @@ export default function AdminDashboardPage() {
     () => dashboard.needsActionNow.slice(0, 4),
     [dashboard.needsActionNow]
   );
-  const visibleRecentActivity = useMemo(
-    () => dashboard.recentActivity.slice(0, 4),
-    [dashboard.recentActivity]
-  );
 
   const saveDeadline = async () => {
     if (!deadlineForm.title.trim()) {
@@ -173,7 +168,7 @@ export default function AdminDashboardPage() {
     >
       {error ? <div className="alert alert-danger">{error}</div> : null}
 
-      <div className="su-dashboard-content">
+      <div className="su-dashboard-content su-admin-dashboard-content">
         <div className="su-dashboard-grid su-dashboard-grid-3 su-dashboard-top-row su-admin-dashboard-top-row">
           <DashboardProgressRingCard
             title="Repository Completion"
@@ -211,123 +206,100 @@ export default function AdminDashboardPage() {
           />
         </div>
 
-        <div className="su-support-grid">
-          <section className="su-support-card">
-            <div className="su-section-header">
+        <section className="su-support-card su-admin-calendar-card">
+          <div className="su-section-header">
+            <div>
+              <h2 className="su-section-title mb-1">Administrative Calendar</h2>
+              <p className="su-secondary-text mb-0">Manage upcoming registration and submission deadlines.</p>
+            </div>
+          </div>
+
+          {deadlineError ? <div className="alert alert-danger py-2">{deadlineError}</div> : null}
+          {deadlineMessage ? <div className="alert alert-success py-2">{deadlineMessage}</div> : null}
+          {deadlineLoadError ? <div className="alert alert-warning py-2">{deadlineLoadError}</div> : null}
+
+          <div className="su-form-section mb-3">
+            <div className="su-form-grid">
+              <div className="su-form-field-full">
+                <label className="form-label mb-1">Deadline Title</label>
+                <input
+                  className="form-control"
+                  value={deadlineForm.title}
+                  placeholder="Enter deadline title"
+                  onChange={(event) => setDeadlineForm((current) => ({ ...current, title: event.target.value }))}
+                />
+              </div>
               <div>
-                <h2 className="su-section-title mb-1">Recent Activity</h2>
-                <p className="su-secondary-text mb-0">Latest workflow updates across the repository.</p>
+                <label className="form-label mb-1">Action</label>
+                <select
+                  className="form-select"
+                  value={deadlineForm.deadlineAction}
+                  onChange={(event) => setDeadlineForm((current) => ({
+                    ...current,
+                    deadlineAction: event.target.value as DeadlineActionType,
+                  }))}
+                >
+                  <option value="REGISTRATION_DEADLINE">Registration deadline</option>
+                  <option value="SUBMISSION_DEADLINE">Submission deadline</option>
+                </select>
               </div>
-            </div>
-
-            {loading ? (
-              <div className="text-muted">Loading activity...</div>
-            ) : visibleRecentActivity.length === 0 ? (
-              <p className="su-dashboard-empty-copy mb-0">Recent workflow events will appear here after cases move between stages.</p>
-            ) : (
-              <div className="su-support-list">
-                {visibleRecentActivity.map((item) => (
-                  <ActivityRow key={`${item.caseId}-${item.occurredAt ?? item.detail}`} item={item} />
-                ))}
-              </div>
-            )}
-          </section>
-
-          <section className="su-support-card">
-            <div className="su-section-header">
               <div>
-                <h2 className="su-section-title mb-1">Administrative Calendar</h2>
-                <p className="su-secondary-text mb-0">Manage upcoming registration and submission deadlines.</p>
+                <label className="form-label mb-1">Publication Type</label>
+                <select
+                  className="form-select"
+                  value={deadlineForm.publicationType}
+                  onChange={(event) => setDeadlineForm((current) => ({
+                    ...current,
+                    publicationType: event.target.value as PublicationType,
+                  }))}
+                >
+                  {ACTIVE_PUBLICATION_TYPES.map((type) => (
+                    <option key={type} value={type}>{getPublicationTypeLabel(type)}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="form-label mb-1">Date</label>
+                <input
+                  className="form-control"
+                  type="date"
+                  value={deadlineForm.eventDate}
+                  onChange={(event) => setDeadlineForm((current) => ({ ...current, eventDate: event.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="form-label mb-1">Time</label>
+                <input
+                  className="form-control"
+                  type="time"
+                  value={deadlineForm.eventTime}
+                  onChange={(event) => setDeadlineForm((current) => ({ ...current, eventTime: event.target.value }))}
+                />
               </div>
             </div>
-
-            {deadlineError ? <div className="alert alert-danger py-2">{deadlineError}</div> : null}
-            {deadlineMessage ? <div className="alert alert-success py-2">{deadlineMessage}</div> : null}
-            {deadlineLoadError ? <div className="alert alert-warning py-2">{deadlineLoadError}</div> : null}
-
-            <div className="su-form-section mb-3">
-              <div className="su-form-grid">
-                <div className="su-form-field-full">
-                  <label className="form-label mb-1">Deadline Title</label>
-                  <input
-                    className="form-control"
-                    value={deadlineForm.title}
-                    placeholder="Enter deadline title"
-                    onChange={(event) => setDeadlineForm((current) => ({ ...current, title: event.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label className="form-label mb-1">Action</label>
-                  <select
-                    className="form-select"
-                    value={deadlineForm.deadlineAction}
-                    onChange={(event) => setDeadlineForm((current) => ({
-                      ...current,
-                      deadlineAction: event.target.value as DeadlineActionType,
-                    }))}
-                  >
-                    <option value="REGISTRATION_DEADLINE">Registration deadline</option>
-                    <option value="SUBMISSION_DEADLINE">Submission deadline</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="form-label mb-1">Publication Type</label>
-                  <select
-                    className="form-select"
-                    value={deadlineForm.publicationType}
-                    onChange={(event) => setDeadlineForm((current) => ({
-                      ...current,
-                      publicationType: event.target.value as PublicationType,
-                    }))}
-                  >
-                    {ACTIVE_PUBLICATION_TYPES.map((type) => (
-                      <option key={type} value={type}>{getPublicationTypeLabel(type)}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="form-label mb-1">Date</label>
-                  <input
-                    className="form-control"
-                    type="date"
-                    value={deadlineForm.eventDate}
-                    onChange={(event) => setDeadlineForm((current) => ({ ...current, eventDate: event.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label className="form-label mb-1">Time</label>
-                  <input
-                    className="form-control"
-                    type="time"
-                    value={deadlineForm.eventTime}
-                    onChange={(event) => setDeadlineForm((current) => ({ ...current, eventTime: event.target.value }))}
-                  />
-                </div>
-              </div>
-              <div className="su-form-actions mt-3">
-                <button type="button" className="btn btn-primary" disabled={deadlineSaving} onClick={() => void saveDeadline()}>
-                  {deadlineSaving ? 'Saving...' : 'Save Deadline'}
-                </button>
-              </div>
+            <div className="su-form-actions mt-3">
+              <button type="button" className="btn btn-primary" disabled={deadlineSaving} onClick={() => void saveDeadline()}>
+                {deadlineSaving ? 'Saving...' : 'Save Deadline'}
+              </button>
             </div>
+          </div>
 
-            {upcomingDeadlines.length === 0 ? (
-              <p className="su-dashboard-empty-copy mb-0">Create a deadline to add it to the administrative calendar.</p>
-            ) : (
-              <div className="su-support-list">
-                {upcomingDeadlines.map((event) => (
-                  <div key={event.id} className="su-support-list-item">
-                    <div className="fw-semibold">{event.title}</div>
-                    <div className="su-secondary-text">
-                      {getDeadlineActionLabel(event.deadlineAction)} • {getPublicationTypeLabel(event.publicationType)}
-                    </div>
-                    <div className="su-secondary-text">{formatCalendarEventSchedule(event)}</div>
+          {upcomingDeadlines.length === 0 ? (
+            <p className="su-dashboard-empty-copy mb-0">Create a deadline to add it to the administrative calendar.</p>
+          ) : (
+            <div className="su-support-list">
+              {upcomingDeadlines.map((event) => (
+                <div key={event.id} className="su-support-list-item">
+                  <div className="fw-semibold">{event.title}</div>
+                  <div className="su-secondary-text">
+                    {getDeadlineActionLabel(event.deadlineAction)} • {getPublicationTypeLabel(event.publicationType)}
                   </div>
-                ))}
-              </div>
-            )}
-          </section>
-        </div>
+                  <div className="su-secondary-text">{formatCalendarEventSchedule(event)}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
     </ShellLayout>
   );
@@ -342,44 +314,21 @@ function AdminNeedsActionItem({
 }) {
   const primaryLabel = studentName || item.title;
   const secondaryLabel = studentName ? item.title : item.detail;
-  const metadataParts = [
-    studentName ? item.detail : null,
+  const contextText = studentName ? item.detail : null;
+  const metadataText = [
     item.queueLabel,
     item.updatedAt ? `Updated ${new Date(item.updatedAt).toLocaleString()}` : null,
-  ].filter(Boolean);
+  ].filter(Boolean).join(' • ');
 
   return (
     <div className="d-flex justify-content-between gap-3 align-items-start">
       <div className="min-w-0 su-dashboard-activity-copy">
         <div className="su-dashboard-activity-primary">{primaryLabel}</div>
         {secondaryLabel ? <div className="su-dashboard-activity-secondary">{secondaryLabel}</div> : null}
-        <div className="su-dashboard-activity-meta">{metadataParts.join(' • ')}</div>
+        {contextText ? <div className="su-dashboard-activity-meta">{contextText}</div> : null}
+        {metadataText ? <div className="su-dashboard-activity-meta">{metadataText}</div> : null}
       </div>
       <div className="flex-shrink-0">
-        <StatusBadge status={item.status} />
-      </div>
-    </div>
-  );
-}
-
-function ActivityRow({ item }: { item: DashboardActivityItem }) {
-  const primaryLabel = item.subtitle || item.title;
-  const secondaryLabel = item.subtitle ? item.title : item.detail;
-  const metadataText = [
-    item.subtitle ? item.detail : null,
-    item.occurredAt ? new Date(item.occurredAt).toLocaleString() : 'Not available',
-  ].filter(Boolean).join(' • ');
-
-  return (
-    <div className="su-support-list-item">
-      <div className="d-flex flex-wrap justify-content-between align-items-start gap-2">
-        <div className="min-w-0 su-dashboard-activity-copy">
-          <div className="su-dashboard-activity-primary">{primaryLabel}</div>
-          <div className="su-dashboard-activity-secondary-row">
-            <div className="su-dashboard-activity-secondary">{secondaryLabel}</div>
-            {metadataText ? <div className="su-dashboard-activity-meta-inline">{metadataText}</div> : null}
-          </div>
-        </div>
         <StatusBadge status={item.status} />
       </div>
     </div>

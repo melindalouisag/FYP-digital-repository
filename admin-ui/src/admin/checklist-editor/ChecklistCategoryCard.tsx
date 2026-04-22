@@ -53,7 +53,7 @@ export function ChecklistCategoryCard({
         role="button"
         tabIndex={0}
         aria-expanded={category.expanded}
-        className="p-3 su-checklist-card-header"
+        className="su-checklist-card-header"
         onClick={() => onToggleCategory(category.id)}
         onKeyDown={(event) => {
           if (event.target !== event.currentTarget) {
@@ -65,10 +65,10 @@ export function ChecklistCategoryCard({
           }
         }}
       >
-        <div className="d-flex flex-wrap justify-content-between align-items-start gap-3">
-          <div className="flex-grow-1" style={{ minWidth: '14rem' }}>
+        <div className="su-checklist-category-header">
+          <div className="su-checklist-category-header-left">
             <div className="d-flex align-items-start gap-2">
-              <span className="small text-muted pt-1">
+              <span className="small text-muted pt-1 su-checklist-category-chevron">
                 <ChevronIcon expanded={category.expanded} />
               </span>
               <div className="flex-grow-1">
@@ -95,7 +95,7 @@ export function ChecklistCategoryCard({
                     {categoryLabel(category, index)}
                   </div>
                 )}
-                <div className="small text-muted">
+                <div className="su-checklist-category-meta">
                   {category.items.length === 0
                     ? 'No checklist items yet'
                     : `${category.items.length} checklist item${category.items.length === 1 ? '' : 's'}`}
@@ -107,11 +107,10 @@ export function ChecklistCategoryCard({
             </div>
           </div>
 
-          <div className="d-flex flex-wrap align-items-center gap-2">
+          <div className="su-checklist-category-header-right">
             <button
               type="button"
-              className="btn btn-outline-secondary btn-sm"
-              style={{ borderRadius: '999px', whiteSpace: 'nowrap' }}
+              className="btn btn-outline-secondary btn-sm su-checklist-pill-button"
               disabled={isReadOnly || category.items.length === 0 || allItemsRequired}
               onClick={(event) => {
                 event.stopPropagation();
@@ -122,7 +121,7 @@ export function ChecklistCategoryCard({
             </button>
             <button
               type="button"
-              className="btn btn-outline-danger btn-sm su-icon-action"
+              className="su-icon-action su-icon-action-danger"
               disabled={isReadOnly}
               aria-label={`Delete ${categoryLabel(category, index)}`}
               title="Delete category"
@@ -147,8 +146,7 @@ export function ChecklistCategoryCard({
               <div className="d-flex align-items-center gap-2">
                 <button
                   type="button"
-                  className="btn btn-outline-primary btn-sm"
-                  style={{ borderRadius: '999px', whiteSpace: 'nowrap' }}
+                  className="btn btn-outline-primary btn-sm su-checklist-pill-button"
                   disabled={isReadOnly}
                   onClick={() => onAddItem(category.id)}
                 >
@@ -158,37 +156,35 @@ export function ChecklistCategoryCard({
             </div>
           )}
 
-          <div className="su-checklist-item-stack">
-            {category.items.map((item, itemIndex) => {
-              const isNewestItem = itemIndex === category.items.length - 1;
-              const matchingSuggestions = activeSuggestionItemId === item.id
-                ? reusableItemSuggestions(categories, category.id, item.id, item.title)
-                : [];
+          {category.items.map((item, itemIndex) => {
+            const isNewestItem = itemIndex === category.items.length - 1;
+            const matchingSuggestions = activeSuggestionItemId === item.id
+              ? reusableItemSuggestions(categories, category.id, item.id, item.title)
+              : [];
 
-              return (
-                <ChecklistItemRow
-                  key={item.id}
-                  item={item}
-                  isNewestItem={isNewestItem}
-                  isReadOnly={isReadOnly}
-                  highlightedSuggestionIndex={highlightedSuggestionIndex}
-                  matchingSuggestions={matchingSuggestions}
-                  onActivateSuggestions={() => {
-                    onActivateSuggestionItem(item.id);
-                    onSetHighlightedSuggestionIndex(0);
-                  }}
-                  onDeactivateSuggestions={() => onDeactivateSuggestionItem(item.id)}
-                  onSetHighlightedSuggestionIndex={onSetHighlightedSuggestionIndex}
-                  onTitleChange={(value) => onUpdateItem(category.id, item.id, { title: value })}
-                  onGuidanceTextChange={(value) => onUpdateItem(category.id, item.id, { guidanceText: value })}
-                  onRequiredChange={(value) => onUpdateItem(category.id, item.id, { isRequired: value })}
-                  onDelete={() => onDeleteItem(category.id, item.id)}
-                  onAddItem={() => onAddItem(category.id)}
-                  onApplySuggestion={(suggestion) => onApplySuggestion(category.id, item.id, suggestion.key)}
-                />
-              );
-            })}
-          </div>
+            return (
+              <ChecklistItemRow
+                key={item.id}
+                item={item}
+                isNewestItem={isNewestItem}
+                isReadOnly={isReadOnly}
+                highlightedSuggestionIndex={highlightedSuggestionIndex}
+                matchingSuggestions={matchingSuggestions}
+                onActivateSuggestions={() => {
+                  onActivateSuggestionItem(item.id);
+                  onSetHighlightedSuggestionIndex(0);
+                }}
+                onDeactivateSuggestions={() => onDeactivateSuggestionItem(item.id)}
+                onSetHighlightedSuggestionIndex={onSetHighlightedSuggestionIndex}
+                onTitleChange={(value) => onUpdateItem(category.id, item.id, { title: value })}
+                onGuidanceTextChange={(value) => onUpdateItem(category.id, item.id, { guidanceText: value })}
+                onRequiredChange={(value) => onUpdateItem(category.id, item.id, { isRequired: value })}
+                onDelete={() => onDeleteItem(category.id, item.id)}
+                onAddItem={() => onAddItem(category.id)}
+                onApplySuggestion={(suggestion) => onApplySuggestion(category.id, item.id, suggestion.key)}
+              />
+            );
+          })}
 
           {category.errorAddItem && (
             <div className="text-danger small mt-2">{category.errorAddItem}</div>

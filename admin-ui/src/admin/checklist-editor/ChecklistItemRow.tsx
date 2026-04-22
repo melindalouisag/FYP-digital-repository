@@ -37,8 +37,8 @@ export function ChecklistItemRow({
 
   return (
     <div className="su-checklist-item-row">
-      <div className="row g-2 align-items-end">
-        <div className="col-lg-5 col-md-6">
+      <div className="su-checklist-item-grid">
+        <div className="su-checklist-item-field">
           <label className="form-label small" htmlFor={`item-title-${item.id}`}>Item Title</label>
           <div className="position-relative">
             <input
@@ -121,7 +121,7 @@ export function ChecklistItemRow({
           </div>
           {item.errorTitle && <div className="text-danger small mt-1">{item.errorTitle}</div>}
         </div>
-        <div className="col-lg-4 col-md-6">
+        <div className="su-checklist-item-field">
           <label className="form-label small">Guidance (optional)</label>
           <input
             className="form-control form-control-sm"
@@ -130,9 +130,9 @@ export function ChecklistItemRow({
             onChange={(event) => onGuidanceTextChange(event.target.value)}
           />
         </div>
-        <div className="col-lg-3">
+        <div className="su-checklist-item-field su-checklist-item-field-required">
           <label className="form-label small">Required</label>
-          <div className="d-flex flex-wrap align-items-center gap-2 mt-1">
+          <div className="su-checklist-required-control">
             <div className="form-check m-0">
               <input
                 type="checkbox"
@@ -142,9 +142,14 @@ export function ChecklistItemRow({
                 onChange={(event) => onRequiredChange(event.target.checked)}
               />
             </div>
+          </div>
+        </div>
+        <div className="su-checklist-item-field su-checklist-item-field-actions">
+          <label className="form-label small">Actions</label>
+          <div className="su-checklist-item-actions">
             <button
               type="button"
-              className="btn btn-outline-secondary btn-sm su-icon-action su-icon-action-close"
+              className="su-icon-action su-icon-action-neutral"
               disabled={isReadOnly}
               aria-label="Delete item"
               title="Delete item"
@@ -155,8 +160,7 @@ export function ChecklistItemRow({
             {isNewestItem && (
               <button
                 type="button"
-                className="btn btn-outline-primary btn-sm"
-                style={{ borderRadius: '999px', whiteSpace: 'nowrap' }}
+                className="btn btn-outline-primary btn-sm su-checklist-pill-button"
                 disabled={isReadOnly}
                 onClick={onAddItem}
               >

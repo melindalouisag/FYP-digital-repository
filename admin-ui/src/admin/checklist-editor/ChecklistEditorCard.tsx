@@ -63,24 +63,19 @@ export function ChecklistEditorCard({
   onActivateTemplate,
 }: ChecklistEditorCardProps) {
   return (
-    <div className="su-card fade-in">
-      <div className="card-body p-4">
+    <section className="su-card su-template-editor-card fade-in">
         <ChecklistTemplateHeader
           template={template}
           hasOwnedLock={hasOwnedLock}
           lockedByOther={lockedByOther}
           isMutating={isMutating}
           onCreateDraftToEdit={onCreateDraftToEdit}
-          onReleaseEditingLock={onReleaseEditingLock}
           onResumeEditing={onResumeEditing}
         />
 
-        <div className="vstack gap-3">
+        <div className="su-template-editor-category-list">
           {categories.length === 0 && (
-            <div
-              className="rounded-3 border p-4 text-center text-muted"
-              style={{ background: '#f8fafc', borderColor: '#e8eff5' }}
-            >
+            <div className="su-template-editor-empty">
               No categories yet. Add a category below to start this draft.
             </div>
           )}
@@ -109,21 +104,17 @@ export function ChecklistEditorCard({
               onApplySuggestion={onApplySuggestion}
             />
           ))}
-
-          <div>
-            <button
-              type="button"
-              className="btn btn-outline-primary btn-sm"
-              style={{ borderRadius: '999px' }}
-              disabled={isReadOnly}
-              onClick={onAddCategory}
-            >
-              Add Category
-            </button>
-          </div>
         </div>
 
-        <div className="mt-4 d-flex flex-wrap gap-2">
+        <div className="su-template-editor-footer">
+          <button
+            type="button"
+            className="btn btn-outline-primary btn-sm su-checklist-pill-button"
+            disabled={isReadOnly}
+            onClick={onAddCategory}
+          >
+            Add Category
+          </button>
           <button
             className="btn btn-primary"
             style={{ borderRadius: '999px', padding: '0.5rem 1.5rem' }}
@@ -142,8 +133,16 @@ export function ChecklistEditorCard({
               Activate
             </button>
           )}
+          {!template.template.active && hasOwnedLock && (
+            <button
+              className="btn btn-outline-secondary btn-sm su-checklist-pill-button"
+              disabled={isMutating}
+              onClick={onReleaseEditingLock}
+            >
+              Cancel Editing
+            </button>
+          )}
         </div>
-      </div>
-    </div>
+    </section>
   );
 }

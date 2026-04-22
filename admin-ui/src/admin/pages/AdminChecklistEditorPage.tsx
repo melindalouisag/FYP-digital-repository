@@ -6,8 +6,12 @@ export default function AdminChecklistEditorPage() {
   const editor = useChecklistEditor();
 
   return (
-    <ShellLayout title="Template Editor" subtitle="Manage checklist categories and items for this template version">
-      <div className="mb-3">
+    <ShellLayout
+      title="Template Editor"
+      subtitle="Manage checklist categories and items for this template version"
+      pageClassName="su-page-shell-dashboard"
+    >
+      <div className="su-template-editor-toolbar">
         <button
           type="button"
           className="btn btn-outline-secondary btn-sm"
