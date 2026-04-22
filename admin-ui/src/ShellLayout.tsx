@@ -1,10 +1,14 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthContext';
+import { adminApi } from '@/services/api/admin';
+import { lecturerApi } from '@/services/api/lecturer';
 import { notificationsApi } from '@/services/api/notifications';
+import { studentApi } from '@/services/api/student';
 import type { NotificationItem } from '@/types/workflow';
 import { adminSidebarIcons, lecturerSidebarIcons, studentSidebarIcons } from '@/utils/portalIcons';
 import { formatRoleList, getRoleDisplayLabel } from '@/utils/uiLabels';
+import { isRegistrationWorkspaceCase, isSubmissionWorkspaceCase } from '@/student/caseNavigation';
 import ThemeSwitch from './theme/ThemeSwitch';
 import { useTheme } from './theme/ThemeContext';
 
@@ -12,6 +16,7 @@ interface ShellLayoutProps {
   title: string;
   subtitle?: ReactNode;
   children: ReactNode;
+  pageClassName?: string;
   sidebarBadges?: Partial<Record<string, number>>;
 }
 
@@ -51,7 +56,13 @@ function roleLinks(role?: string): LinkItem[] {
   return [];
 }
 
-export default function ShellLayout({ title, subtitle, children, sidebarBadges }: ShellLayoutProps) {
+export default function ShellLayout({
+  title,
+  subtitle,
+  children,
+  pageClassName,
+  sidebarBadges,
+}: ShellLayoutProps) {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { theme, setTheme } = useTheme();
@@ -74,9 +85,14 @@ export default function ShellLayout({ title, subtitle, children, sidebarBadges }
   const availableRoles = user?.availableRoles ?? (user?.role ? [user.role] : []);
   const notificationStorageKey = user ? `su-notifications-last-seen:${user.id}:${user.role}` : null;
   const lastSeenAt = notificationStorageKey ? readLocalStorage(notificationStorageKey) : null;
+  const portalSidebarBadges = usePortalSidebarBadges(user?.role);
   const shortDisplayName = useMemo(
     () => shortenDisplayName(user?.fullName, user?.email),
     [user?.email, user?.fullName]
+  );
+  const mergedSidebarBadges = useMemo(
+    () => ({ ...portalSidebarBadges, ...sidebarBadges }),
+    [portalSidebarBadges, sidebarBadges]
   );
   const unreadCount = useMemo(
     () => countUnreadNotifications(notifications, lastSeenAt),
@@ -343,9 +359,9 @@ export default function ShellLayout({ title, subtitle, children, sidebarBadges }
                     <span className="su-sidebar-link-bullet" aria-hidden="true" />
                   )}
                   <span className="su-sidebar-link-label">{link.label}</span>
-                  {(sidebarBadges?.[link.path] ?? 0) > 0 ? (
-                    <span className="su-sidebar-count-badge" aria-label={`${sidebarBadges?.[link.path]} pending`}>
-                      {sidebarBadges?.[link.path]}
+                  {(mergedSidebarBadges[link.path] ?? 0) > 0 ? (
+                    <span className="su-sidebar-count-badge" aria-label={`${mergedSidebarBadges[link.path]} pending`}>
+                      {mergedSidebarBadges[link.path]}
                     </span>
                   ) : null}
                 </NavLink>
@@ -354,7 +370,7 @@ export default function ShellLayout({ title, subtitle, children, sidebarBadges }
           </aside>
 
           <main className="col-12 col-lg-9 col-xl-10 p-3 p-lg-4 fade-in">
-            <div className="su-page-shell">
+            <div className={['su-page-shell', pageClassName].filter(Boolean).join(' ')}>
               <div className="su-page-header">
                 <h1 className="mb-0 su-page-title">{title}</h1>
                 {subtitle ? <p className="mb-0 su-page-subtitle">{subtitle}</p> : null}
@@ -417,6 +433,78 @@ function readLocalStorage(key: string) {
   } catch {
     return null;
   }
+}
+
+function usePortalSidebarBadges(role?: string) {
+  const [counts, setCounts] = useState<Partial<Record<string, number>>>({});
+
+  useEffect(() => {
+    if (!role) {
+      setCounts({});
+      return;
+    }
+
+    let active = true;
+
+    const loadCounts = async () => {
+      try {
+        if (role === 'STUDENT') {
+          const cases = await studentApi.listCases();
+          if (!active) {
+            return;
+          }
+
+          setCounts({
+            '/student/registrations': cases.filter((item) => isRegistrationWorkspaceCase(item.status)).length,
+            '/student/submissions': cases.filter((item) => isSubmissionWorkspaceCase(item.status)).length,
+          });
+          return;
+        }
+
+        if (role === 'LECTURER') {
+          const dashboard = await lecturerApi.dashboard(new Date().getFullYear());
+          if (!active) {
+            return;
+          }
+
+          setCounts({
+            '/lecturer/approvals': dashboard.registrationApprovalCount,
+            '/lecturer/review': dashboard.submissionReviewCount,
+          });
+          return;
+        }
+
+        if (role === 'ADMIN') {
+          const dashboard = await adminApi.dashboard();
+          if (!active) {
+            return;
+          }
+
+          setCounts({
+            '/admin/registration-approvals': dashboard.registrationQueueCount,
+            '/admin/review': dashboard.submissionReviewQueueCount,
+            '/admin/clearance': dashboard.clearanceQueueCount,
+            '/admin/publish': dashboard.publishingQueueCount,
+          });
+          return;
+        }
+
+        setCounts({});
+      } catch {
+        if (active) {
+          setCounts({});
+        }
+      }
+    };
+
+    void loadCounts();
+
+    return () => {
+      active = false;
+    };
+  }, [role]);
+
+  return counts;
 }
 
 function writeLocalStorage(key: string, value: string) {

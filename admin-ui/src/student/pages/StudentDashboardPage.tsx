@@ -13,26 +13,29 @@ export default function StudentDashboardPage() {
     <ShellLayout
       title="Student Dashboard"
       subtitle="Monitor publication progress, focus on the next required step, and keep your records moving."
+      pageClassName="su-page-shell-dashboard"
     >
       {dashboard.error ? <div className="alert alert-danger">{dashboard.error}</div> : null}
 
-      <div className="su-dashboard-grid su-dashboard-grid-2 su-dashboard-top-row mb-4">
-        <StudentProgressOverview
+      <div className="su-dashboard-content">
+        <div className="su-dashboard-grid su-dashboard-grid-2 su-dashboard-top-row su-student-dashboard-top-row">
+          <StudentProgressOverview
+            loading={dashboard.loading}
+            orderedCases={dashboard.orderedCases}
+          />
+          <StudentNextActionPanel
+            loading={dashboard.loading}
+            nextStepCases={dashboard.nextStepCases}
+            onNavigate={navigate}
+          />
+        </div>
+
+        <StudentPublicationSummary
           loading={dashboard.loading}
           orderedCases={dashboard.orderedCases}
-        />
-        <StudentNextActionPanel
-          loading={dashboard.loading}
-          nextStepCases={dashboard.nextStepCases}
           onNavigate={navigate}
         />
       </div>
-
-      <StudentPublicationSummary
-        loading={dashboard.loading}
-        orderedCases={dashboard.orderedCases}
-        onNavigate={navigate}
-      />
     </ShellLayout>
   );
 }

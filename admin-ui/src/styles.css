@@ -3052,6 +3052,10 @@ body {
   margin: 0 auto;
 }
 
+.su-page-shell-dashboard {
+  max-width: 1240px;
+}
+
 .su-page-header {
   display: flex;
   flex-direction: column;
@@ -3560,6 +3564,14 @@ body {
   align-items: stretch;
 }
 
+.su-dashboard-content {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: 100%;
+  max-width: 1140px;
+}
+
 .su-dashboard-panel,
 .su-support-card,
 .su-publication-record-card {
@@ -3777,6 +3789,13 @@ body {
   gap: 14px;
 }
 
+.su-dashboard-bar-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
 .su-dashboard-bar-label,
 .su-dashboard-bar-value {
   font-size: 14px;
@@ -3830,6 +3849,38 @@ body {
 
 .su-admin-dashboard-top-row .su-dashboard-list-item {
   padding: 9px 0;
+}
+
+.su-student-dashboard-top-row .su-dashboard-panel,
+.su-lecturer-dashboard-top-row .su-dashboard-panel {
+  padding: 18px;
+}
+
+.su-lecturer-dashboard-top-row .su-dashboard-panel-header,
+.su-admin-dashboard-top-row .su-dashboard-panel-header {
+  margin-bottom: 14px;
+}
+
+.su-lecturer-dashboard-top-row .su-progress-ring-card-body,
+.su-admin-dashboard-top-row .su-progress-ring-card-body {
+  gap: 12px;
+}
+
+.su-lecturer-dashboard-top-row .su-progress-ring-summary,
+.su-admin-dashboard-top-row .su-progress-ring-summary {
+  gap: 6px;
+}
+
+.su-lecturer-dashboard-top-row .su-dashboard-list-item {
+  padding: 8px 0;
+}
+
+.su-lecturer-dashboard-top-row .su-dashboard-bars {
+  gap: 10px;
+}
+
+.su-lecturer-dashboard-top-row .su-dashboard-bar-header {
+  margin-bottom: 6px;
 }
 
 .su-checklist-category-card {
@@ -3907,6 +3958,109 @@ body {
   color: var(--text);
 }
 
+[data-theme="dark"] .su-app-shell {
+  background: var(--bg);
+}
+
+[data-theme="dark"] .su-sidebar {
+  background: var(--sidebar-bg);
+  border-right-color: var(--border);
+}
+
+[data-theme="dark"] .su-page-subtitle,
+[data-theme="dark"] .su-secondary-text,
+[data-theme="dark"] .su-detail-label,
+[data-theme="dark"] .text-muted,
+[data-theme="dark"] .su-empty-state-copy,
+[data-theme="dark"] .su-empty-state p,
+[data-theme="dark"] .su-dashboard-empty-copy {
+  color: var(--muted) !important;
+}
+
+[data-theme="dark"] .su-card,
+[data-theme="dark"] .card,
+[data-theme="dark"] .su-dashboard-panel,
+[data-theme="dark"] .su-support-card,
+[data-theme="dark"] .su-form-section,
+[data-theme="dark"] .su-empty-state,
+[data-theme="dark"] .su-table-shell,
+[data-theme="dark"] .su-checklist-category-card,
+[data-theme="dark"] .su-checklist-category-content {
+  background: var(--card) !important;
+  border-color: var(--border) !important;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+}
+
+[data-theme="dark"] .su-header-popover,
+[data-theme="dark"] .su-account-popover,
+[data-theme="dark"] .su-notification-popover,
+[data-theme="dark"] .su-notification-empty,
+[data-theme="dark"] .su-notification-item,
+[data-theme="dark"] .su-revision-section {
+  background: var(--card) !important;
+  border-color: var(--border) !important;
+  color: var(--text);
+}
+
+[data-theme="dark"] .su-notification-item-detail,
+[data-theme="dark"] .su-notification-item-meta,
+[data-theme="dark"] .su-notification-empty,
+[data-theme="dark"] .su-account-meta {
+  color: var(--muted) !important;
+}
+
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .form-select,
+[data-theme="dark"] .su-progress-ring-select,
+[data-theme="dark"] .su-publication-filter-select,
+[data-theme="dark"] .su-dashboard-toolbar-select {
+  background: #17212c;
+  border-color: #344253;
+  color: var(--text);
+}
+
+[data-theme="dark"] .form-control::placeholder {
+  color: #8ea0b2;
+  opacity: 1;
+}
+
+[data-theme="dark"] .form-control:focus,
+[data-theme="dark"] .form-select:focus {
+  background: #17212c;
+  border-color: var(--primary);
+  color: var(--text);
+  box-shadow: 0 0 0 0.18rem rgba(44, 163, 181, 0.16);
+}
+
+[data-theme="dark"] .table,
+[data-theme="dark"] .table > :not(caption) > * > * {
+  background-color: transparent !important;
+  color: var(--text);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .table thead th {
+  color: #c6d3e2;
+}
+
+[data-theme="dark"] .table-hover tbody tr:hover,
+[data-theme="dark"] .su-table-row-clickable:hover {
+  background: rgba(102, 197, 211, 0.08);
+}
+
+[data-theme="dark"] .su-progress-ring-core {
+  background: var(--card);
+}
+
+[data-theme="dark"] .su-dashboard-panel-title,
+[data-theme="dark"] .su-section-title,
+[data-theme="dark"] .su-empty-state-title,
+[data-theme="dark"] .su-table-title,
+[data-theme="dark"] .fw-semibold,
+[data-theme="dark"] .fw-bold {
+  color: var(--text);
+}
+
 [data-theme="dark"] .su-dashboard-activity-secondary,
 [data-theme="dark"] .su-dashboard-activity-meta,
 [data-theme="dark"] .su-dashboard-activity-meta-inline {
@@ -3920,6 +4074,10 @@ body {
 }
 
 @media (max-width: 575px) {
+  .su-dashboard-content {
+    gap: 16px;
+  }
+
   .su-repository-hero-stats {
     padding: 0.25rem 0;
   }

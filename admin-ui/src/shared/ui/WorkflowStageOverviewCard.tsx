@@ -30,7 +30,7 @@ export default function WorkflowStageOverviewCard({
         <div className="su-dashboard-bars">
           {stageDistribution.map((item) => (
             <div className="su-dashboard-bar-row" key={item.label}>
-              <div className="d-flex justify-content-between gap-2 mb-2">
+              <div className="su-dashboard-bar-header">
                 <span className="su-dashboard-bar-label">{item.label}</span>
                 <span className="su-dashboard-bar-value">{item.count}</span>
               </div>

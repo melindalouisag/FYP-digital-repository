@@ -53,11 +53,16 @@ export default function LecturerDashboardPage() {
   const completionSecondaryText = dashboard.totalStudentCount > 0
     ? `${dashboard.activeSupervisedCaseCount} active supervised publication${dashboard.activeSupervisedCaseCount === 1 ? '' : 's'}`
     : 'No supervised publications yet.';
+  const visibleRecentActivity = useMemo(
+    () => dashboard.recentActivity.slice(0, 4),
+    [dashboard.recentActivity]
+  );
 
   return (
     <ShellLayout
       title="Lecturer Dashboard"
       subtitle="Monitor supervised publication progress, workflow stages, and the latest student activity."
+      pageClassName="su-page-shell-dashboard"
       sidebarBadges={{
         '/lecturer/approvals': dashboard.registrationApprovalCount,
         '/lecturer/review': dashboard.submissionReviewCount,
@@ -65,49 +70,51 @@ export default function LecturerDashboardPage() {
     >
       {error ? <div className="alert alert-danger">{error}</div> : null}
 
-      <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-        <label className="d-flex align-items-center gap-2">
-          <span className="su-dashboard-toolbar-label">Academic Year</span>
-          <select
-            className="form-select form-select-sm su-dashboard-toolbar-select"
-            value={year}
-            onChange={(event) => setYear(Number(event.target.value))}
-          >
-            {yearOptions.map((value) => (
-              <option key={value} value={value}>{value}</option>
-            ))}
-          </select>
-        </label>
-      </div>
-
-      <div className="su-dashboard-grid su-dashboard-grid-3 su-dashboard-top-row mb-4">
-        <DashboardProgressRingCard
-          title="Publication Completion"
-          progressPercent={completionPercent}
-          loading={loading}
-          primaryText={`${dashboard.publishedStudentCount} of ${dashboard.totalStudentCount} students published`}
-          secondaryText={completionSecondaryText}
-        />
-        <WorkflowStageOverviewCard
-          loading={loading}
-          stageDistribution={dashboard.stageDistribution}
-          emptyText="No supervised publications available for this academic year."
-        />
-        <DashboardPanel title="Recent Student Activity" className="w-100">
-          {loading ? (
-            <p className="su-dashboard-empty-copy mb-0">Loading dashboard data.</p>
-          ) : dashboard.recentActivity.length === 0 ? (
-            <p className="su-dashboard-empty-copy mb-0">No recent student activity.</p>
-          ) : (
-            <div className="su-dashboard-list">
-              {dashboard.recentActivity.map((item) => (
-                <div className="su-dashboard-list-item" key={`${item.caseId}-${item.occurredAt ?? item.detail}`}>
-                  <LecturerActivityItem item={item} />
-                </div>
+      <div className="su-dashboard-content">
+        <div className="d-flex flex-wrap justify-content-between align-items-center gap-3">
+          <label className="d-flex align-items-center gap-2">
+            <span className="su-dashboard-toolbar-label">Academic Year</span>
+            <select
+              className="form-select form-select-sm su-dashboard-toolbar-select"
+              value={year}
+              onChange={(event) => setYear(Number(event.target.value))}
+            >
+              {yearOptions.map((value) => (
+                <option key={value} value={value}>{value}</option>
               ))}
-            </div>
-          )}
-        </DashboardPanel>
+            </select>
+          </label>
+        </div>
+
+        <div className="su-dashboard-grid su-dashboard-grid-3 su-dashboard-top-row su-lecturer-dashboard-top-row">
+          <DashboardProgressRingCard
+            title="Publication Completion"
+            progressPercent={completionPercent}
+            loading={loading}
+            primaryText={`${dashboard.publishedStudentCount} of ${dashboard.totalStudentCount} students published`}
+            secondaryText={completionSecondaryText}
+          />
+          <WorkflowStageOverviewCard
+            loading={loading}
+            stageDistribution={dashboard.stageDistribution}
+            emptyText="No supervised publications available for this academic year."
+          />
+          <DashboardPanel title="Recent Student Activity" className="w-100">
+            {loading ? (
+              <p className="su-dashboard-empty-copy mb-0">Loading dashboard data.</p>
+            ) : visibleRecentActivity.length === 0 ? (
+              <p className="su-dashboard-empty-copy mb-0">No recent student activity.</p>
+            ) : (
+              <div className="su-dashboard-list">
+                {visibleRecentActivity.map((item) => (
+                  <div className="su-dashboard-list-item" key={`${item.caseId}-${item.occurredAt ?? item.detail}`}>
+                    <LecturerActivityItem item={item} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </DashboardPanel>
+        </div>
       </div>
     </ShellLayout>
   );
