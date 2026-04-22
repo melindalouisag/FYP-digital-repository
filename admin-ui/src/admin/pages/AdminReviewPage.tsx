@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { adminApi } from '@/services/api/admin';
+import PortalIcon from '@/shared/ui/PortalIcon';
 import EmptyState from '@/shared/ui/EmptyState';
 import StatusBadge from '@/shared/ui/StatusBadge';
 import type { AdminStudentReviewGroup } from '@/types/workflow';
 import { formatFacultyName } from '@/utils/facultyLabel';
+import { adminSidebarIcons } from '@/utils/portalIcons';
 import ShellLayout from '../../ShellLayout';
 import { resolvePrimaryCase } from '../studentTracking';
 
@@ -48,8 +50,6 @@ export default function AdminReviewPage() {
     }).sort((left, right) => compareReviewRows(left.status, right.status, left.updatedAt, right.updatedAt))
   ), [groups]);
 
-  const revisionRequiredCount = rows.filter((row) => row.status === 'NEEDS_REVISION_LIBRARY').length;
-
   return (
     <ShellLayout
       title="Submission Review"
@@ -57,44 +57,20 @@ export default function AdminReviewPage() {
     >
       {error ? <div className="alert alert-danger">{error}</div> : null}
 
-      <div className="su-summary-grid mb-4">
-        <div className="su-summary-card">
-          <div className="su-secondary-text">Total Students</div>
-          <div className="su-summary-value">{rows.length}</div>
-        </div>
-        <div className="su-summary-card">
-          <div className="su-secondary-text">Pending Review</div>
-          <div className="su-summary-value">{rows.length}</div>
-        </div>
-        <div className="su-summary-card">
-          <div className="su-secondary-text">Cases in Queue</div>
-          <div className="su-summary-value">{groups.reduce((sum, group) => sum + group.cases.length, 0)}</div>
-        </div>
-        <div className="su-summary-card">
-          <div className="su-secondary-text">Revision Required</div>
-          <div className="su-summary-value">{revisionRequiredCount}</div>
-        </div>
-      </div>
-
       <section className="su-section">
-        <div className="su-section-header">
-          <div>
-            <h2 className="su-section-title mb-1">Action Required</h2>
-            <p className="su-secondary-text mb-0">Student records are sorted by the most recent library-stage activity.</p>
-          </div>
-        </div>
-
         {loading ? (
           <div className="text-center py-5">
             <div className="su-spinner mx-auto mb-3" />
             <div className="text-muted">Loading review queue...</div>
           </div>
-        ) : rows.length === 0 ? (
-          <EmptyState
-            title="No submissions awaiting review"
-            description="Library review cases will appear here after supervisors forward them to the library."
-          />
-        ) : (
+          ) : rows.length === 0 ? (
+            <EmptyState
+              title="No submissions awaiting review"
+              description="Library review cases will appear here after supervisors forward them to the library."
+              icon={<PortalIcon src={adminSidebarIcons.submission} size={40} />}
+              centered
+            />
+          ) : (
           <div className="su-table-shell">
             <table className="table align-middle mb-0">
               <thead>

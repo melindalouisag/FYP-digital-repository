@@ -63,7 +63,7 @@ export default function StudentSubmissionsPage() {
       {error && <div className="alert alert-danger">{error}</div>}
 
       {!loading && submissionCases.length === 0 && (
-        <div className="su-empty-state">
+        <div className="su-empty-state su-empty-state-centered">
           <div className="su-empty-icon">
             <PortalIcon src={studentSidebarIcons.submission} size={40} />
           </div>

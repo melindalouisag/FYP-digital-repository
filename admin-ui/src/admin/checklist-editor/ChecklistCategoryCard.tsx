@@ -48,7 +48,7 @@ export function ChecklistCategoryCard({
   const allItemsRequired = category.items.length > 0 && category.items.every((item) => item.isRequired);
 
   return (
-    <div className="rounded-3 border" style={{ background: '#f8fafc', borderColor: '#e8eff5' }}>
+    <div className="su-checklist-category-card">
       <div
         role="button"
         tabIndex={0}
@@ -138,70 +138,61 @@ export function ChecklistCategoryCard({
       </div>
 
       {category.expanded && (
-        <div className="px-3 pb-3 border-top" style={{ borderColor: '#e8eff5' }}>
-          <div className="pt-3">
-            <div className="small text-muted mb-2">Checklist Items</div>
+        <div className="su-checklist-category-content">
+          <div className="su-checklist-section-label">Checklist Items</div>
 
-            {category.items.length === 0 && (
-              <div className="border rounded p-3 mb-2">
-                <div className="row g-3 align-items-end">
-                  <div className="col-lg-9">
-                    <div className="small text-muted">No items yet. Add an item to this category.</div>
-                  </div>
-                  <div className="col-lg-3">
-                    <label className="form-label small">Actions</label>
-                    <div className="d-flex align-items-center gap-2 mt-1">
-                      <button
-                        type="button"
-                        className="btn btn-outline-primary btn-sm"
-                        style={{ borderRadius: '999px', whiteSpace: 'nowrap' }}
-                        disabled={isReadOnly}
-                        onClick={() => onAddItem(category.id)}
-                      >
-                        Add Item
-                      </button>
-                    </div>
-                  </div>
-                </div>
+          {category.items.length === 0 && (
+            <div className="su-checklist-empty-row">
+              <div className="small text-muted">No items yet. Add an item to this category.</div>
+              <div className="d-flex align-items-center gap-2">
+                <button
+                  type="button"
+                  className="btn btn-outline-primary btn-sm"
+                  style={{ borderRadius: '999px', whiteSpace: 'nowrap' }}
+                  disabled={isReadOnly}
+                  onClick={() => onAddItem(category.id)}
+                >
+                  Add Item
+                </button>
               </div>
-            )}
-
-            <div className="vstack gap-2">
-              {category.items.map((item, itemIndex) => {
-                const isNewestItem = itemIndex === category.items.length - 1;
-                const matchingSuggestions = activeSuggestionItemId === item.id
-                  ? reusableItemSuggestions(categories, category.id, item.id, item.title)
-                  : [];
-
-                return (
-                  <ChecklistItemRow
-                    key={item.id}
-                    item={item}
-                    isNewestItem={isNewestItem}
-                    isReadOnly={isReadOnly}
-                    highlightedSuggestionIndex={highlightedSuggestionIndex}
-                    matchingSuggestions={matchingSuggestions}
-                    onActivateSuggestions={() => {
-                      onActivateSuggestionItem(item.id);
-                      onSetHighlightedSuggestionIndex(0);
-                    }}
-                    onDeactivateSuggestions={() => onDeactivateSuggestionItem(item.id)}
-                    onSetHighlightedSuggestionIndex={onSetHighlightedSuggestionIndex}
-                    onTitleChange={(value) => onUpdateItem(category.id, item.id, { title: value })}
-                    onGuidanceTextChange={(value) => onUpdateItem(category.id, item.id, { guidanceText: value })}
-                    onRequiredChange={(value) => onUpdateItem(category.id, item.id, { isRequired: value })}
-                    onDelete={() => onDeleteItem(category.id, item.id)}
-                    onAddItem={() => onAddItem(category.id)}
-                    onApplySuggestion={(suggestion) => onApplySuggestion(category.id, item.id, suggestion.key)}
-                  />
-                );
-              })}
             </div>
+          )}
 
-            {category.errorAddItem && (
-              <div className="text-danger small mt-2">{category.errorAddItem}</div>
-            )}
+          <div className="su-checklist-item-stack">
+            {category.items.map((item, itemIndex) => {
+              const isNewestItem = itemIndex === category.items.length - 1;
+              const matchingSuggestions = activeSuggestionItemId === item.id
+                ? reusableItemSuggestions(categories, category.id, item.id, item.title)
+                : [];
+
+              return (
+                <ChecklistItemRow
+                  key={item.id}
+                  item={item}
+                  isNewestItem={isNewestItem}
+                  isReadOnly={isReadOnly}
+                  highlightedSuggestionIndex={highlightedSuggestionIndex}
+                  matchingSuggestions={matchingSuggestions}
+                  onActivateSuggestions={() => {
+                    onActivateSuggestionItem(item.id);
+                    onSetHighlightedSuggestionIndex(0);
+                  }}
+                  onDeactivateSuggestions={() => onDeactivateSuggestionItem(item.id)}
+                  onSetHighlightedSuggestionIndex={onSetHighlightedSuggestionIndex}
+                  onTitleChange={(value) => onUpdateItem(category.id, item.id, { title: value })}
+                  onGuidanceTextChange={(value) => onUpdateItem(category.id, item.id, { guidanceText: value })}
+                  onRequiredChange={(value) => onUpdateItem(category.id, item.id, { isRequired: value })}
+                  onDelete={() => onDeleteItem(category.id, item.id)}
+                  onAddItem={() => onAddItem(category.id)}
+                  onApplySuggestion={(suggestion) => onApplySuggestion(category.id, item.id, suggestion.key)}
+                />
+              );
+            })}
           </div>
+
+          {category.errorAddItem && (
+            <div className="text-danger small mt-2">{category.errorAddItem}</div>
+          )}
         </div>
       )}
     </div>

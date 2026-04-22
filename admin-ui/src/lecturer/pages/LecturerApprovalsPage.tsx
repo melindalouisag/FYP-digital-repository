@@ -146,7 +146,7 @@ export default function LecturerApprovalsPage() {
       )}
 
       {!loading && rows.length === 0 && (
-        <div className="su-empty-state">
+        <div className="su-empty-state su-empty-state-centered">
           <div className="su-empty-icon">
             <PortalIcon src={lecturerSidebarIcons.approvals} size={40} />
           </div>

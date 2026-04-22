@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { adminApi } from '@/services/api/admin';
+import PortalIcon from '@/shared/ui/PortalIcon';
 import EmptyState from '@/shared/ui/EmptyState';
 import StatusBadge from '@/shared/ui/StatusBadge';
 import { useConfirmDialog } from '@/shared/ui/useConfirmDialog';
 import type { CaseSummary, PagedResponse } from '@/types/workflow';
+import { adminSidebarIcons } from '@/utils/portalIcons';
 import ShellLayout from '../../ShellLayout';
 
 const PAGE_SIZE = 10;
@@ -83,33 +85,7 @@ export default function AdminClearancePage() {
       >
         {error ? <div className="alert alert-danger">{error}</div> : null}
 
-        <div className="su-summary-grid mb-4">
-          <div className="su-summary-card">
-            <div className="su-secondary-text">Pending Cases</div>
-            <div className="su-summary-value">{pageData.totalElements}</div>
-          </div>
-          <div className="su-summary-card">
-            <div className="su-secondary-text">Visible Rows</div>
-            <div className="su-summary-value">{pageData.items.length}</div>
-          </div>
-          <div className="su-summary-card">
-            <div className="su-secondary-text">Current Page</div>
-            <div className="su-summary-value">{pageData.totalElements === 0 ? 0 : pageData.page + 1}</div>
-          </div>
-          <div className="su-summary-card">
-            <div className="su-secondary-text">Action Needed</div>
-            <div className="su-summary-value">{pageData.items.length}</div>
-          </div>
-        </div>
-
         <section className="su-section">
-          <div className="su-section-header">
-            <div>
-              <h2 className="su-section-title mb-1">Action Required</h2>
-              <p className="su-secondary-text mb-0">Submitted clearance forms are listed from the most recent update.</p>
-            </div>
-          </div>
-
           {loading ? (
             <div className="text-center py-5">
               <div className="su-spinner mx-auto mb-3" />
@@ -119,6 +95,8 @@ export default function AdminClearancePage() {
             <EmptyState
               title="No clearance reviews pending"
               description="Submitted clearance forms will appear here when students send them for review."
+              icon={<PortalIcon src={adminSidebarIcons.clearance} size={40} />}
+              centered
             />
           ) : (
             <div className="su-table-shell">

@@ -3327,6 +3327,16 @@ body {
   color: var(--su-text);
 }
 
+.su-empty-state-centered {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+  text-align: center;
+  padding: 32px 24px;
+}
+
 .su-empty-state-title {
   margin: 0 0 8px;
   color: var(--su-navy);
@@ -3344,6 +3354,26 @@ body {
 
 .su-empty-state-action {
   margin-top: 16px;
+}
+
+.su-empty-state-centered .su-empty-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12px;
+}
+
+.su-empty-state-centered .su-empty-state-title,
+.su-empty-state-centered .su-empty-state-copy,
+.su-empty-state-centered h5,
+.su-empty-state-centered p {
+  max-width: 520px;
+  text-align: center;
+}
+
+.su-empty-state-centered .su-empty-state-action {
+  display: flex;
+  justify-content: center;
 }
 
 .su-support-grid {
@@ -3578,7 +3608,7 @@ body {
   position: relative;
   display: grid;
   place-items: center;
-  width: clamp(190px, 28vw, 200px);
+  width: clamp(150px, 24vw, 156px);
   aspect-ratio: 1;
   padding: 0;
   background: none;
@@ -3612,7 +3642,7 @@ body {
 
 .su-progress-ring-core {
   position: absolute;
-  inset: 23px;
+  inset: 18px;
   width: auto;
   height: auto;
   display: grid;
@@ -3622,7 +3652,7 @@ body {
 }
 
 .su-progress-ring-value {
-  font-size: 30px;
+  font-size: 28px;
   font-weight: 700;
 }
 
@@ -3682,7 +3712,7 @@ body {
 }
 
 .su-dashboard-list-item {
-  padding: 12px 0;
+  padding: 10px 0;
 }
 
 .su-dashboard-item-title,
@@ -3715,6 +3745,19 @@ body {
   color: #5d7387;
   font-size: 14px;
   line-height: 20px;
+}
+
+.su-dashboard-activity-secondary-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+
+.su-dashboard-activity-meta-inline {
+  color: #7a8e9f;
+  font-size: 12px;
+  line-height: 18px;
 }
 
 .su-dashboard-activity-meta {
@@ -3781,6 +3824,61 @@ body {
   border-top: 1px solid #edf2f6;
 }
 
+.su-admin-dashboard-top-row .su-dashboard-panel {
+  padding: 18px;
+}
+
+.su-admin-dashboard-top-row .su-dashboard-list-item {
+  padding: 9px 0;
+}
+
+.su-checklist-category-card {
+  border: 1px solid #e8eff5;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.su-checklist-category-content {
+  padding: 12px 16px 16px;
+  border-top: 1px solid #e8eff5;
+}
+
+.su-checklist-section-label {
+  margin-bottom: 8px;
+  color: #5d7387;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 600;
+}
+
+.su-checklist-empty-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0 6px;
+}
+
+.su-checklist-item-stack {
+  display: flex;
+  flex-direction: column;
+}
+
+.su-checklist-item-row {
+  padding: 12px 0;
+  border-top: 1px solid #eef2f6;
+}
+
+.su-checklist-item-stack > :first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.su-checklist-item-stack > :last-child {
+  padding-bottom: 0;
+}
+
 .su-support-list > :first-child .su-support-list-item,
 .su-support-list > .su-support-list-item:first-child {
   padding-top: 0;
@@ -3810,7 +3908,8 @@ body {
 }
 
 [data-theme="dark"] .su-dashboard-activity-secondary,
-[data-theme="dark"] .su-dashboard-activity-meta {
+[data-theme="dark"] .su-dashboard-activity-meta,
+[data-theme="dark"] .su-dashboard-activity-meta-inline {
   color: var(--muted);
 }
 
@@ -3846,7 +3945,7 @@ body {
   }
 
   .su-progress-ring {
-    width: min(100%, 200px);
+    width: min(100%, 156px);
   }
 
   .su-dashboard-toolbar-select {

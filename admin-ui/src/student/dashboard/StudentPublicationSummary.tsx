@@ -78,9 +78,6 @@ export function StudentPublicationSummary({
         <p className="su-dashboard-empty-copy mb-0">No publications yet.</p>
       ) : selectedGroup ? (
         <div className="su-publication-list-shell">
-          <div className="su-publication-list-meta">
-            {getPublicationTypeLabel(selectedGroup.type)} • {selectedGroup.items.length === 1 ? '1 record' : `${selectedGroup.items.length} records`}
-          </div>
           <div className="su-publication-list">
             {selectedGroup.items.map((item) => {
               const navigationTarget = resolveStudentCaseNavigation(item, 'dashboard');

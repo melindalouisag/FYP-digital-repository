@@ -55,10 +55,6 @@ export default function StudentRegistrationsPage() {
     const start = page * PAGE_SIZE;
     return registrationCases.slice(start, start + PAGE_SIZE);
   }, [page, registrationCases]);
-  const hasAnyRegistrationHistory = cases.length > 0;
-  const emptyStateActionLabel = hasAnyRegistrationHistory
-    ? 'New Registration'
-    : 'Create Your First Registration';
   const pageStart = registrationCases.length === 0 ? 0 : page * PAGE_SIZE + 1;
   const pageEnd = pageStart === 0 ? 0 : pageStart + visibleCases.length - 1;
   const hasPrevious = page > 0;
@@ -88,15 +84,12 @@ export default function StudentRegistrationsPage() {
         {error && <div className="alert alert-danger">{error}</div>}
 
         {!loading && registrationCases.length === 0 && (
-          <div className="su-empty-state">
+          <div className="su-empty-state su-empty-state-centered">
             <div className="su-empty-icon">
               <PortalIcon src={studentSidebarIcons.registration} size={40} />
             </div>
             <h5>No Registration Records to Work On</h5>
             <p className="text-muted">Draft registrations, returned registrations, and registrations still in approval will appear here.</p>
-            <button className="btn btn-primary" onClick={openCreateRegistrationConfirm}>
-              {emptyStateActionLabel}
-            </button>
           </div>
         )}
 

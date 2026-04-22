@@ -147,7 +147,7 @@ export default function AdminDashboardPage() {
     >
       {error ? <div className="alert alert-danger">{error}</div> : null}
 
-      <div className="su-dashboard-grid su-dashboard-grid-3 su-dashboard-top-row mb-4">
+      <div className="su-dashboard-grid su-dashboard-grid-3 su-dashboard-top-row su-admin-dashboard-top-row mb-4">
         <DashboardProgressRingCard
           title="Repository Completion"
           progressPercent={completionPercent}
@@ -320,20 +320,20 @@ export default function AdminDashboardPage() {
 function ActivityRow({ item }: { item: DashboardActivityItem }) {
   const primaryLabel = item.subtitle || item.title;
   const secondaryLabel = item.subtitle ? item.title : item.detail;
-  const metadataParts = [
+  const metadataText = [
     item.subtitle ? item.detail : null,
     item.occurredAt ? new Date(item.occurredAt).toLocaleString() : 'Not available',
-  ].filter(Boolean);
+  ].filter(Boolean).join(' • ');
 
   return (
     <div className="su-support-list-item">
       <div className="d-flex flex-wrap justify-content-between align-items-start gap-2">
         <div className="min-w-0 su-dashboard-activity-copy">
-          <div className="su-dashboard-activity-main">
-            <div className="su-dashboard-activity-primary">{primaryLabel}</div>
+          <div className="su-dashboard-activity-primary">{primaryLabel}</div>
+          <div className="su-dashboard-activity-secondary-row">
             <div className="su-dashboard-activity-secondary">{secondaryLabel}</div>
+            {metadataText ? <div className="su-dashboard-activity-meta-inline">{metadataText}</div> : null}
           </div>
-          <div className="su-dashboard-activity-meta">{metadataParts.join(' • ')}</div>
         </div>
         <StatusBadge status={item.status} />
       </div>

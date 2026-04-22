@@ -47,10 +47,6 @@ export default function LecturerDashboardPage() {
     const current = new Date().getFullYear();
     return [current - 1, current, current + 1];
   }, []);
-  const totalCases = useMemo(
-    () => dashboard.stageDistribution.reduce((sum, item) => sum + item.count, 0),
-    [dashboard.stageDistribution]
-  );
   const completionPercent = dashboard.totalStudentCount > 0
     ? Math.round((dashboard.publishedStudentCount / dashboard.totalStudentCount) * 100)
     : 0;
@@ -82,13 +78,6 @@ export default function LecturerDashboardPage() {
             ))}
           </select>
         </label>
-        <div className="su-dashboard-toolbar-meta">
-          {dashboard.registrationApprovalCount} registration approval{dashboard.registrationApprovalCount === 1 ? '' : 's'} pending
-          {' • '}
-          {dashboard.submissionReviewCount} submission review{dashboard.submissionReviewCount === 1 ? '' : 's'} pending
-          {' • '}
-          {totalCases} tracked publication{totalCases === 1 ? '' : 's'}
-        </div>
       </div>
 
       <div className="su-dashboard-grid su-dashboard-grid-3 su-dashboard-top-row mb-4">
@@ -127,19 +116,19 @@ export default function LecturerDashboardPage() {
 function LecturerActivityItem({ item }: { item: DashboardActivityItem }) {
   const primaryLabel = item.subtitle || item.title;
   const secondaryLabel = item.subtitle ? item.title : item.detail;
-  const metadataParts = [
+  const metadataText = [
     item.subtitle ? item.detail : null,
     item.occurredAt ? new Date(item.occurredAt).toLocaleString() : 'No recent updates',
-  ].filter(Boolean);
+  ].filter(Boolean).join(' • ');
 
   return (
     <div className="d-flex justify-content-between gap-3 align-items-start">
       <div className="min-w-0 su-dashboard-activity-copy">
-        <div className="su-dashboard-activity-main">
-          <div className="su-dashboard-activity-primary">{primaryLabel}</div>
+        <div className="su-dashboard-activity-primary">{primaryLabel}</div>
+        <div className="su-dashboard-activity-secondary-row">
           <div className="su-dashboard-activity-secondary">{secondaryLabel}</div>
+          {metadataText ? <div className="su-dashboard-activity-meta-inline">{metadataText}</div> : null}
         </div>
-        <div className="su-dashboard-activity-meta">{metadataParts.join(' • ')}</div>
       </div>
       <div className="flex-shrink-0">
         <StatusBadge status={item.status} />

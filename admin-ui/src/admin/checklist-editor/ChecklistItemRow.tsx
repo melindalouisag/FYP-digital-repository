@@ -36,8 +36,8 @@ export function ChecklistItemRow({
   const showSuggestions = !isReadOnly && matchingSuggestions.length > 0;
 
   return (
-    <div className="border rounded p-3">
-      <div className="row g-3 align-items-end">
+    <div className="su-checklist-item-row">
+      <div className="row g-2 align-items-end">
         <div className="col-lg-5 col-md-6">
           <label className="form-label small" htmlFor={`item-title-${item.id}`}>Item Title</label>
           <div className="position-relative">

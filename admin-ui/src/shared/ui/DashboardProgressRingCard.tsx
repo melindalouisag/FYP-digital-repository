@@ -12,8 +12,8 @@ interface DashboardProgressRingCardProps {
   className?: string;
 }
 
-const RING_SIZE = 200;
-const RING_STROKE_WIDTH = 14;
+const RING_SIZE = 156;
+const RING_STROKE_WIDTH = 11;
 const RING_RADIUS = ((RING_SIZE - RING_STROKE_WIDTH) / 2) - 1;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 const INITIAL_RING_DELAY_MS = 100;

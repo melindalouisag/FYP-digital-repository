@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { adminApi } from '@/services/api/admin';
+import PortalIcon from '@/shared/ui/PortalIcon';
 import EmptyState from '@/shared/ui/EmptyState';
 import StatusBadge from '@/shared/ui/StatusBadge';
 import { useConfirmDialog } from '@/shared/ui/useConfirmDialog';
 import type { AdminPublishQueueItem, PagedResponse } from '@/types/workflow';
+import { adminSidebarIcons } from '@/utils/portalIcons';
 import ShellLayout from '../../ShellLayout';
 
 const PAGE_SIZE = 10;
@@ -62,33 +64,7 @@ export default function AdminPublishPage() {
         {error ? <div className="alert alert-danger">{error}</div> : null}
         {message ? <div className="alert alert-success">{message}</div> : null}
 
-        <div className="su-summary-grid mb-4">
-          <div className="su-summary-card">
-            <div className="su-secondary-text">Ready for Publication</div>
-            <div className="su-summary-value">{pageData.totalElements}</div>
-          </div>
-          <div className="su-summary-card">
-            <div className="su-secondary-text">Visible Rows</div>
-            <div className="su-summary-value">{pageData.items.length}</div>
-          </div>
-          <div className="su-summary-card">
-            <div className="su-secondary-text">Current Page</div>
-            <div className="su-summary-value">{pageData.totalElements === 0 ? 0 : pageData.page + 1}</div>
-          </div>
-          <div className="su-summary-card">
-            <div className="su-secondary-text">Action Required</div>
-            <div className="su-summary-value">{pageData.items.length}</div>
-          </div>
-        </div>
-
         <section className="su-section">
-          <div className="su-section-header">
-            <div>
-              <h2 className="su-section-title mb-1">Action Required</h2>
-              <p className="su-secondary-text mb-0">Open the publishing detail page or publish the record directly from this queue.</p>
-            </div>
-          </div>
-
           {loading ? (
             <div className="text-center py-5">
               <div className="su-spinner mx-auto mb-3" />
@@ -98,6 +74,8 @@ export default function AdminPublishPage() {
             <EmptyState
               title="No publications ready for publication"
               description="Finalized records will appear here when they are ready for repository release."
+              icon={<PortalIcon src={adminSidebarIcons.publishing} size={40} />}
+              centered
             />
           ) : (
             <div className="su-table-shell">
