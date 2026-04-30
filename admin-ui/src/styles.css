@@ -3640,6 +3640,23 @@ body {
   background: #fff;
 }
 
+.su-next-action-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.su-next-action-panel-body {
+  flex: 1;
+  min-height: 0;
+}
+
+.su-dashboard-empty-centered {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  width: 100%;
+}
+
 .su-dashboard-panel-header {
   gap: 12px;
   margin-bottom: 16px;

@@ -24,6 +24,8 @@ export function StudentNextActionPanel({
 
   return (
     <DashboardPanel
+      className="su-next-action-panel"
+      bodyClassName="su-next-action-panel-body"
       title={(
         <span className="su-dashboard-title-with-icon">
           <PortalIcon src={studentSidebarIcons.needsAction} className="su-dashboard-title-icon" />
@@ -34,7 +36,7 @@ export function StudentNextActionPanel({
       {loading ? (
         <p className="su-dashboard-empty-copy mb-0">Loading dashboard data.</p>
       ) : !nextCase ? (
-        <div className="su-dashboard-empty">
+        <div className="su-dashboard-empty su-dashboard-empty-centered">
           <p className="su-dashboard-empty-copy mb-0">No active publications need your attention right now.</p>
         </div>
       ) : (

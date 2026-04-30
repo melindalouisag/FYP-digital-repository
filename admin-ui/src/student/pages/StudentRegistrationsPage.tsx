@@ -88,8 +88,8 @@ export default function StudentRegistrationsPage() {
             <div className="su-empty-icon">
               <PortalIcon src={studentSidebarIcons.registration} size={40} />
             </div>
-            <h5>No Registration Records to Work On</h5>
-            <p className="text-muted">Draft registrations, returned registrations, and registrations still in approval will appear here.</p>
+            <h5>No Active Registration Records</h5>
+            <p className="text-muted">Draft, returned, pending, and supervisor-approved registrations will appear here. After library verification, the publication moves to Submission.</p>
           </div>
         )}
 

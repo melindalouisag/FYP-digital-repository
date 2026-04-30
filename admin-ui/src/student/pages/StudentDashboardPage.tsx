@@ -12,7 +12,6 @@ export default function StudentDashboardPage() {
   return (
     <ShellLayout
       title="Student Dashboard"
-      subtitle="Monitor publication progress, focus on the next required step, and keep your records moving."
       pageClassName="su-page-shell-dashboard"
     >
       {dashboard.error ? <div className="alert alert-danger">{dashboard.error}</div> : null}

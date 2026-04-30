@@ -67,8 +67,8 @@ export default function StudentSubmissionsPage() {
           <div className="su-empty-icon">
             <PortalIcon src={studentSidebarIcons.submission} size={40} />
           </div>
-          <h5>No Submission-Stage Publications Yet</h5>
-          <p className="text-muted">Publications will appear here after registration verification and remain here while submission review is still in progress.</p>
+          <h5>No Submissions Yet</h5>
+          <p className="text-muted">Verified publications will appear here when they are ready for file upload, revision, clearance, or final review.</p>
         </div>
       )}
 
