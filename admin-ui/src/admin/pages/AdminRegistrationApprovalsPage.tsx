@@ -81,7 +81,6 @@ export default function AdminRegistrationApprovalsPage() {
     <>
       <ShellLayout
         title="Registration"
-        subtitle="Review submitted registrations, approve them for the next stage, or return them with a clear revision note."
       >
         {error ? <div className="alert alert-danger">{error}</div> : null}
 
@@ -93,7 +92,7 @@ export default function AdminRegistrationApprovalsPage() {
             </div>
           ) : pageData.items.length === 0 ? (
             <EmptyState
-              title="No registrations awaiting review"
+              title="No Registrations Awaiting Review"
               description="New registration submissions will appear here after supervisor approval."
               icon={<PortalIcon src={adminSidebarIcons.registration} size={40} />}
               centered

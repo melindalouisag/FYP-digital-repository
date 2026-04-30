@@ -4,7 +4,7 @@ import { adminApi } from '@/services/api/admin';
 import EmptyState from '@/shared/ui/EmptyState';
 import StatusBadge from '@/shared/ui/StatusBadge';
 import type { AdminStudentTrackingGroup, CaseStatus } from '@/types/workflow';
-import { formatFacultyName, normalizeFacultyCode, type FacultyCode } from '@/utils/facultyLabel';
+import { normalizeFacultyCode, type FacultyCode } from '@/utils/facultyLabel';
 import { formatStatus } from '@/utils/workflowUi';
 import ShellLayout from '../../ShellLayout';
 import { buildFacultySummaries, buildStudentListRows, isRevisionStatus } from '../studentTracking';
@@ -88,9 +88,9 @@ export default function AdminStudentsListPage() {
 
   if (!activeFacultyCode) {
     return (
-      <ShellLayout title="Students" subtitle="Student tracking">
+      <ShellLayout title="Students">
         <EmptyState
-          title="Faculty not found"
+          title="Faculty Not Found"
           description="Open the Students overview and choose one of the available faculty views."
           action={(
             <button type="button" className="btn btn-outline-secondary" onClick={() => navigate('/admin/students')}>
@@ -103,10 +103,7 @@ export default function AdminStudentsListPage() {
   }
 
   return (
-    <ShellLayout
-      title="Students"
-      subtitle={`Faculty view for ${formatFacultyName(activeFacultyCode)}`}
-    >
+    <ShellLayout title="Students">
       {error ? <div className="alert alert-danger">{error}</div> : null}
 
       <div className="su-summary-grid mb-4">
@@ -132,7 +129,6 @@ export default function AdminStudentsListPage() {
         <div className="su-section-header">
           <div>
             <h2 className="su-section-title mb-1">Student List</h2>
-            <p className="su-secondary-text mb-0">Search, filter, and review the latest publication record for each student.</p>
           </div>
           <button type="button" className="btn btn-outline-secondary" onClick={() => navigate('/admin/students')}>
             Back to Faculties
@@ -173,8 +169,9 @@ export default function AdminStudentsListPage() {
           </div>
         ) : filteredRows.length === 0 ? (
           <EmptyState
-            title="No students found"
-            description="Adjust the current search or filter to see matching student records."
+            title="No Students Found"
+            description="No student records match the current search or filter."
+            centered
           />
         ) : (
           <div className="su-table-shell">

@@ -119,7 +119,7 @@ export default function AdminChecklistPage() {
   };
 
   return (
-    <ShellLayout title="Templates" subtitle="Create draft checklist versions, edit them safely, and activate one version for future reviews">
+    <ShellLayout title="Templates">
       {isLoading && (
         <div className="text-center py-5">
           <div className="su-spinner mx-auto mb-3" />

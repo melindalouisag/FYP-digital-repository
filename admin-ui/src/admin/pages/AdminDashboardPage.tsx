@@ -157,7 +157,6 @@ export default function AdminDashboardPage() {
   return (
     <ShellLayout
       title="Library Admin Dashboard"
-      subtitle="Monitor repository completion, act on urgent queue items, and keep publication workflows moving."
       pageClassName="su-page-shell-dashboard"
       sidebarBadges={{
         '/admin/registration-approvals': dashboard.registrationQueueCount,
@@ -177,11 +176,17 @@ export default function AdminDashboardPage() {
             primaryText={`${dashboard.publishedStudentCount} of ${dashboard.totalStudentCount} students published`}
             secondaryText={`${dashboard.activeCaseCount} active publication${dashboard.activeCaseCount === 1 ? '' : 's'}`}
           />
-          <DashboardPanel title="Needs Action Now" className="w-100">
+          <DashboardPanel
+            title="Needs Action Now"
+            className="w-100 su-admin-needs-action-panel"
+            bodyClassName="su-admin-needs-action-panel-body"
+          >
             {loading ? (
               <p className="su-dashboard-empty-copy mb-0">Loading dashboard data.</p>
             ) : visibleNeedsAction.length === 0 ? (
-              <p className="su-dashboard-empty-copy mb-0">No urgent queue items right now.</p>
+              <div className="su-dashboard-empty su-dashboard-empty-centered">
+                <p className="su-dashboard-empty-copy mb-0">No urgent queue items right now.</p>
+              </div>
             ) : (
               <div className="su-dashboard-list">
                 {visibleNeedsAction.map((item) => (

@@ -125,7 +125,7 @@ export default function AdminStudentProfilePage() {
 
           {!selectedCase || !activeCase ? (
             <EmptyState
-              title="No submissions yet"
+              title="No Submissions Yet"
               description="This student does not have a publication case to review yet."
             />
           ) : (

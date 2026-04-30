@@ -53,7 +53,6 @@ export default function AdminReviewPage() {
   return (
     <ShellLayout
       title="Submission Review"
-      subtitle="Review submissions that have already been sent to the library and open each student record for checklist processing."
     >
       {error ? <div className="alert alert-danger">{error}</div> : null}
 
@@ -65,7 +64,7 @@ export default function AdminReviewPage() {
           </div>
           ) : rows.length === 0 ? (
             <EmptyState
-              title="No submissions awaiting review"
+              title="No Submissions Awaiting Review"
               description="Library review cases will appear here after supervisors forward them to the library."
               icon={<PortalIcon src={adminSidebarIcons.submission} size={40} />}
               centered

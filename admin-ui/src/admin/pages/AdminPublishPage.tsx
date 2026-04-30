@@ -59,7 +59,6 @@ export default function AdminPublishPage() {
     <>
       <ShellLayout
         title="Publishing"
-        subtitle="Review repository-ready submissions and publish them once the final record is complete."
       >
         {error ? <div className="alert alert-danger">{error}</div> : null}
         {message ? <div className="alert alert-success">{message}</div> : null}
@@ -72,8 +71,8 @@ export default function AdminPublishPage() {
             </div>
           ) : pageData.items.length === 0 ? (
             <EmptyState
-              title="No publications ready for publication"
-              description="Finalized records will appear here when they are ready for repository release."
+              title="No Publications Ready for Publication"
+              description="Finalized records will appear here when they are ready for repository publication."
               icon={<PortalIcon src={adminSidebarIcons.publishing} size={40} />}
               centered
             />

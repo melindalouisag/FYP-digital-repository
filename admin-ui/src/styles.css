@@ -3927,6 +3927,16 @@ body {
   padding: 9px 0;
 }
 
+.su-admin-needs-action-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.su-admin-needs-action-panel-body {
+  flex: 1;
+  min-height: 0;
+}
+
 .su-student-dashboard-top-row .su-dashboard-panel,
 .su-lecturer-dashboard-top-row .su-dashboard-panel {
   padding: 18px;

@@ -8,7 +8,6 @@ export default function AdminChecklistEditorPage() {
   return (
     <ShellLayout
       title="Template Editor"
-      subtitle="Manage checklist categories and items for this template version"
       pageClassName="su-page-shell-dashboard"
     >
       <div className="su-template-editor-toolbar">

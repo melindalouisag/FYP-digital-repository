@@ -81,7 +81,6 @@ export default function AdminClearancePage() {
     <>
       <ShellLayout
         title="Clearance"
-        subtitle="Review submitted clearance forms and either approve them for publication or return them with a correction note."
       >
         {error ? <div className="alert alert-danger">{error}</div> : null}
 
@@ -93,8 +92,8 @@ export default function AdminClearancePage() {
             </div>
           ) : pageData.items.length === 0 ? (
             <EmptyState
-              title="No clearance reviews pending"
-              description="Submitted clearance forms will appear here when students send them for review."
+              title="No Clearance Reviews Pending"
+              description="Submitted clearance forms will appear here."
               icon={<PortalIcon src={adminSidebarIcons.clearance} size={40} />}
               centered
             />

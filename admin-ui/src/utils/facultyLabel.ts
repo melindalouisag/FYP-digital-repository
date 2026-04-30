@@ -31,7 +31,7 @@ const FACULTY_DEFINITIONS: FacultyDefinition[] = [
   },
   {
     code: 'FOE',
-    label: 'FOE (Faculty of Education)',
+    label: 'Faculty of Education (FOE)',
     aliases: [
       'FOE',
       'FACULTY OF EDUCATION (FOE)',
@@ -41,7 +41,7 @@ const FACULTY_DEFINITIONS: FacultyDefinition[] = [
   },
   {
     code: 'FAS',
-    label: 'FAS (Faculty of Arts and Science)',
+    label: 'Faculty of Arts and Science (FAS)',
     aliases: [
       'FAS',
       'FACULTY OF ARTS AND SCIENCE (FAS)',

@@ -32,10 +32,7 @@ export default function AdminStudentsOverviewPage() {
   const facultySummaries = useMemo(() => buildFacultySummaries(groups), [groups]);
 
   return (
-    <ShellLayout
-      title="Students"
-      subtitle="Track publication workflow activity by faculty and open each faculty view for student-level progress."
-    >
+    <ShellLayout title="Students">
       {error ? <div className="alert alert-danger">{error}</div> : null}
 
       {loading ? (
@@ -45,7 +42,7 @@ export default function AdminStudentsOverviewPage() {
         </div>
       ) : facultySummaries.every((item) => item.totalStudents === 0) ? (
         <EmptyState
-          title="No students found"
+          title="No Students Found"
           description="Student publication records will appear here after workflow cases are created."
         />
       ) : (
