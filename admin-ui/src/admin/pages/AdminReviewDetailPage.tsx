@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { adminApi } from '@/services/api/admin';
 import { useConfirmDialog } from '@/shared/ui/useConfirmDialog';
 import type {
@@ -11,6 +11,7 @@ import type {
   SubmissionVersion,
   WorkflowComment,
 } from '@/types/workflow';
+import { normalizeFacultyCode } from '@/utils/facultyLabel';
 import { getRoleDisplayLabel } from '@/utils/uiLabels';
 import {
   canAdminDecide,
@@ -24,6 +25,14 @@ import ShellLayout from '../../ShellLayout';
 type ChecklistDraftRow = {
   checklistItemId: number;
   pass: boolean;
+};
+
+type StudentProfileReturnState = {
+  returnToStudentProfile?: {
+    studentName?: string | null;
+    facultyCode?: string | null;
+    studentUserId?: number | string | null;
+  };
 };
 
 type ChecklistSection = {
@@ -214,6 +223,7 @@ function formatCommentAuthorRole(role: WorkflowComment['authorRole']) {
 export default function AdminReviewDetailPage() {
   const { caseId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { openConfirm, confirmDialog } = useConfirmDialog();
   const [detail, setDetail] = useState<CaseDetailPayload | null>(null);
   const [templates, setTemplates] = useState<ChecklistTemplateResponse[]>([]);
@@ -241,6 +251,17 @@ export default function AdminReviewDetailPage() {
   const selectedSubmissionDownloadHref = detail && selectedSubmission
     ? `/api/admin/cases/${detail.case.id}/submissions/${selectedSubmission.id}/download`
     : '';
+  const profileReturnState = (location.state as StudentProfileReturnState | null)?.returnToStudentProfile;
+  const profileReturnFacultyCode = normalizeFacultyCode(profileReturnState?.facultyCode);
+  const profileReturnStudentUserId = profileReturnState?.studentUserId;
+  const profileReturnPath = profileReturnFacultyCode && profileReturnStudentUserId != null
+    ? `/admin/students/${profileReturnFacultyCode}/${profileReturnStudentUserId}`
+    : null;
+  const profileReturnName = profileReturnState?.studentName?.trim();
+  const returnButtonLabel = profileReturnPath && profileReturnName
+    ? `Return to ${profileReturnName} Profile`
+    : 'Return to Submission Review';
+  const returnButtonTarget = profileReturnPath ?? '/admin/review';
 
   const selectedTemplate = useMemo(
     () => resolveTemplateForSubmission(templates, selectedSubmission),
@@ -435,6 +456,14 @@ export default function AdminReviewDetailPage() {
   return (
     <>
       <ShellLayout title="Submission Review Detail">
+      <button
+        type="button"
+        className="btn btn-outline-secondary btn-sm mb-4"
+        style={PILL_BUTTON_STYLE}
+        onClick={() => navigate(returnButtonTarget)}
+      >
+        {returnButtonLabel}
+      </button>
       {loading && (
         <div className="text-center py-5">
           <div className="su-spinner mx-auto mb-3" />
@@ -472,7 +501,7 @@ export default function AdminReviewDetailPage() {
                 </div>
                 {selectedSubmissionDownloadHref && (
                   <a
-                    className="btn btn-outline-primary btn-sm"
+                    className="btn btn-outline-primary btn-sm su-download-action-button"
                     href={selectedSubmissionDownloadHref}
                     style={PILL_BUTTON_STYLE}
                   >
@@ -552,11 +581,6 @@ export default function AdminReviewDetailPage() {
                   >
                     Open Template Setup
                   </button>
-                </div>
-              )}
-              {!reviewStage && (
-                <div className="alert alert-info mb-3">
-                  Checklist review becomes available when the publication enters library review.
                 </div>
               )}
               {checklistItems.length === 0 && (
@@ -654,11 +678,6 @@ export default function AdminReviewDetailPage() {
             title="Review Decision"
             delay={0.15}
           >
-              {!decisionAllowed && (
-                <div className="alert alert-info">
-                  Review decisions are available only while the publication is in library review.
-                </div>
-              )}
               {decisionAllowed && !checklistSaved && (
                 <div className="alert alert-warning">
                   Checklist results have not been saved yet. You can still approve the publication, but saving the checklist before approval is recommended.

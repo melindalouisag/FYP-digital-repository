@@ -2097,6 +2097,18 @@ body {
   color: var(--su-navy);
 }
 
+.su-download-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 96px;
+  min-height: 36px;
+  padding-inline: 1rem;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+}
+
 .su-action-panel {
   background: #f8fbfc;
   border: 1px solid #d7e7ed;

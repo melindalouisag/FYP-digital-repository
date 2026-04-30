@@ -1,13 +1,23 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { adminApi } from '@/services/api/admin';
 import DownloadFilenameLink from '@/shared/ui/DownloadFilenameLink';
 import { useConfirmDialog } from '@/shared/ui/useConfirmDialog';
 import type { AdminPublishDetail } from '@/types/workflow';
+import { normalizeFacultyCode } from '@/utils/facultyLabel';
 import ShellLayout from '../../ShellLayout';
+
+type StudentProfileReturnState = {
+  returnToStudentProfile?: {
+    studentName?: string | null;
+    facultyCode?: string | null;
+    studentUserId?: number | string | null;
+  };
+};
 
 export default function AdminPublishDetailPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { caseId } = useParams();
   const [detail, setDetail] = useState<AdminPublishDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -22,6 +32,17 @@ export default function AdminPublishDetailPage() {
   const canUnpublish = isPublished && !working;
   const latestSubmissionDownloadHref = detail ? `/api/admin/cases/${detail.caseId}/file/latest` : '';
   const displayCaseTitle = (value?: string | null) => value?.trim() || 'Untitled submission';
+  const profileReturnState = (location.state as StudentProfileReturnState | null)?.returnToStudentProfile;
+  const profileReturnFacultyCode = normalizeFacultyCode(profileReturnState?.facultyCode);
+  const profileReturnStudentUserId = profileReturnState?.studentUserId;
+  const profileReturnPath = profileReturnFacultyCode && profileReturnStudentUserId != null
+    ? `/admin/students/${profileReturnFacultyCode}/${profileReturnStudentUserId}`
+    : null;
+  const profileReturnName = profileReturnState?.studentName?.trim();
+  const returnButtonLabel = profileReturnPath && profileReturnName
+    ? `Return to ${profileReturnName} Profile`
+    : 'Return to Publishing';
+  const returnButtonTarget = profileReturnPath ?? '/admin/publish';
 
   const load = useCallback(async () => {
     if (!caseId) return;
@@ -107,8 +128,8 @@ export default function AdminPublishDetailPage() {
 
   return (
     <ShellLayout title="Publishing Detail">
-      <button className="btn btn-outline-secondary btn-sm mb-4" style={{ borderRadius: '999px' }} onClick={() => navigate('/admin/publish')}>
-        Return to Publishing
+      <button className="btn btn-outline-secondary btn-sm mb-4" style={{ borderRadius: '999px' }} onClick={() => navigate(returnButtonTarget)}>
+        {returnButtonLabel}
       </button>
 
       {error && <div className="alert alert-danger" style={{ borderRadius: '0.75rem' }}>{error}</div>}
@@ -217,19 +238,14 @@ export default function AdminPublishDetailPage() {
                   )}
 
                   {isPublished && (
-                    <div className="mt-3 p-3" style={{ background: '#fef3f2', borderRadius: '0.75rem', border: '1px solid #fecaca' }}>
-                      <div className="mb-2">
-                        <strong style={{ color: '#dc3545' }}>Unpublish</strong>
-                      </div>
-                      <button
-                        className="btn btn-outline-danger"
-                        style={{ borderRadius: '999px' }}
-                        disabled={!canUnpublish}
-                        onClick={() => void unpublish()}
-                      >
-                        {workingAction === 'unpublish' ? 'Unpublishing...' : 'Unpublish'}
-                      </button>
-                    </div>
+                    <button
+                      className="btn btn-outline-danger"
+                      style={{ borderRadius: '999px' }}
+                      disabled={!canUnpublish}
+                      onClick={() => void unpublish()}
+                    >
+                      {workingAction === 'unpublish' ? 'Unpublishing...' : 'Unpublish'}
+                    </button>
                   )}
 
                   {!isReadyToPublish && !isPublished && (

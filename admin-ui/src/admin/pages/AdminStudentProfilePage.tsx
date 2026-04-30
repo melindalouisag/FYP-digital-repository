@@ -55,6 +55,16 @@ export default function AdminStudentProfilePage() {
   const previousVersions = selectedSubmissions.slice(1);
   const timelineItems = buildTrackingTimeline(selectedCase);
   const facultyLabel = formatFacultyName(detail?.faculty ?? facultyCode);
+  const profileFacultyCode = normalizeFacultyCode(facultyCode) ?? normalizeFacultyCode(detail?.faculty) ?? 'FET';
+  const studentProfileReturnState = detail
+    ? {
+        returnToStudentProfile: {
+          studentName: detail.studentName,
+          facultyCode: profileFacultyCode,
+          studentUserId: detail.studentUserId,
+        },
+      }
+    : undefined;
   const primaryCase = useMemo(() => resolvePrimaryCase(detail?.cases ?? []), [detail?.cases]);
   const publishTarget = activeCase && (
     activeCase.status === 'CLEARANCE_APPROVED'
@@ -73,7 +83,7 @@ export default function AdminStudentProfilePage() {
         <button
           type="button"
           className="btn btn-outline-secondary"
-          onClick={() => navigate(`/admin/students/${normalizeFacultyCode(facultyCode) ?? normalizeFacultyCode(detail?.faculty) ?? 'FET'}`)}
+          onClick={() => navigate(`/admin/students/${profileFacultyCode}`)}
         >
           Back to Student List
         </button>
@@ -125,7 +135,6 @@ export default function AdminStudentProfilePage() {
                 <div className="su-section-header">
                   <div>
                     <h2 className="su-section-title mb-1">Student Info</h2>
-                    <p className="su-secondary-text mb-0">Current publication case and student record.</p>
                   </div>
                   <StatusBadge status={activeCase.status} />
                 </div>
@@ -151,7 +160,6 @@ export default function AdminStudentProfilePage() {
                 <div className="su-section-header">
                   <div>
                     <h2 className="su-section-title mb-1">Progress Timeline</h2>
-                    <p className="su-secondary-text mb-0">Workflow milestones based on the current publication case.</p>
                   </div>
                 </div>
                 <StudentProgressTimeline items={timelineItems} />
@@ -207,16 +215,23 @@ export default function AdminStudentProfilePage() {
                 <div className="su-section-header">
                   <div>
                     <h2 className="su-section-title mb-1">Quick Actions</h2>
-                    <p className="su-secondary-text mb-0">Open the current case in the existing admin workflow pages.</p>
                   </div>
                 </div>
                 <div className="su-action-row">
-                  <button type="button" className="btn btn-primary" onClick={() => navigate(`/admin/review/${activeCase.id}`)}>
-                    Review
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => navigate(`/admin/review/${activeCase.id}`, { state: studentProfileReturnState })}
+                  >
+                    Review Feedback History
                   </button>
                   {publishTarget ? (
-                    <button type="button" className="btn btn-outline-secondary" onClick={() => navigate(publishTarget)}>
-                      Publish
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary"
+                      onClick={() => navigate(publishTarget, { state: studentProfileReturnState })}
+                    >
+                      View Publishing Record
                     </button>
                   ) : null}
                 </div>

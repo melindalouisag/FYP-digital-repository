@@ -192,7 +192,7 @@ export default function LecturerStudentDetailPage() {
                           />
                         ) : c.latestSubmissionAt ? (
                           <a
-                            className="btn btn-outline-primary btn-sm"
+                            className="btn btn-outline-primary btn-sm su-download-action-button"
                             style={{ borderRadius: '999px' }}
                             href={`/api/lecturer/cases/${c.caseId}/submissions/latest/download`}
                           >
