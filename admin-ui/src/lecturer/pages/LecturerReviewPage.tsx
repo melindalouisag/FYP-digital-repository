@@ -37,7 +37,7 @@ export default function LecturerReviewPage() {
   const displayCaseTitle = (value?: string | null) => value?.trim() || 'Untitled submission';
 
   return (
-    <ShellLayout title="Submission Review" subtitle="Review submission records grouped by student for supervisor action">
+    <ShellLayout title="Submission Review">
       {error && <div className="alert alert-danger">{error}</div>}
 
       <div className="d-flex flex-wrap align-items-center gap-2 mb-4">
@@ -67,7 +67,7 @@ export default function LecturerReviewPage() {
             <PortalIcon src={lecturerSidebarIcons.review} size={40} />
           </div>
           <h5>No Publications Awaiting Supervisor Review</h5>
-          <p className="text-muted">No publications are waiting for supervisor review for {year}.</p>
+          <p className="text-muted">Review student submissions here. Forward submissions to the library when no lecturer-side revision is required.</p>
         </div>
       )}
 

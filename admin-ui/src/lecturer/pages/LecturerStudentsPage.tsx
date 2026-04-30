@@ -37,7 +37,7 @@ export default function LecturerStudentsPage() {
   const displayCaseTitle = (value?: string | null) => value?.trim() || 'Untitled submission';
 
   return (
-    <ShellLayout title="My Students" subtitle="Review supervised students and publication activity for the selected year">
+    <ShellLayout title="My Students">
       <div className="d-flex flex-wrap align-items-center gap-2 mb-4">
         <label className="form-label mb-0 fw-semibold small">Year:</label>
         <select

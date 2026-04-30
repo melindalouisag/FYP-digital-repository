@@ -61,7 +61,6 @@ export default function LecturerDashboardPage() {
   return (
     <ShellLayout
       title="Lecturer Dashboard"
-      subtitle="Monitor supervised publication progress, workflow stages, and the latest student activity."
       pageClassName="su-page-shell-dashboard"
       sidebarBadges={{
         '/lecturer/approvals': dashboard.registrationApprovalCount,
@@ -89,6 +88,7 @@ export default function LecturerDashboardPage() {
         <div className="su-dashboard-grid su-dashboard-grid-3 su-dashboard-top-row su-lecturer-dashboard-top-row">
           <DashboardProgressRingCard
             title="Publication Completion"
+            className="su-lecturer-completion-card"
             progressPercent={completionPercent}
             loading={loading}
             primaryText={`${dashboard.publishedStudentCount} of ${dashboard.totalStudentCount} students published`}

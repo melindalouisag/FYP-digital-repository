@@ -134,7 +134,6 @@ export default function LecturerApprovalsPage() {
     <>
       <ShellLayout
         title="Registration Approval"
-        subtitle="Review registration submissions and either approve them or return them with a reason"
       >
         {error && <div className="alert alert-danger" style={{ borderRadius: '0.75rem' }}>{error}</div>}
 
@@ -150,8 +149,8 @@ export default function LecturerApprovalsPage() {
           <div className="su-empty-icon">
             <PortalIcon src={lecturerSidebarIcons.approvals} size={40} />
           </div>
-          <h5>No Registration Approvals Pending</h5>
-          <p className="text-muted">No student registrations are waiting for supervisor approval at this time.</p>
+          <h5>No Pending Registration Approvals</h5>
+          <p className="text-muted">Review student publication registrations here. Approve or reject each registration with a stated reason.</p>
         </div>
       )}
 

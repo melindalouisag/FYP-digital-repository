@@ -3932,6 +3932,24 @@ body {
   padding: 18px;
 }
 
+.su-lecturer-completion-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.su-lecturer-completion-card .su-progress-ring-card-body {
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.su-lecturer-completion-card .su-progress-ring,
+.su-lecturer-completion-card .su-progress-ring-summary {
+  margin-right: auto;
+  margin-left: auto;
+}
+
 .su-lecturer-dashboard-top-row .su-dashboard-panel-header,
 .su-admin-dashboard-top-row .su-dashboard-panel-header {
   margin-bottom: 14px;

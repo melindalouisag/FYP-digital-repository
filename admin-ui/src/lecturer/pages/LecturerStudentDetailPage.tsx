@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useCallback, useEffect, useState } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { lecturerApi, type LecturerCaseWorkItem, type LecturerStudentGroup, type LecturerSubmissionVersion } from '@/services/api/lecturer';
 import CaseTimeline from '@/shared/ui/CaseTimeline';
 import DownloadFilenameLink from '@/shared/ui/DownloadFilenameLink';
@@ -16,13 +16,11 @@ const supervisorStatuses: Array<LecturerCaseWorkItem['status']> = [
 
 export default function LecturerStudentDetailPage() {
   const { studentId } = useParams();
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { openConfirm, confirmDialog } = useConfirmDialog();
   const tab = searchParams.get('tab') === 'library' ? 'library' : 'supervisor';
 
   const [group, setGroup] = useState<LecturerStudentGroup | null>(null);
-  const [year, setYear] = useState<number>(new Date().getFullYear());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [workingCaseId, setWorkingCaseId] = useState<number | null>(null);
@@ -37,7 +35,7 @@ export default function LecturerStudentDetailPage() {
     setLoading(true);
     setError('');
     try {
-      const groups = await lecturerApi.myStudents(year);
+      const groups = await lecturerApi.myStudents();
       const match = groups.find((g) => String(g.studentUserId) === String(studentId)) ?? null;
       setGroup(match);
     } catch (err) {
@@ -46,7 +44,7 @@ export default function LecturerStudentDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [studentId, year]);
+  }, [studentId]);
 
   useEffect(() => {
     void load();
@@ -86,11 +84,6 @@ export default function LecturerStudentDetailPage() {
     };
   }, [group, submissions]);
 
-  const yearOptions = useMemo(() => {
-    const current = new Date().getFullYear();
-    return [current - 1, current, current + 1];
-  }, []);
-
   const runAction = async (caseId: number, action: () => Promise<void>) => {
     setWorkingCaseId(caseId);
     setError('');
@@ -129,25 +122,8 @@ export default function LecturerStudentDetailPage() {
 
   return (
     <>
-      <ShellLayout title="Student Publications" subtitle="Review publication history, submission files, and supervisor decisions for the selected student">
+      <ShellLayout title="Student Publications">
       {error && <div className="alert alert-danger" style={{ borderRadius: '0.75rem' }}>{error}</div>}
-
-      <div className="d-flex flex-wrap align-items-center gap-2 mb-4">
-        <button className="btn btn-outline-secondary btn-sm" style={{ borderRadius: '999px' }} onClick={() => navigate(-1)}>
-          Return to Previous Page
-        </button>
-        <label className="form-label mb-0 fw-semibold small">Year:</label>
-        <select
-          className="form-select form-select-sm"
-          style={{ width: 120, borderRadius: '999px' }}
-          value={year}
-          onChange={(event) => setYear(Number(event.target.value))}
-        >
-          {yearOptions.map((value) => (
-            <option key={value} value={value}>{value}</option>
-          ))}
-        </select>
-      </div>
 
       {loading && (
         <div className="text-center py-5">
@@ -159,7 +135,7 @@ export default function LecturerStudentDetailPage() {
       {!loading && !group && (
         <div className="su-empty-state">
           <h5>Student Not Found</h5>
-          <p className="text-muted">No supervised student record is available for the selected year.</p>
+          <p className="text-muted">No supervised student record is available.</p>
         </div>
       )}
 
@@ -389,7 +365,7 @@ export default function LecturerStudentDetailPage() {
           {group.cases.length === 0 && (
             <div className="su-empty-state mt-3">
               <h5>No Publications for This Student</h5>
-              <p className="text-muted">No publications are available for this student in the selected year.</p>
+              <p className="text-muted">No publications are available for this student.</p>
             </div>
           )}
         </>
