@@ -476,7 +476,7 @@ export default function AdminReviewDetailPage() {
                     href={selectedSubmissionDownloadHref}
                     style={PILL_BUTTON_STYLE}
                   >
-                    Download file
+                    Download
                   </a>
                 )}
               </div>

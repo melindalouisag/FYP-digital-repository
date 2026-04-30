@@ -80,7 +80,7 @@ describe('StudentRegistrationNewPage', () => {
     await waitFor(() => expect(studentApiMocks.listSupervisors).toHaveBeenCalled());
 
     await user.clear(screen.getByLabelText('Title'));
-    await user.click(screen.getByRole('button', { name: /submit for review/i }));
+    await user.click(screen.getByRole('button', { name: /^submit$/i }));
 
     expect(await screen.findByText('Title is required.')).toBeInTheDocument();
     expect(screen.getByText('Please select a supervisor.')).toBeInTheDocument();

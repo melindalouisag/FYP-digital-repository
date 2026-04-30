@@ -170,7 +170,7 @@ export default function RepositoryDetail() {
                 disabled={!user || downloadLoading}
                 title={!user ? 'Sign-in with a university account is required to download files.' : undefined}
               >
-                {downloadLoading ? 'Downloading...' : 'Download PDF'}
+                {downloadLoading ? 'Downloading...' : 'Download'}
               </button>
               {!user && (
                 <div className="d-flex align-items-center gap-2">

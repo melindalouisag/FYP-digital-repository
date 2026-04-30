@@ -105,7 +105,7 @@ export default function StudentClearanceDetailPage() {
                 onClick={() => void onSubmit()}
                 disabled={submitting || !canSubmitClearance(detail.case.status)}
               >
-                {submitting ? 'Submitting...' : 'Submit for Review'}
+                {submitting ? 'Submitting...' : 'Submit'}
               </button>
               <button
                 className="btn btn-outline-secondary"

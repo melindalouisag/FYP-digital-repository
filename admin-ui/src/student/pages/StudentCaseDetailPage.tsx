@@ -15,6 +15,7 @@ import type {
 } from '@/types/workflow';
 import { getRoleDisplayLabel } from '@/utils/uiLabels';
 import {
+  canUploadSubmission,
   canSubmitClearance,
   formatStageName,
   formatStatus,
@@ -95,7 +96,8 @@ export default function StudentCaseDetailPage() {
   const versions = detail?.versions ?? detail?.submissions ?? [];
   const isRejected = stageKey === 'rejected';
   const showClearanceAction = Boolean(status && CLEARANCE_ACTION_STATUSES.has(status));
-  const clearanceButtonLabel = status && canSubmitClearance(status) ? 'Submit for Review' : 'Open Clearance';
+  const clearanceButtonLabel = status && canSubmitClearance(status) ? 'Submit' : 'Open';
+  const submissionButtonLabel = status && canUploadSubmission(status) ? 'Upload' : 'Open';
   const pageTitle = detail?.case.title?.trim() ? detail.case.title : 'Untitled Publication';
   const pageSubtitle = detail
     ? `${getPublicationTypeLabel(detail.case.type)} • Current status: ${formatStatus(detail.case.status)}`
@@ -215,7 +217,7 @@ export default function StudentCaseDetailPage() {
               onClick={() => navigate(`/student/cases/${detail.case.id}/submission`)}
               disabled={submissionDeadlinePassed}
             >
-              Open submission page
+              {submissionButtonLabel}
             </button>
           </div>
 

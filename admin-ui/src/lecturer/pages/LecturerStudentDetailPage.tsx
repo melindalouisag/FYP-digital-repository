@@ -196,7 +196,7 @@ export default function LecturerStudentDetailPage() {
                             style={{ borderRadius: '999px' }}
                             href={`/api/lecturer/cases/${c.caseId}/submissions/latest/download`}
                           >
-                            Download Latest
+                            Download
                           </a>
                         ) : (
                           <span className="text-muted small">No submission file yet.</span>

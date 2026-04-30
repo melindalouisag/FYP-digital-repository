@@ -220,11 +220,7 @@ export function RegistrationForm({ form }: RegistrationFormProps) {
           disabled={form.saving || form.loadingSupervisors || form.loadingPage || form.registrationDeadlinePassed}
           onClick={() => void form.submitForApproval()}
         >
-          {form.saving
-            ? 'Submitting...'
-            : (form.isEditMode && form.currentStatus && form.currentStatus !== 'REGISTRATION_DRAFT'
-              ? 'Save and Submit for Review'
-              : 'Submit for Review')}
+          {form.saving ? 'Submitting...' : 'Submit'}
         </button>
       </div>
     </form>
