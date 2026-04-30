@@ -8,4 +8,5 @@ import java.util.Optional;
 
 public interface ClearanceFormRepository extends JpaRepository<ClearanceForm, Long> {
   Optional<ClearanceForm> findByPublicationCase(PublicationCase publicationCase);
+  void deleteByPublicationCase(PublicationCase publicationCase);
 }

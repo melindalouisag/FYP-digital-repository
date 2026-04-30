@@ -26,7 +26,6 @@ import com.example.thesisrepo.web.dto.OperationResultResponse;
 import com.example.thesisrepo.web.dto.PagedResponse;
 import com.example.thesisrepo.web.dto.PublishResultResponse;
 import com.example.thesisrepo.web.dto.StudentCaseSummaryResponse;
-import jakarta.transaction.Transactional;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
@@ -270,10 +269,9 @@ public class AdminWorkflowController {
   }
 
   @PostMapping("/publish/{caseId}/unpublish")
-  @Transactional
-  public ResponseEntity<CaseStatusResponse> unpublish(@PathVariable Long caseId, @RequestBody DecisionRequest req) {
-    User admin = currentUser.requireCurrentUser();
-    return ResponseEntity.ok(publishingService.unpublish(admin, caseId, req.getReason()));
+  public ResponseEntity<OperationResultResponse> unpublish(@PathVariable Long caseId) {
+    currentUser.requireCurrentUser();
+    return ResponseEntity.ok(publishingService.unpublish(caseId));
   }
 
   private PublicationCase getCase(Long caseId) {

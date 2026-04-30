@@ -8,29 +8,36 @@ import com.example.thesisrepo.publication.PublicationCase;
 import com.example.thesisrepo.publication.PublicationRegistration;
 import com.example.thesisrepo.publication.PublishedItem;
 import com.example.thesisrepo.publication.SubmissionVersion;
-import com.example.thesisrepo.publication.WorkflowComment;
+import com.example.thesisrepo.publication.repo.AuditEventRepository;
+import com.example.thesisrepo.publication.repo.CaseSupervisorRepository;
+import com.example.thesisrepo.publication.repo.ChecklistResultRepository;
+import com.example.thesisrepo.publication.repo.ClearanceFormRepository;
+import com.example.thesisrepo.publication.repo.DownloadEventRepository;
 import com.example.thesisrepo.publication.repo.PublicationCaseRepository;
 import com.example.thesisrepo.publication.repo.PublicationRegistrationRepository;
 import com.example.thesisrepo.publication.repo.PublishedItemRepository;
 import com.example.thesisrepo.publication.repo.SubmissionVersionRepository;
 import com.example.thesisrepo.publication.repo.WorkflowCommentRepository;
+import com.example.thesisrepo.reminder.StudentDashboardReminderRepository;
 import com.example.thesisrepo.service.workflow.AuditEventService;
 import com.example.thesisrepo.service.workflow.PublicationWorkflowGateService;
 import com.example.thesisrepo.user.Role;
 import com.example.thesisrepo.user.User;
 import com.example.thesisrepo.web.dto.AdminPublishDetailDto;
 import com.example.thesisrepo.web.dto.AdminPublishQueueDto;
-import com.example.thesisrepo.web.dto.CaseStatusResponse;
+import com.example.thesisrepo.web.dto.OperationResultResponse;
 import com.example.thesisrepo.web.dto.PagedResponse;
 import com.example.thesisrepo.web.dto.PublishResultResponse;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -38,20 +45,26 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static org.springframework.http.HttpStatus.BAD_REQUEST;
-
 @Service
 @RequiredArgsConstructor
 public class PublishingService {
+  private static final Logger log = LoggerFactory.getLogger(PublishingService.class);
 
   private final PublicationCaseRepository cases;
   private final PublicationRegistrationRepository registrations;
   private final SubmissionVersionRepository submissionVersions;
   private final PublishedItemRepository publishedItems;
+  private final DownloadEventRepository downloadEvents;
+  private final ChecklistResultRepository checklistResults;
+  private final ClearanceFormRepository clearances;
+  private final CaseSupervisorRepository caseSupervisors;
   private final StudentProfileRepository studentProfiles;
   private final WorkflowCommentRepository comments;
+  private final AuditEventRepository auditEventRepository;
+  private final StudentDashboardReminderRepository reminders;
   private final PublicationWorkflowGateService workflowGates;
   private final AuditEventService auditEvents;
+  private final StorageService storageService;
   private final EntityManager entityManager;
 
   @Transactional(readOnly = true)
@@ -147,34 +160,33 @@ public class PublishingService {
   }
 
   @Transactional
-  public CaseStatusResponse unpublish(User admin, Long caseId, String reason) {
-    String normalizedReason = requireMinLength(reason, 5, "Reason is required (min 5 characters)");
-
+  public OperationResultResponse unpublish(Long caseId) {
     PublicationCase publicationCase = workflowGates.requireCase(caseId);
     workflowGates.ensureAdminCanUnpublish(publicationCase);
+    List<SubmissionVersion> versions = submissionVersions.findByPublicationCaseOrderByVersionNumberDesc(publicationCase);
+    List<String> storedFiles = versions.stream()
+      .map(SubmissionVersion::getFilePath)
+      .filter(PublishingService::hasText)
+      .toList();
 
+    publishedItems.findByPublicationCase_Id(caseId)
+      .ifPresent(downloadEvents::deleteByPublishedItem);
     publishedItems.deleteByPublicationCase_Id(caseId);
-    publicationCase.setStatus(CaseStatus.NEEDS_REVISION_LIBRARY);
-    cases.save(publicationCase);
-
-    WorkflowComment comment = comments.save(WorkflowComment.builder()
-      .publicationCase(publicationCase)
-      .author(admin)
-      .authorRole(Role.ADMIN)
-      .authorEmail(admin.getEmail())
-      .body(normalizedReason)
-      .build());
-
-    auditEvents.log(
-      publicationCase.getId(),
-      admin,
-      Role.ADMIN,
-      AuditEventType.UNPUBLISHED_FOR_CORRECTION,
-      comment.getBody()
-    );
+    auditEventRepository.deleteByCaseId(caseId);
+    comments.deleteByPublicationCase(publicationCase);
+    if (!versions.isEmpty()) {
+      checklistResults.deleteBySubmissionVersionIn(versions);
+    }
+    clearances.deleteByPublicationCase(publicationCase);
+    registrations.deleteByPublicationCase(publicationCase);
+    caseSupervisors.deleteByPublicationCase(publicationCase);
+    reminders.deleteByPublicationCase(publicationCase);
+    submissionVersions.deleteByPublicationCase(publicationCase);
+    cases.delete(publicationCase);
 
     entityManager.flush();
-    return new CaseStatusResponse(publicationCase.getId(), publicationCase.getStatus());
+    deleteStoredFiles(storedFiles);
+    return new OperationResultResponse(true);
   }
 
   private String resolvePublishTitle(PublicationCase publicationCase, PublicationRegistration registration) {
@@ -191,10 +203,13 @@ public class PublishingService {
     return value != null && !value.isBlank();
   }
 
-  private static String requireMinLength(String value, int minLength, String message) {
-    if (value == null || value.trim().length() < minLength) {
-      throw new ResponseStatusException(BAD_REQUEST, message);
+  private void deleteStoredFiles(List<String> storedFiles) {
+    for (String storedFile : storedFiles) {
+      try {
+        storageService.delete(storedFile);
+      } catch (IOException ex) {
+        log.warn("Failed to delete stored submission file during unpublish cleanup: {}", storedFile, ex);
+      }
     }
-    return value.trim();
   }
 }

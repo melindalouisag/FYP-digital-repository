@@ -16,6 +16,7 @@ import java.util.Optional;
 public interface PublicationRegistrationRepository extends JpaRepository<PublicationRegistration, Long> {
   Optional<PublicationRegistration> findByPublicationCase(PublicationCase publicationCase);
   List<PublicationRegistration> findByPublicationCaseIn(List<PublicationCase> cases);
+  void deleteByPublicationCase(PublicationCase publicationCase);
 
   @EntityGraph(attributePaths = {"publicationCase", "publicationCase.student"})
   @Query(

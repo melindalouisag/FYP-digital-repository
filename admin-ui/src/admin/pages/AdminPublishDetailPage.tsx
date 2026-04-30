@@ -14,13 +14,12 @@ export default function AdminPublishDetailPage() {
   const [workingAction, setWorkingAction] = useState<'publish' | 'unpublish' | null>(null);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
-  const [unpublishReason, setUnpublishReason] = useState('');
   const { openConfirm, confirmDialog } = useConfirmDialog();
 
   const working = workingAction !== null;
   const isPublished = detail?.status === 'PUBLISHED';
   const isReadyToPublish = detail?.status === 'READY_TO_PUBLISH';
-  const canUnpublish = isPublished && unpublishReason.trim().length >= 5 && !working;
+  const canUnpublish = isPublished && !working;
   const latestSubmissionDownloadHref = detail ? `/api/admin/cases/${detail.caseId}/file/latest` : '';
   const displayCaseTitle = (value?: string | null) => value?.trim() || 'Untitled submission';
 
@@ -84,14 +83,9 @@ export default function AdminPublishDetailPage() {
 
   const unpublish = async () => {
     if (!caseId) return;
-    const trimmed = unpublishReason.trim();
-    if (trimmed.length < 5) {
-      setError('Reason is required (min 5 characters).');
-      return;
-    }
     openConfirm({
-      title: 'Unpublish Repository Item',
-      message: 'This will remove the item from the repository and reopen the publication for corrections. Continue?',
+      title: 'Unpublish Publication?',
+      message: 'This will permanently delete the publication record from the system and remove it from the repository. The student will need to start again from registration. Continue?',
       confirmLabel: 'Unpublish',
       confirmVariant: 'danger',
       onConfirm: async (close) => {
@@ -99,11 +93,9 @@ export default function AdminPublishDetailPage() {
         setError('');
         setMessage('');
         try {
-          await adminApi.unpublish(Number(caseId), trimmed);
-          setMessage('Publication removed from the repository and returned for correction.');
-          setUnpublishReason('');
-          await load();
+          await adminApi.unpublish(Number(caseId));
           close();
+          navigate('/admin/publish');
         } catch (err) {
           setError(err instanceof Error ? err.message : 'Unpublish action failed.');
         } finally {
@@ -114,7 +106,7 @@ export default function AdminPublishDetailPage() {
   };
 
   return (
-    <ShellLayout title="Publishing Detail" subtitle="Review metadata, the latest submission, and final publishing actions">
+    <ShellLayout title="Publishing Detail">
       <button className="btn btn-outline-secondary btn-sm mb-4" style={{ borderRadius: '999px' }} onClick={() => navigate('/admin/publish')}>
         Return to Publishing
       </button>
@@ -229,25 +221,13 @@ export default function AdminPublishDetailPage() {
                       <div className="mb-2">
                         <strong style={{ color: '#dc3545' }}>Unpublish</strong>
                       </div>
-                      <p className="small text-muted mb-2">
-                        This will remove the item from the repository and reopen the publication for correction.
-                      </p>
-                      <textarea
-                        className="form-control mb-2"
-                        rows={3}
-                        value={unpublishReason}
-                        onChange={(event) => setUnpublishReason(event.target.value)}
-                        placeholder="Describe what needs to be corrected (min 5 characters)"
-                        disabled={working}
-                        style={{ borderRadius: '0.5rem' }}
-                      />
                       <button
                         className="btn btn-outline-danger"
                         style={{ borderRadius: '999px' }}
                         disabled={!canUnpublish}
                         onClick={() => void unpublish()}
                       >
-                        {workingAction === 'unpublish' ? 'Unpublishing...' : 'Unpublish and Return for Correction'}
+                        {workingAction === 'unpublish' ? 'Unpublishing...' : 'Unpublish'}
                       </button>
                     </div>
                   )}

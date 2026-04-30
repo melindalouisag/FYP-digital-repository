@@ -11,4 +11,5 @@ import java.util.Optional;
 public interface WorkflowCommentRepository extends JpaRepository<WorkflowComment, Long> {
   List<WorkflowComment> findByPublicationCaseOrderByCreatedAtAsc(PublicationCase publicationCase);
   Optional<WorkflowComment> findTopByPublicationCaseAndAuthorRoleOrderByCreatedAtDesc(PublicationCase publicationCase, Role authorRole);
+  void deleteByPublicationCase(PublicationCase publicationCase);
 }

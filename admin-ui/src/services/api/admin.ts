@@ -133,8 +133,8 @@ export const adminApi = {
     return postJson(`/api/admin/publish/${caseId}`);
   },
 
-  unpublish(caseId: number, reason: string): Promise<{ caseId: number; status: CaseStatus }> {
-    return postJson(`/api/admin/publish/${caseId}/unpublish`, { reason });
+  unpublish(caseId: number): Promise<{ ok: boolean }> {
+    return postJson(`/api/admin/publish/${caseId}/unpublish`);
   },
 
   checklists(type: PublicationType): Promise<ChecklistTemplateResponse[]> {

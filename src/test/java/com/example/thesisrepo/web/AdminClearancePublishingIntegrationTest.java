@@ -2,20 +2,37 @@ package com.example.thesisrepo.web;
 
 import com.example.thesisrepo.publication.AuditEventType;
 import com.example.thesisrepo.publication.CaseStatus;
+import com.example.thesisrepo.publication.CaseSupervisor;
+import com.example.thesisrepo.publication.ChecklistItemV2;
+import com.example.thesisrepo.publication.ChecklistResult;
+import com.example.thesisrepo.publication.ChecklistScope;
+import com.example.thesisrepo.publication.ChecklistTemplate;
 import com.example.thesisrepo.publication.ClearanceForm;
 import com.example.thesisrepo.publication.ClearanceStatus;
+import com.example.thesisrepo.publication.DownloadEvent;
+import com.example.thesisrepo.publication.PublishedItem;
 import com.example.thesisrepo.publication.PublicationCase;
 import com.example.thesisrepo.publication.PublicationRegistration;
 import com.example.thesisrepo.publication.PublicationType;
+import com.example.thesisrepo.publication.ReviewOutcome;
 import com.example.thesisrepo.publication.SubmissionStatus;
 import com.example.thesisrepo.publication.SubmissionVersion;
+import com.example.thesisrepo.publication.WorkflowComment;
 import com.example.thesisrepo.publication.repo.AuditEventRepository;
+import com.example.thesisrepo.publication.repo.CaseSupervisorRepository;
+import com.example.thesisrepo.publication.repo.ChecklistItemV2Repository;
+import com.example.thesisrepo.publication.repo.ChecklistResultRepository;
+import com.example.thesisrepo.publication.repo.ChecklistTemplateRepository;
 import com.example.thesisrepo.publication.repo.ClearanceFormRepository;
+import com.example.thesisrepo.publication.repo.DownloadEventRepository;
 import com.example.thesisrepo.publication.repo.PublicationCaseRepository;
 import com.example.thesisrepo.publication.repo.PublicationRegistrationRepository;
 import com.example.thesisrepo.publication.repo.PublishedItemRepository;
 import com.example.thesisrepo.publication.repo.SubmissionVersionRepository;
 import com.example.thesisrepo.publication.repo.WorkflowCommentRepository;
+import com.example.thesisrepo.reminder.ReminderStatus;
+import com.example.thesisrepo.reminder.StudentDashboardReminder;
+import com.example.thesisrepo.reminder.StudentDashboardReminderRepository;
 import com.example.thesisrepo.user.Role;
 import com.example.thesisrepo.user.User;
 import com.example.thesisrepo.user.UserRepository;
@@ -30,6 +47,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -54,12 +73,20 @@ class AdminClearancePublishingIntegrationTest {
   @Autowired private PublishedItemRepository publishedItems;
   @Autowired private WorkflowCommentRepository comments;
   @Autowired private AuditEventRepository auditEvents;
+  @Autowired private DownloadEventRepository downloadEvents;
+  @Autowired private ChecklistTemplateRepository checklistTemplates;
+  @Autowired private ChecklistItemV2Repository checklistItems;
+  @Autowired private ChecklistResultRepository checklistResults;
+  @Autowired private CaseSupervisorRepository caseSupervisors;
+  @Autowired private StudentDashboardReminderRepository reminders;
 
   private User student;
+  private User lecturer;
 
   @BeforeEach
   void setUp() {
     student = requireUser(Role.STUDENT);
+    lecturer = requireUser(Role.LECTURER);
   }
 
   @Test
@@ -178,23 +205,67 @@ class AdminClearancePublishingIntegrationTest {
     assertThat(auditEvents.findByCaseIdOrderByCreatedAtDesc(readyCase.getId()))
       .anyMatch(event -> event.getEventType() == AuditEventType.PUBLISHED);
 
-    mockMvc.perform(post("/api/admin/publish/{caseId}/unpublish", readyCase.getId())
-        .session(adminSession)
-        .contentType(MediaType.APPLICATION_JSON)
-        .content("""
-          {"reason":"Metadata and abstract need correction."}
-          """))
-      .andExpect(status().isOk())
-      .andExpect(jsonPath("$.caseId").value(readyCase.getId()))
-      .andExpect(jsonPath("$.status").value("NEEDS_REVISION_LIBRARY"));
+    PublishedItem publishedItem = publishedItems.findByPublicationCase_Id(readyCase.getId()).orElseThrow();
+    int templateVersion = checklistTemplates.findTopByPublicationTypeOrderByVersionDesc(ChecklistScope.THESIS)
+      .map(ChecklistTemplate::getVersion)
+      .orElse(0) + 1;
+    ChecklistTemplate template = checklistTemplates.save(ChecklistTemplate.builder()
+      .publicationType(ChecklistScope.THESIS)
+      .version(templateVersion)
+      .isActive(false)
+      .build());
+    ChecklistItemV2 checklistItem = checklistItems.save(ChecklistItemV2.builder()
+      .template(template)
+      .orderIndex(1)
+      .section("Metadata")
+      .itemText("Metadata is complete")
+      .isRequired(true)
+      .build());
+    checklistResults.save(ChecklistResult.builder()
+      .submissionVersion(approvedVersion)
+      .checklistItem(checklistItem)
+      .passFail(ReviewOutcome.PASS)
+      .build());
+    comments.save(WorkflowComment.builder()
+      .publicationCase(readyCase)
+      .submissionVersion(approvedVersion)
+      .author(student)
+      .authorRole(Role.STUDENT)
+      .authorEmail(student.getEmail())
+      .body("Student-side comment")
+      .build());
+    caseSupervisors.save(CaseSupervisor.builder()
+      .publicationCase(readyCase)
+      .lecturer(lecturer)
+      .build());
+    downloadEvents.save(DownloadEvent.builder()
+      .publishedItem(publishedItem)
+      .user(student)
+      .downloadedAt(Instant.now())
+      .build());
+    reminders.save(StudentDashboardReminder.builder()
+      .user(student)
+      .publicationCase(readyCase)
+      .title("Publication reminder")
+      .reminderDate(LocalDate.now())
+      .reminderTime(LocalTime.NOON)
+      .status(ReminderStatus.ACTIVE)
+      .build());
 
-    assertThat(cases.findById(readyCase.getId()).orElseThrow().getStatus()).isEqualTo(CaseStatus.NEEDS_REVISION_LIBRARY);
+    mockMvc.perform(post("/api/admin/publish/{caseId}/unpublish", readyCase.getId())
+        .session(adminSession))
+      .andExpect(status().isOk())
+      .andExpect(jsonPath("$.ok").value(true));
+
+    assertThat(cases.findById(readyCase.getId())).isEmpty();
+    assertThat(registrations.findByPublicationCase(readyCase)).isEmpty();
+    assertThat(submissionVersions.findByPublicationCaseOrderByVersionNumberDesc(readyCase)).isEmpty();
+    assertThat(clearances.findByPublicationCase(readyCase)).isEmpty();
     assertThat(publishedItems.existsByPublicationCase_Id(readyCase.getId())).isFalse();
-    assertThat(comments.findByPublicationCaseOrderByCreatedAtAsc(readyCase))
-      .extracting(comment -> comment.getBody())
-      .contains("Metadata and abstract need correction.");
-    assertThat(auditEvents.findByCaseIdOrderByCreatedAtDesc(readyCase.getId()))
-      .anyMatch(event -> event.getEventType() == AuditEventType.UNPUBLISHED_FOR_CORRECTION);
+    assertThat(comments.findByPublicationCaseOrderByCreatedAtAsc(readyCase)).isEmpty();
+    assertThat(checklistResults.findBySubmissionVersion(approvedVersion)).isEmpty();
+    assertThat(caseSupervisors.findByPublicationCase(readyCase)).isEmpty();
+    assertThat(auditEvents.findByCaseIdOrderByCreatedAtDesc(readyCase.getId())).isEmpty();
 
     PublicationCase invalidCase = createCase(CaseStatus.READY_TO_PUBLISH, "Not Yet Published");
     clearances.save(ClearanceForm.builder()
@@ -206,11 +277,7 @@ class AdminClearancePublishingIntegrationTest {
     createSubmission(invalidCase, SubmissionStatus.APPROVED, "invalid-publish.pdf");
 
     mockMvc.perform(post("/api/admin/publish/{caseId}/unpublish", invalidCase.getId())
-        .session(adminSession)
-        .contentType(MediaType.APPLICATION_JSON)
-        .content("""
-          {"reason":"Should fail before publish."}
-          """))
+        .session(adminSession))
       .andExpect(status().isConflict());
 
     mockMvc.perform(post("/api/admin/publish/{caseId}", invalidCase.getId()).session(lecturerSession))

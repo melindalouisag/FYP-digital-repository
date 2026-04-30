@@ -9,8 +9,6 @@ import { formatFacultyName, normalizeFacultyCode } from '@/utils/facultyLabel';
 import ShellLayout from '../../ShellLayout';
 import {
   buildTrackingTimeline,
-  caseReviewComments,
-  passedChecklistCount,
   statusDescriptionText,
   resolvePrimaryCase,
 } from '../studentTracking';
@@ -55,29 +53,22 @@ export default function AdminStudentProfilePage() {
   const selectedSubmissions = selectedCase?.submissions ?? selectedCase?.versions ?? [];
   const latestSubmission = selectedSubmissions[0] ?? null;
   const previousVersions = selectedSubmissions.slice(1);
-  const reviewerComments = caseReviewComments(selectedCase?.comments ?? []);
   const timelineItems = buildTrackingTimeline(selectedCase);
   const facultyLabel = formatFacultyName(detail?.faculty ?? facultyCode);
   const primaryCase = useMemo(() => resolvePrimaryCase(detail?.cases ?? []), [detail?.cases]);
-  const checklistPassCount = passedChecklistCount(selectedCase?.checklistResults ?? []);
-  const checklistTotal = selectedCase?.checklistResults?.length ?? 0;
   const publishTarget = activeCase && (
     activeCase.status === 'CLEARANCE_APPROVED'
       || activeCase.status === 'READY_TO_PUBLISH'
       || activeCase.status === 'PUBLISHED'
   )
     ? `/admin/publish/${activeCase.id}`
-    : '/admin/publish';
+    : null;
 
   return (
-    <ShellLayout
-      title="Student Profile"
-      subtitle="Review student progress, supporting records, and the current workflow case."
-    >
+    <ShellLayout title="Student Profile">
       <div className="su-section-header mb-4">
         <div>
           <h2 className="su-section-title mb-1">{detail?.studentName ?? 'Student Profile'}</h2>
-          <p className="su-secondary-text mb-0">Faculty tracking view for {facultyLabel}</p>
         </div>
         <button
           type="button"
@@ -170,7 +161,6 @@ export default function AdminStudentProfilePage() {
                 <div className="su-section-header">
                   <div>
                     <h2 className="su-section-title mb-1">Supporting Data</h2>
-                    <p className="su-secondary-text mb-0">Review the latest files, prior versions, checklist result, and related comments.</p>
                   </div>
                 </div>
 
@@ -210,65 +200,6 @@ export default function AdminStudentProfilePage() {
                       </div>
                     )}
                   </div>
-
-                  <div className="su-support-card">
-                    <h3 className="su-subsection-title">Reviewer Comments</h3>
-                    {reviewerComments.length === 0 ? (
-                      <p className="su-secondary-text mb-0">No reviewer comments are available.</p>
-                    ) : (
-                      <div className="su-support-list">
-                        {reviewerComments.map((comment) => (
-                          <div key={comment.id} className="su-support-list-item">
-                            <div className="fw-semibold">{comment.authorRole === 'ADMIN' ? 'Library' : 'Lecturer'}</div>
-                            <div className="su-secondary-text">{comment.createdAt ? new Date(comment.createdAt).toLocaleString() : 'Not available'}</div>
-                            <div className="su-table-title">{comment.body}</div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="su-support-card">
-                    <h3 className="su-subsection-title">Checklist Result</h3>
-                    {checklistTotal === 0 ? (
-                      <p className="su-secondary-text mb-0">No checklist result has been saved yet.</p>
-                    ) : (
-                      <>
-                        <div className="su-table-title">{checklistPassCount} of {checklistTotal} items passed</div>
-                        <div className="su-support-list">
-                          {(selectedCase.checklistResults ?? []).map((result) => (
-                            <div key={result.id} className="su-support-list-item">
-                              <div className="fw-semibold">{result.checklistItem.itemText}</div>
-                              <div className="su-secondary-text">
-                                {result.passFail === 'PASS' ? 'Passed' : 'Revision Required'}
-                              </div>
-                              {result.note ? <div className="su-secondary-text">{result.note}</div> : null}
-                            </div>
-                          ))}
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  <div className="su-support-card">
-                    <h3 className="su-subsection-title">Clearance Status</h3>
-                    {selectedCase.clearance ? (
-                      <>
-                        <div className="su-table-title">{selectedCase.clearance.status.replaceAll('_', ' ')}</div>
-                        <div className="su-secondary-text">
-                          Submitted {selectedCase.clearance.submittedAt ? new Date(selectedCase.clearance.submittedAt).toLocaleString() : 'Not available'}
-                        </div>
-                        {selectedCase.clearance.approvedAt ? (
-                          <div className="su-secondary-text">
-                            Approved {new Date(selectedCase.clearance.approvedAt).toLocaleString()}
-                          </div>
-                        ) : null}
-                        {selectedCase.clearance.note ? <div className="su-secondary-text">{selectedCase.clearance.note}</div> : null}
-                      </>
-                    ) : (
-                      <p className="su-secondary-text mb-0">No clearance record is available.</p>
-                    )}
-                  </div>
                 </div>
               </section>
 
@@ -281,17 +212,13 @@ export default function AdminStudentProfilePage() {
                 </div>
                 <div className="su-action-row">
                   <button type="button" className="btn btn-primary" onClick={() => navigate(`/admin/review/${activeCase.id}`)}>
-                    View Full Case
+                    Review
                   </button>
-                  <button type="button" className="btn btn-outline-secondary" onClick={() => navigate(`/admin/review/${activeCase.id}`)}>
-                    Review Submission
-                  </button>
-                  <button type="button" className="btn btn-outline-secondary" onClick={() => navigate('/admin/clearance')}>
-                    View Clearance
-                  </button>
-                  <button type="button" className="btn btn-outline-secondary" onClick={() => navigate(publishTarget)}>
-                    View Publish Record
-                  </button>
+                  {publishTarget ? (
+                    <button type="button" className="btn btn-outline-secondary" onClick={() => navigate(publishTarget)}>
+                      Publish
+                    </button>
+                  ) : null}
                 </div>
               </section>
             </>

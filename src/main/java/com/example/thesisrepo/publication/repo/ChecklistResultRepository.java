@@ -9,5 +9,6 @@ import java.util.List;
 public interface ChecklistResultRepository extends JpaRepository<ChecklistResult, Long> {
   List<ChecklistResult> findBySubmissionVersion(SubmissionVersion submissionVersion);
   void deleteBySubmissionVersion(SubmissionVersion submissionVersion);
+  void deleteBySubmissionVersionIn(List<SubmissionVersion> submissionVersions);
   boolean existsByChecklistItem_Template_Id(Long templateId);
 }

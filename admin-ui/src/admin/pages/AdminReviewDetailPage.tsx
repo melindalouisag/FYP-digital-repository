@@ -434,7 +434,7 @@ export default function AdminReviewDetailPage() {
 
   return (
     <>
-      <ShellLayout title="Submission Review Detail" subtitle="Review the submission, complete the checklist, and record the final library decision">
+      <ShellLayout title="Submission Review Detail">
       {loading && (
         <div className="text-center py-5">
           <div className="su-spinner mx-auto mb-3" />

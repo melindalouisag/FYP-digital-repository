@@ -11,4 +11,5 @@ public interface SubmissionVersionRepository extends JpaRepository<SubmissionVer
   List<SubmissionVersion> findByPublicationCaseOrderByVersionNumberDesc(PublicationCase publicationCase);
   List<SubmissionVersion> findByPublicationCaseIn(List<PublicationCase> publicationCases);
   Optional<SubmissionVersion> findTopByPublicationCaseOrderByVersionNumberDesc(PublicationCase publicationCase);
+  void deleteByPublicationCase(PublicationCase publicationCase);
 }
