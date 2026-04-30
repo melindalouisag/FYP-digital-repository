@@ -10,6 +10,7 @@ export function RegistrationForm({ form }: RegistrationFormProps) {
   const publicationTypeOptions = form.isEditMode && !ACTIVE_PUBLICATION_TYPES.includes(form.type)
     ? [form.type, ...ACTIVE_PUBLICATION_TYPES]
     : ACTIVE_PUBLICATION_TYPES;
+  const agreementError = form.errors.agreement1 || form.errors.agreement2;
 
   return (
     <form
@@ -96,14 +97,14 @@ export function RegistrationForm({ form }: RegistrationFormProps) {
           </div>
 
           <div className="su-form-field-full">
-            <label className="form-label">Journal or Conference (for Articles)</label>
+            <label className="form-label">Journal or Conference</label>
             <input
               className="form-control"
               value={form.articlePublishIn}
               onChange={(event) => form.setArticlePublishIn(event.target.value)}
               placeholder="Journal or conference name"
             />
-            <div className="su-secondary-text mt-1">Leave this blank for thesis registrations.</div>
+            <div className="su-secondary-text mt-1">Leave this blank for publications archived only in Sampoerna University Library.</div>
           </div>
         </div>
       </section>
@@ -174,9 +175,6 @@ export function RegistrationForm({ form }: RegistrationFormProps) {
 
       <section className="su-form-section" id="registration-agreements">
         <h2 className="su-subsection-title mb-3">Submission Declaration</h2>
-        <div className="su-secondary-text mb-3">
-          Both permission statements are required before you submit this registration for review.
-        </div>
         <div className="form-check mb-3">
           <input
             className={`form-check-input${form.errors.agreement1 ? ' is-invalid' : ''}`}
@@ -201,8 +199,7 @@ export function RegistrationForm({ form }: RegistrationFormProps) {
             I understand that this permission constitutes a non-exclusive, perpetual, royalty-free license, and that I retain all other rights to the copyright in my publication, including the right to use it in other works such as articles and books.
           </label>
         </div>
-        {form.errors.agreement1 ? <div className="text-danger small mt-1">{form.errors.agreement1}</div> : null}
-        {form.errors.agreement2 ? <div className="text-danger small mt-1">{form.errors.agreement2}</div> : null}
+        {agreementError ? <div className="text-danger small mt-1">{agreementError}</div> : null}
       </section>
 
       {form.serverError ? (

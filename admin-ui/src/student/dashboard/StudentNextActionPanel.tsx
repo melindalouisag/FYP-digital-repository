@@ -37,7 +37,7 @@ export function StudentNextActionPanel({
         <p className="su-dashboard-empty-copy mb-0">Loading dashboard data.</p>
       ) : !nextCase ? (
         <div className="su-dashboard-empty su-dashboard-empty-centered">
-          <p className="su-dashboard-empty-copy mb-0">No active publications need your attention right now.</p>
+          <p className="su-dashboard-empty-copy mb-0">No action required right now.</p>
         </div>
       ) : (
         <StudentNextActionCard item={nextCase} onNavigate={onNavigate} />

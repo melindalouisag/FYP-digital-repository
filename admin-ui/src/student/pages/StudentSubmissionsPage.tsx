@@ -68,7 +68,7 @@ export default function StudentSubmissionsPage() {
             <PortalIcon src={studentSidebarIcons.submission} size={40} />
           </div>
           <h5>No Submissions Yet</h5>
-          <p className="text-muted">Verified publications will appear here when they are ready for file upload, revision, clearance, or final review.</p>
+          <p className="text-muted">Upload your file, update publication metadata, and review feedback from your supervisor and the library here.</p>
         </div>
       )}
 

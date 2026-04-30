@@ -95,6 +95,7 @@ const ERROR_FIELD_ORDER: Array<keyof FormErrors> = [
   'agreement1',
   'agreement2',
 ];
+const AGREEMENT_VALIDATION_MESSAGE = 'Both permission statements are required for publication.';
 
 function priority(status: string) {
   return STATUS_PRIORITY[status] ?? 5;
@@ -225,10 +226,10 @@ export function useRegistrationForm(): UseRegistrationFormResult {
       nextErrors.studentId = 'Student ID number is required.';
     }
     if (!permissionChecklistOneAccepted) {
-      nextErrors.agreement1 = 'Please accept agreement checklist 1.';
+      nextErrors.agreement1 = AGREEMENT_VALIDATION_MESSAGE;
     }
     if (!permissionChecklistTwoAccepted) {
-      nextErrors.agreement2 = 'Please accept agreement checklist 2.';
+      nextErrors.agreement2 = AGREEMENT_VALIDATION_MESSAGE;
     }
     return nextErrors;
   };

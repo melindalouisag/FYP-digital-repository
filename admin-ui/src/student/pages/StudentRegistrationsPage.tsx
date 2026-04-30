@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { studentApi } from '@/services/api/student';
 import PortalIcon from '@/shared/ui/PortalIcon';
-import { useConfirmDialog } from '@/shared/ui/useConfirmDialog';
 import type { CaseSummary } from '@/types/workflow';
 import { studentSidebarIcons } from '@/utils/portalIcons';
 import { formatStatus, getWorkflowNextAction, statusBadgeClass } from '@/utils/workflowUi';
@@ -18,7 +17,6 @@ const PAGE_SIZE = 10;
 
 export default function StudentRegistrationsPage() {
   const navigate = useNavigate();
-  const { openConfirm, confirmDialog } = useConfirmDialog();
   const [cases, setCases] = useState<CaseSummary[]>([]);
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -60,130 +58,120 @@ export default function StudentRegistrationsPage() {
   const hasPrevious = page > 0;
   const hasNext = page + 1 < totalPages;
 
-  const openCreateRegistrationConfirm = () => {
-    openConfirm({
-      title: 'Open Register Publication?',
-      message: 'You are about to open Register Publication and create a new publication record. Continue?',
-      confirmLabel: 'Continue',
-      onConfirm: (close) => {
-        close();
-        navigate('/student/registrations/new');
-      },
-    });
-  };
-
   return (
-    <>
-      <ShellLayout title="Register Publication">
-        <div className="d-flex justify-content-end align-items-center mb-4">
-          <button className="btn btn-primary" style={{ borderRadius: '0.7rem' }} onClick={openCreateRegistrationConfirm}>
-            New Registration
-          </button>
+    <ShellLayout title="Register Publication">
+      <div className="d-flex justify-content-end align-items-center mb-4">
+        <button
+          className="btn btn-primary"
+          type="button"
+          style={{ borderRadius: '0.7rem' }}
+          onClick={() => navigate('/student/registrations/new')}
+        >
+          New Registration
+        </button>
+      </div>
+
+      {error && <div className="alert alert-danger">{error}</div>}
+
+      {!loading && registrationCases.length === 0 && (
+        <div className="su-empty-state su-empty-state-centered">
+          <div className="su-empty-icon">
+            <PortalIcon src={studentSidebarIcons.registration} size={40} />
+          </div>
+          <h5>No Active Registration Records</h5>
+          <p className="text-muted">Draft, pending approval, and rejected registrations will appear here. After library verification, your publication moves to Submission.</p>
         </div>
+      )}
 
-        {error && <div className="alert alert-danger">{error}</div>}
+      {registrationCases.length > 0 && (
+        <div className="table-responsive su-card">
+          <table className="table table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Publication</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Updated</th>
+                <th>Next Step</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visibleCases.map((c) => {
+                const navigationTarget = resolveStudentCaseNavigation(c, 'registrations');
 
-        {!loading && registrationCases.length === 0 && (
-          <div className="su-empty-state su-empty-state-centered">
-            <div className="su-empty-icon">
-              <PortalIcon src={studentSidebarIcons.registration} size={40} />
-            </div>
-            <h5>No Active Registration Records</h5>
-            <p className="text-muted">Draft, returned, pending, and supervisor-approved registrations will appear here. After library verification, the publication moves to Submission.</p>
-          </div>
-        )}
-
-        {registrationCases.length > 0 && (
-          <div className="table-responsive su-card">
-            <table className="table table-hover align-middle mb-0">
-              <thead>
-                <tr>
-                  <th>Publication</th>
-                  <th>Type</th>
-                  <th>Status</th>
-                  <th>Updated</th>
-                  <th>Next Step</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleCases.map((c) => {
-                  const navigationTarget = resolveStudentCaseNavigation(c, 'registrations');
-
-                  return (
-                    <tr
-                      key={c.id}
-                      className="su-table-row-clickable"
-                      tabIndex={0}
-                      aria-label={`${navigationTarget.label}: ${c.title || 'Untitled Publication'}`}
-                      onClick={() => navigate(navigationTarget.path)}
-                      onKeyDown={(event) => {
-                        if (!isNavigationActivationKey(event)) return;
-                        event.preventDefault();
-                        navigate(navigationTarget.path);
-                      }}
-                    >
-                      <td>
-                        <div className="fw-semibold">{c.title || 'Untitled Publication'}</div>
-                      </td>
-                      <td><span className="badge bg-dark-subtle text-dark-emphasis" style={{ borderRadius: '999px' }}>{c.type}</span></td>
-                      <td>
-                        <span className={`badge status-badge ${statusBadgeClass(c.status)}`}>
-                          {formatStatus(c.status)}
-                        </span>
-                      </td>
-                      <td className="text-muted small">{c.updatedAt ? new Date(c.updatedAt).toLocaleString() : 'N/A'}</td>
-                      <td>
-                        <div className="fw-semibold small text-body-secondary">{navigationTarget.label}</div>
-                        {navigationTarget.label !== getWorkflowNextAction(c.status) ? (
-                          <div className="small text-muted mt-1">{getWorkflowNextAction(c.status)}</div>
-                        ) : null}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {!loading && registrationCases.length > 0 && (
-          <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-4">
-            <div className="text-muted small">
-              Showing {pageStart}-{pageEnd} of {registrationCases.length}
-            </div>
-            <nav aria-label="Registration list pagination">
-              <ul className="pagination pagination-sm mb-0">
-                <li className={`page-item ${!hasPrevious || loading ? 'disabled' : ''}`}>
-                  <button
-                    className="page-link"
-                    type="button"
-                    onClick={() => setPage((current) => Math.max(current - 1, 0))}
-                    disabled={!hasPrevious || loading}
+                return (
+                  <tr
+                    key={c.id}
+                    className="su-table-row-clickable"
+                    tabIndex={0}
+                    aria-label={`${navigationTarget.label}: ${c.title || 'Untitled Publication'}`}
+                    onClick={() => navigate(navigationTarget.path)}
+                    onKeyDown={(event) => {
+                      if (!isNavigationActivationKey(event)) return;
+                      event.preventDefault();
+                      navigate(navigationTarget.path);
+                    }}
                   >
-                    Previous
-                  </button>
-                </li>
-                <li className="page-item disabled">
-                  <span className="page-link">
-                    Page {page + 1} of {totalPages}
-                  </span>
-                </li>
-                <li className={`page-item ${!hasNext || loading ? 'disabled' : ''}`}>
-                  <button
-                    className="page-link"
-                    type="button"
-                    onClick={() => setPage((current) => current + 1)}
-                    disabled={!hasNext || loading}
-                  >
-                    Next
-                  </button>
-                </li>
-              </ul>
-            </nav>
+                    <td>
+                      <div className="fw-semibold">{c.title || 'Untitled Publication'}</div>
+                    </td>
+                    <td><span className="badge bg-dark-subtle text-dark-emphasis" style={{ borderRadius: '999px' }}>{c.type}</span></td>
+                    <td>
+                      <span className={`badge status-badge ${statusBadgeClass(c.status)}`}>
+                        {formatStatus(c.status)}
+                      </span>
+                    </td>
+                    <td className="text-muted small">{c.updatedAt ? new Date(c.updatedAt).toLocaleString() : 'N/A'}</td>
+                    <td>
+                      <div className="fw-semibold small text-body-secondary">{navigationTarget.label}</div>
+                      {navigationTarget.label !== getWorkflowNextAction(c.status) ? (
+                        <div className="small text-muted mt-1">{getWorkflowNextAction(c.status)}</div>
+                      ) : null}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {!loading && registrationCases.length > 0 && (
+        <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-4">
+          <div className="text-muted small">
+            Showing {pageStart}-{pageEnd} of {registrationCases.length}
           </div>
-        )}
-      </ShellLayout>
-      {confirmDialog}
-    </>
+          <nav aria-label="Registration list pagination">
+            <ul className="pagination pagination-sm mb-0">
+              <li className={`page-item ${!hasPrevious || loading ? 'disabled' : ''}`}>
+                <button
+                  className="page-link"
+                  type="button"
+                  onClick={() => setPage((current) => Math.max(current - 1, 0))}
+                  disabled={!hasPrevious || loading}
+                >
+                  Previous
+                </button>
+              </li>
+              <li className="page-item disabled">
+                <span className="page-link">
+                  Page {page + 1} of {totalPages}
+                </span>
+              </li>
+              <li className={`page-item ${!hasNext || loading ? 'disabled' : ''}`}>
+                <button
+                  className="page-link"
+                  type="button"
+                  onClick={() => setPage((current) => current + 1)}
+                  disabled={!hasNext || loading}
+                >
+                  Next
+                </button>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      )}
+    </ShellLayout>
   );
 }

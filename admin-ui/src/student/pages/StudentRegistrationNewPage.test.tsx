@@ -80,12 +80,11 @@ describe('StudentRegistrationNewPage', () => {
     await waitFor(() => expect(studentApiMocks.listSupervisors).toHaveBeenCalled());
 
     await user.clear(screen.getByLabelText('Title'));
-    await user.click(screen.getByRole('button', { name: /save and submit for approval/i }));
+    await user.click(screen.getByRole('button', { name: /submit for review/i }));
 
     expect(await screen.findByText('Title is required.')).toBeInTheDocument();
     expect(screen.getByText('Please select a supervisor.')).toBeInTheDocument();
-    expect(screen.getByText('Please accept agreement checklist 1.')).toBeInTheDocument();
-    expect(screen.getByText('Please accept agreement checklist 2.')).toBeInTheDocument();
+    expect(screen.getByText('Both permission statements are required for publication.')).toBeInTheDocument();
     expect(studentApiMocks.createRegistration).not.toHaveBeenCalled();
   });
 });
