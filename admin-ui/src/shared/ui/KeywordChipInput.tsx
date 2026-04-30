@@ -6,6 +6,7 @@ type KeywordChipInputProps = {
   onChange: (nextValues: string[]) => void;
   placeholder?: string;
   disabled?: boolean;
+  commitOnComma?: boolean;
 };
 
 export default function KeywordChipInput({
@@ -14,6 +15,7 @@ export default function KeywordChipInput({
   onChange,
   placeholder = 'Enter keywords separated by commas',
   disabled = false,
+  commitOnComma = true,
 }: KeywordChipInputProps) {
   const [draft, setDraft] = useState('');
 
@@ -77,7 +79,7 @@ export default function KeywordChipInput({
         value={draft}
         onChange={(event) => {
           const nextDraft = event.target.value;
-          if (nextDraft.includes(',')) {
+          if (commitOnComma && nextDraft.includes(',')) {
             const parts = nextDraft.split(',');
             const trailingDraft = parts.pop() ?? '';
             appendTokens(parts);

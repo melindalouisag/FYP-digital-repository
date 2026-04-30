@@ -497,9 +497,10 @@ export default function StudentCaseSubmissionPage() {
                   }
                 }}
                 disabled={!uploadAllowed || submissionDeadlinePassed || uploading}
-                placeholder="Enter keywords separated by commas"
+                placeholder="Type keywords, then press Enter"
+                commitOnComma={false}
               />
-              <div className="form-text">Enter keywords separated by commas</div>
+              <div className="form-text">Type keywords separated by commas, then press Enter to add them.</div>
               <div className="form-text">Example: digital repository, ETD, library automation</div>
               {keywordError ? <div className="text-danger small mt-2">{keywordError}</div> : null}
               {!keywordError ? <div className="form-text">Please enter at least 3 keywords</div> : null}
